@@ -1,0 +1,6 @@
+name: Factory
+version: '1.0-Factory'
+main: org.factory.factory.Factory
+api-version: '1.21'
+commands:
+  factory:
