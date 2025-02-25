@@ -17,8 +17,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.bukkit.Bukkit.getServer;
+import static org.factory.factory.Utils.VaultEconomy.icon;
 
 public class UserInterface {
+
+    public static String checkSymbol = "✔";
+    public static String xSymbol = "✘";
 
     public static String sendText(String text) {
         return text.replaceAll("&", "§");
@@ -88,6 +92,12 @@ public class UserInterface {
         Inventory gui = Bukkit.createInventory(new CustomInventoryHolder(null), size*9, name);
 
         return gui;
+    }
+
+    public static String Notification_NoMoney(Player player, double amount){
+        PlaySoundAt(Sound.ENTITY_VILLAGER_NO, player.getLocation(), 1, 1);
+
+        return sendText("&4You don't have enough money! &c(you need "+FormatDouble(amount)+icon+" more!)");
     }
 
 }

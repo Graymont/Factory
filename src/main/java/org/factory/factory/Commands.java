@@ -91,19 +91,21 @@ public class Commands implements CommandExecutor, TabCompleter {
                 FactoryItem.Type item_type = FactoryItem.Type.parseType(args[1]);
                 FactoryItem.SubType item_subType = FactoryItem.SubType.parseSubType(args[2]);
                 double attackDamage = Double.parseDouble(args[3]);
-                double attackSpeed = Double.parseDouble(args[4]);
-                double criticalChance = Double.parseDouble(args[5]);
-                double steamConsumption = Double.parseDouble(args[6]);
-                double durability = Double.parseDouble(args[7]);
-                double maxDurability = Double.parseDouble(args[8]);
-                Rarity.RarityType rarity = Rarity.RarityType.parseRarity(args[9]);
-                String displayname = String.join(" ", Arrays.copyOfRange(args, 10, args.length-1));;
+                double attackRange = Double.parseDouble(args[4]);
+                double attackSpeed = Double.parseDouble(args[5]);
+                double criticalChance = Double.parseDouble(args[6]);
+                double steamConsumption = Double.parseDouble(args[7]);
+                double durability = Double.parseDouble(args[8]);
+                double maxDurability = Double.parseDouble(args[9]);
+                Rarity.RarityType rarity = Rarity.RarityType.parseRarity(args[10]);
+                String displayname = String.join(" ", Arrays.copyOfRange(args, 11, args.length-1));;
                 Material material = Material.getMaterial(args[args.length-1]);
 
                 FactoryItem createdItem = new FactoryItem();
                 createdItem.setType(item_type);
                 createdItem.setSubType(item_subType);
                 createdItem.setAttackDamage(attackDamage);
+                createdItem.setAttackRange(attackRange);
                 createdItem.setAttackSpeed(attackSpeed);
                 createdItem.setCriticalChance(criticalChance);
                 createdItem.setSteamConsumption(steamConsumption);

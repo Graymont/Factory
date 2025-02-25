@@ -38,7 +38,9 @@ public class SQLiteDatabase {
 
     public void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS PlacedMachines (location TEXT PRIMARY KEY, " +
-                "owner TEXT, uuid TEXT, taskId INTEGER, machineLevel INTEGER, speed INTEGER, productionRate INTEGER, steamConsumption INTEGER, durability INTEGER, maxDurability INTEGER, dropName TEXT, potentialDrop INTEGER, rarity TEXT, machineName TEXT)";
+                "owner TEXT, uuid TEXT, taskId INTEGER, machineLevel INTEGER, speed INTEGER, productionRate INTEGER, " +
+                "steamConsumption INTEGER, durability INTEGER, maxDurability INTEGER, dropName TEXT, " +
+                "potentialDrop INTEGER, rarity TEXT, machineName TEXT)";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sql);
         } catch (SQLException e) {

@@ -46,7 +46,7 @@ import static org.bukkit.Bukkit.*;
 import static org.factory.factory.Database.GetItem;
 import static org.factory.factory.Utils.FactoryItem.*;
 
-import static org.factory.factory.Utils.FactoryMachine.CreateMachine;
+import static org.factory.factory.Utils.FactoryMachine.*;
 import static org.factory.factory.Utils.GUIManager.OpenMachineUpgrades;
 import static org.factory.factory.Utils.GUIManager.OpenMenu;
 import static org.factory.factory.Utils.PersistentDataManager.*;
@@ -130,10 +130,10 @@ public class Events implements Listener {
                              String machineName
     ){
         Location location = block.getLocation();
-        placedMachines.put(location+".speed", ""+speed);
+        placedMachines.put(location+__speedKey, ""+speed);
 
-        if (placedMachines.get(location+".taskId") != null){
-            int taskIdToRemove = Integer.parseInt(placedMachines.get(location+".taskId"));
+        if (placedMachines.get(location+__taskIdKey) != null){
+            int taskIdToRemove = Integer.parseInt(placedMachines.get(location+__taskIdKey));
             Bukkit.getScheduler().cancelTask(taskIdToRemove);
             //PlayerDebug(player, "Removed taskId: "+taskIdToRemove);
         }
@@ -150,25 +150,25 @@ public class Events implements Listener {
 
                 double steam = playerSteam.get(player);
 
-                int _durability = Integer.parseInt(placedMachines.get(location+".durability"));
-                int _maxDurability = Integer.parseInt(placedMachines.get(location+".maxDurability"));
+                int _durability = Integer.parseInt(placedMachines.get(location+__durabilityKey));
+                int _maxDurability = Integer.parseInt(placedMachines.get(location+__maxDurabilityKey));
 
                 if (steam < steamConsumption){
                     return;
                 }
 
                 if (_durability < 5){
-                    if (placedMachines.get(location+".taskId") != null){
-                        if (!placedMachines.get(location+".status").equals("Broken")){
-                            placedMachines.put(location+".status", "Broken");
-                            UpdateMachineTag(player, location, machineName, Integer.parseInt(placedMachines.get(location+".taskId")));
+                    if (placedMachines.get(location+__taskIdKey) != null){
+                        if (!placedMachines.get(location+__statusKey).equals("Broken")){
+                            placedMachines.put(location+__statusKey, "Broken");
+                            UpdateMachineTag(player, location, machineName, Integer.parseInt(placedMachines.get(location+__taskIdKey)));
                         }
                     }
                     return;
                 }else{
-                    if (!placedMachines.get(location+".status").equals("Active")){
-                        placedMachines.put(location+".status", "Broken");
-                        UpdateMachineTag(player, location, machineName, Integer.parseInt(placedMachines.get(location+".taskId")));
+                    if (!placedMachines.get(location+__statusKey).equals("Active")){
+                        placedMachines.put(location+__statusKey, "Broken");
+                        UpdateMachineTag(player, location, machineName, Integer.parseInt(placedMachines.get(location+__taskIdKey)));
                     }
                 }
 
@@ -179,7 +179,7 @@ public class Events implements Listener {
                 playerSteam.put(player, steam);
 
                 _durability -= 1;
-                placedMachines.put(location+".durability", ""+_durability);
+                placedMachines.put(location+__durabilityKey, ""+_durability);
 
                 if (dropChance <= 5 && potentialDrop >= 5){
                     ItemStack drop2 = new ItemStack(drop.clone());
@@ -219,20 +219,20 @@ public class Events implements Listener {
             }
         }.runTaskTimer(plugin, 0L, speed*20).getTaskId();
 
-        placedMachines.put(location+".location", ""+location);
-        placedMachines.put(location+".owner", player.getName());
-        placedMachines.put(location+".uuid", ""+player.getUniqueId());
-        placedMachines.put(location+".taskId", ""+taskId);
-        placedMachines.put(location+".productionRate", ""+productionRate);
-        placedMachines.put(location+".steamConsumption", ""+steamConsumption);
-        placedMachines.put(location+".durability", ""+durability);
-        placedMachines.put(location+".maxDurability", ""+maxDurability);
-        placedMachines.put(location+".machineLevel", ""+machineLevel);
-        placedMachines.put(location+".dropName", dropName);
-        placedMachines.put(location+".potentialDrop", ""+potentialDrop);
-        placedMachines.put(location+".machineName", machineName);
-        placedMachines.put(location+".rarity", rarity.toString());
-        placedMachines.put(location+".status", "Active");
+        placedMachines.put(location+__locationKey, ""+location);
+        placedMachines.put(location+__ownerKey, player.getName());
+        placedMachines.put(location+__uuidKey, ""+player.getUniqueId());
+        placedMachines.put(location+__taskIdKey, ""+taskId);
+        placedMachines.put(location+__productionRateKey, ""+productionRate);
+        placedMachines.put(location+__steamConsumptionKey, ""+steamConsumption);
+        placedMachines.put(location+__durabilityKey, ""+durability);
+        placedMachines.put(location+__maxDurabilityKey, ""+maxDurability);
+        placedMachines.put(location+__machineLevelKey, ""+machineLevel);
+        placedMachines.put(location+__dropNameKey, dropName);
+        placedMachines.put(location+__potentialDropKey, ""+potentialDrop);
+        placedMachines.put(location+__machineNameKey, machineName);
+        placedMachines.put(location+__rarityKey, rarity.toString());
+        placedMachines.put(location+__statusKey, "Active");
         machineItems.put(location, machine.clone());
 
         UpdateMachineTag(player, location, machineName, taskId);
@@ -260,10 +260,10 @@ public class Events implements Listener {
         Set<String> keys = new HashSet<>(placedMachines.keySet());
 
         for (String key : keys) {
-            if (key.endsWith(".location")) {
-                String location = key.replace(".location", "");
-                if (placedMachines.containsKey(location + ".owner") &&
-                        placedMachines.get(location + ".owner").equals(player.getName())) {
+            if (key.endsWith(__locationKey)) {
+                String location = key.replace(__locationKey, "");
+                if (placedMachines.containsKey(location + __ownerKey) &&
+                        placedMachines.get(location + __ownerKey).equals(player.getName())) {
 
                     mCount++;
                     Location locationParsed = parseLocationString(location);
@@ -274,16 +274,16 @@ public class Events implements Listener {
                     }
 
                     try {
-                        long speed = Long.parseLong(placedMachines.get(location + ".speed"));
-                        int productionRate = Integer.parseInt(placedMachines.get(location + ".productionRate"));
-                        int steamConsumption = Integer.parseInt(placedMachines.get(location + ".steamConsumption"));
-                        int durability = Integer.parseInt(placedMachines.get(location + ".durability"));
-                        int maxDurability = Integer.parseInt(placedMachines.get(location + ".maxDurability"));
-                        int machineLevel = Integer.parseInt(placedMachines.get(location + ".machineLevel"));
-                        int potentialDrop = Integer.parseInt(placedMachines.get(location + ".potentialDrop"));
-                        String dropName = placedMachines.get(location + ".dropName");
-                        String rarity = placedMachines.get(location + ".rarity");
-                        String machineName = placedMachines.get(location + ".machineName");
+                        long speed = Long.parseLong(placedMachines.get(location + __speedKey));
+                        int productionRate = Integer.parseInt(placedMachines.get(location + __productionRateKey));
+                        int steamConsumption = Integer.parseInt(placedMachines.get(location + __steamConsumptionKey));
+                        int durability = Integer.parseInt(placedMachines.get(location + __durabilityKey));
+                        int maxDurability = Integer.parseInt(placedMachines.get(location + __maxDurabilityKey));
+                        int machineLevel = Integer.parseInt(placedMachines.get(location + __machineLevelKey));
+                        int potentialDrop = Integer.parseInt(placedMachines.get(location + __potentialDropKey));
+                        String dropName = placedMachines.get(location + __dropNameKey);
+                        String rarity = placedMachines.get(location + __rarityKey);
+                        String machineName = placedMachines.get(location + __machineNameKey);
 
                         ItemStack machine = machineItems.get(locationParsed);
                         World world = locationParsed.getWorld();
@@ -316,12 +316,12 @@ public class Events implements Listener {
 
     public void StopAllMachines(Player player){
         for (String key : placedMachines.keySet()) {
-            if (key.endsWith(".location")) {
-                String location = key.replace(".location", "");
-                int taskId = Integer.parseInt(placedMachines.get(location+".taskId"));
-                placedMachines.put(location+".status", "Inactive");
+            if (key.endsWith(__locationKey)) {
+                String location = key.replace(__locationKey, "");
+                int taskId = Integer.parseInt(placedMachines.get(location+__taskIdKey));
+                placedMachines.put(location+__statusKey, "Inactive");
                 Bukkit.getScheduler().cancelTask(taskId);
-                String machineName = placedMachines.get(location+".machineName");
+                String machineName = placedMachines.get(location+__machineNameKey);
                 Location parsedLocation = parseLocationString(location);
                 assert parsedLocation != null;
                 UpdateMachineTag(player, parsedLocation, machineName, taskId);
@@ -341,7 +341,7 @@ public class Events implements Listener {
             ItemStack item = player.getInventory().getItemInMainHand().clone();
             ItemMeta meta = item.getItemMeta();
             item.setAmount(1);
-            NamespacedKey key = GetNamespacedKey("machine");
+            NamespacedKey key = GetNamespacedKey(machineKey);
             //NamespacedKey dropKey = new NamespacedKey(plugin, "machine_drop");
             //NamespacedKey potentialKey = new NamespacedKey(plugin, "machine_potentialDrop");
             PersistentDataContainer container = meta.getPersistentDataContainer();
@@ -378,16 +378,16 @@ public class Events implements Listener {
             Integer machineLevel = 1;
             Integer potentialDrop = 1;
 
-            speed = container.get(GetNamespacedKey("speed"), PersistentDataType.LONG);
-            productionRate = container.get(GetNamespacedKey("productionRate"), PersistentDataType.INTEGER);
-            steamConsumption = container.get(GetNamespacedKey("steamConsumption"), PersistentDataType.INTEGER);
-            machineLevel = container.get(GetNamespacedKey("machineLevel"), PersistentDataType.INTEGER);
-            durability = container.get(GetNamespacedKey("durability"), PersistentDataType.INTEGER);
-            maxDurability = container.get(GetNamespacedKey("maxDurability"), PersistentDataType.INTEGER);
-            potentialDrop = container.get(GetNamespacedKey("potentialDrop"), PersistentDataType.INTEGER);
+            speed = container.get(GetNamespacedKey(speedKey), PersistentDataType.LONG);
+            productionRate = container.get(GetNamespacedKey(productionRateKey), PersistentDataType.INTEGER);
+            steamConsumption = container.get(GetNamespacedKey(steamConsumptionKey), PersistentDataType.INTEGER);
+            machineLevel = container.get(GetNamespacedKey(machineLevelKey), PersistentDataType.INTEGER);
+            durability = container.get(GetNamespacedKey(durabilityKey), PersistentDataType.INTEGER);
+            maxDurability = container.get(GetNamespacedKey(maxDurabilityKey), PersistentDataType.INTEGER);
+            potentialDrop = container.get(GetNamespacedKey(potentialDropKey), PersistentDataType.INTEGER);
 
-            String dropName = container.get(GetNamespacedKey("dropName"), PersistentDataType.STRING);
-            String rarity = container.get(GetNamespacedKey("rarity"), PersistentDataType.STRING);
+            String dropName = container.get(GetNamespacedKey(dropNameKey), PersistentDataType.STRING);
+            String rarity = container.get(GetNamespacedKey(rarityKey), PersistentDataType.STRING);
             String machineName = meta.getDisplayName();
 
             StartMachine(player, speed, block, dropName, potentialDrop, item.clone(), productionRate,
@@ -411,7 +411,7 @@ public class Events implements Listener {
                 Location location = block.getLocation();
                 //Location hologramLocation = parseLocationString(placedMachines.get(location+".location"));
 
-                if (placedMachines.get(location+".owner") != null){
+                if (placedMachines.get(location+__ownerKey) != null){
 
                     if (playerCooldown.get(player.getName()+".cooldown.Place Machine") > 0){
                         event.setCancelled(true);
@@ -420,12 +420,12 @@ public class Events implements Listener {
                         PlaySoundAt(Sound.ENTITY_VILLAGER_NO, player.getLocation(), 1, 2);
                         return;
                     }
-                    String owner = placedMachines.get(location+".owner");
-                    int machineLevel = Integer.parseInt(placedMachines.get(location+".machineLevel"));
+                    String owner = placedMachines.get(location+__ownerKey);
+                    int machineLevel = Integer.parseInt(placedMachines.get(location+__machineLevelKey));
                     if (owner.equals(player.getName())){
 
                         if (player.isSneaking()){
-                            OpenMachineUpgrades(player, machineLevel);
+                            OpenMachineUpgrades(player, location);
                             event.setCancelled(true);
                             return;
                         }
@@ -450,13 +450,13 @@ public class Events implements Listener {
         Block block = event.getBlock();
 
         Location location = block.getLocation();
-        if (placedMachines.get(location+".owner") != null){
+        if (placedMachines.get(location+__ownerKey) != null){
             event.setCancelled(true);
         }
     }
 
     public void RemoveMachine(Player player, Block block, Location location){
-        String taskIdString = placedMachines.get(location+".taskId");
+        String taskIdString = placedMachines.get(location+__taskIdKey);
         int taskId = Integer.parseInt(taskIdString);
 
         ItemStack obtainedMachine = machineItems.get(location).clone();
@@ -465,16 +465,16 @@ public class Events implements Listener {
         PersistentDataContainer container = meta.getPersistentDataContainer();
 
         String name = uncolouredText(meta.getDisplayName());
-        int machineLevel = Integer.parseInt(placedMachines.get(location+".machineLevel"));
-        long speed = Long.parseLong(placedMachines.get(location+".speed"));
-        int productionRate = Integer.parseInt(placedMachines.get(location+".productionRate"));
-        int steamConsumption = Integer.parseInt(placedMachines.get(location+".steamConsumption"));
-        int durability = Integer.parseInt(placedMachines.get(location+".durability"));
-        int maxDurability = Integer.parseInt(placedMachines.get(location+".maxDurability"));
+        int machineLevel = Integer.parseInt(placedMachines.get(location+__machineLevelKey));
+        long speed = Long.parseLong(placedMachines.get(location+__speedKey));
+        int productionRate = Integer.parseInt(placedMachines.get(location+__productionRateKey));
+        int steamConsumption = Integer.parseInt(placedMachines.get(location+__steamConsumptionKey));
+        int durability = Integer.parseInt(placedMachines.get(location+__durabilityKey));
+        int maxDurability = Integer.parseInt(placedMachines.get(location+__maxDurabilityKey));
         Material material = obtainedMachine.getType();
-        String dropName = container.get(GetNamespacedKey("dropName"), PersistentDataType.STRING);
-        int potentialDrop = Integer.parseInt(placedMachines.get(location+".potentialDrop"));
-        String rarity = container.get(GetNamespacedKey("rarity"), PersistentDataType.STRING);
+        String dropName = container.get(GetNamespacedKey(dropNameKey), PersistentDataType.STRING);
+        int potentialDrop = Integer.parseInt(placedMachines.get(location+__potentialDropKey));
+        String rarity = container.get(GetNamespacedKey(rarityKey), PersistentDataType.STRING);
 
         obtainedMachine = new ItemStack(CreateMachine(name, machineLevel, speed, productionRate
                 , steamConsumption, durability, maxDurability, material, dropName, potentialDrop, Rarity.RarityType.parseRarity(rarity)));
@@ -489,18 +489,18 @@ public class Events implements Listener {
         Bukkit.getScheduler().cancelTask(taskId);
         //long speed = Long.parseLong(placedMachines.get(location+".speed"));
 
-        placedMachines.remove(location+".location");
-        placedMachines.remove(location+".owner");
-        placedMachines.remove(location+".uuid");
-        placedMachines.remove(location+".machineLevel");
-        placedMachines.remove(location+".productionRate");
-        placedMachines.remove(location+".taskId");
-        placedMachines.remove(location+".speed");
-        placedMachines.remove(location+".steamConsumption");
-        placedMachines.remove(location+".durability");
-        placedMachines.remove(location+".maxDurability");
-        placedMachines.remove(location+".dropName");
-        placedMachines.remove(location+".potentialDrop");
+        placedMachines.remove(location+__locationKey);
+        placedMachines.remove(location+__ownerKey);
+        placedMachines.remove(location+__uuidKey);
+        placedMachines.remove(location+__machineLevelKey);
+        placedMachines.remove(location+__productionRateKey);
+        placedMachines.remove(location+__taskIdKey);
+        placedMachines.remove(location+__speedKey);
+        placedMachines.remove(location+__steamConsumptionKey);
+        placedMachines.remove(location+__durabilityKey);
+        placedMachines.remove(location+__maxDurabilityKey);
+        placedMachines.remove(location+__dropNameKey);
+        placedMachines.remove(location+__potentialDropKey);
         machineItems.remove(location);
 
         block.setType(Material.AIR);
@@ -623,16 +623,16 @@ public class Events implements Listener {
         PersistentDataContainer container = meta.getPersistentDataContainer();
 
         String name = uncolouredText(meta.getDisplayName());
-        Integer machineLevel = container.get(GetNamespacedKey("machineLevel"), PersistentDataType.INTEGER);
-        Long speed = container.get(GetNamespacedKey("speed"), PersistentDataType.LONG);
-        Integer productionRate = container.get(GetNamespacedKey("productionRate"), PersistentDataType.INTEGER);
-        Integer steamConsumption = container.get(GetNamespacedKey("steamConsumption"), PersistentDataType.INTEGER);
-        Integer durability = container.get(GetNamespacedKey("durability"), PersistentDataType.INTEGER);
-        Integer maxDurability = container.get(GetNamespacedKey("maxDurability"), PersistentDataType.INTEGER);
+        Integer machineLevel = container.get(GetNamespacedKey(machineLevelKey), PersistentDataType.INTEGER);
+        Long speed = container.get(GetNamespacedKey(speedKey), PersistentDataType.LONG);
+        Integer productionRate = container.get(GetNamespacedKey(productionRateKey), PersistentDataType.INTEGER);
+        Integer steamConsumption = container.get(GetNamespacedKey(steamConsumptionKey), PersistentDataType.INTEGER);
+        Integer durability = container.get(GetNamespacedKey(durabilityKey), PersistentDataType.INTEGER);
+        Integer maxDurability = container.get(GetNamespacedKey(maxDurabilityKey), PersistentDataType.INTEGER);
         Material material = item.getType();
-        String dropName = container.get(GetNamespacedKey("dropName"), PersistentDataType.STRING);
-        Integer potentialDrop = container.get(GetNamespacedKey("potentialDrop"), PersistentDataType.INTEGER);
-        String rarity = container.get(GetNamespacedKey("rarity"), PersistentDataType.STRING);
+        String dropName = container.get(GetNamespacedKey(dropNameKey), PersistentDataType.STRING);
+        Integer potentialDrop = container.get(GetNamespacedKey(potentialDropKey), PersistentDataType.INTEGER);
+        String rarity = container.get(GetNamespacedKey(rarityKey), PersistentDataType.STRING);
 
         item = new ItemStack(CreateMachine(name, machineLevel, speed, productionRate
         , steamConsumption, durability, maxDurability, material, dropName, potentialDrop, Rarity.RarityType.parseRarity(rarity)));
@@ -755,7 +755,7 @@ public class Events implements Listener {
     }
 
     public List<String> attributeList = Arrays.asList(
-      "Steam", "Movement Speed", "Steam Regen", "Attack Damage", "Attack Speed", "Critical Chance", "Critical Damage"
+      "Steam", "Movement Speed", "Steam Regen", "Attack Damage", "Attack Range", "Attack Speed", "Critical Chance", "Critical Damage"
             , "Accuracy", "Defense", "Undead Damage", "Undead Defense", "Mutant Damage", "Mutant Defense",
             "Melee Damage", "Range Damage", "Steam Consumption"
     );
@@ -1070,65 +1070,7 @@ public class Events implements Listener {
         return false;
     }
 
-    /*public ItemStack CreateItem(
-            FactoryItem.Type type,
-            FactoryItem.SubType subType,
-            int attackDamage,
-            int attackSpeed,
-            int criticalChance,
-            int steamConsumption,
-            int durability,
-            int maxDurability,
-            Rarity.RarityType rarity,
-            String displayname,
-            Material material){
-        ItemStack item = new ItemStack(Material.STICK);
-        if (material != null){
-            item.setType(material);
-        }
-        ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(displayname);
-        PersistentDataContainer container = meta.getPersistentDataContainer();
-
-        container.set(GetNamespacedKey("item"), PersistentDataType.BOOLEAN, true);
-
-        container.set(GetNamespacedKey("attackDamage"), PersistentDataType.INTEGER, attackDamage);
-        container.set(GetNamespacedKey("attackSpeed"), PersistentDataType.INTEGER, attackSpeed);
-        container.set(GetNamespacedKey("criticalChance"), PersistentDataType.INTEGER, criticalChance);
-        container.set(GetNamespacedKey("steamConsumption"), PersistentDataType.INTEGER, steamConsumption);
-        container.set(GetNamespacedKey("durability"), PersistentDataType.INTEGER, 1000);
-        container.set(GetNamespacedKey("maxDurability"), PersistentDataType.INTEGER, 1000);
-        container.set(GetNamespacedKey("type"), PersistentDataType.STRING, type.toString().toLowerCase());
-        container.set(GetNamespacedKey("subType"), PersistentDataType.STRING, subType.toString().toLowerCase());
-
-
-        String item_type = type.toString().toLowerCase();
-        String item_subType = subType.toString().toLowerCase();
-
-        List<String> itemLore = new ArrayList<>();
-        meta.setDisplayName(sendText(displayname));
-
-        itemLore.add(sendText("&8"+type));
-        itemLore.add(sendText("&8&o"+subType));
-        if (item_type.equals("weapon")){
-            itemLore.add(sendText(" "));
-            itemLore.add(sendText("&c\uD83D\uDDE1 &7Attack Damage: &f"+attackDamage));
-            itemLore.add(sendText("&c⚔ &7Attack Speed: &f"+attackSpeed));
-            itemLore.add(sendText("&3\uD83C\uDFF9 &7Critical Chance: &f"+criticalChance));
-            itemLore.add(sendText("&e⚡ &7Steam Consumption: &f"+steamConsumption));
-            itemLore.add(sendText(" "));
-            itemLore.add(sendText("&7Durability: &f"+durability+"/"+maxDurability));
-            itemLore.add(sendText(" "));
-            itemLore.add(sendText(Rarity.setRarity(rarity)));
-        }
-
-
-
-        meta.setLore(itemLore);
-        item.setItemMeta(meta);
-        return item;
-    }*/
 
     @EventHandler
     public void OnArmSwing(PlayerArmSwingEvent event){
@@ -1136,7 +1078,17 @@ public class Events implements Listener {
 
         ItemStack item = player.getInventory().getItemInMainHand();
         if (item.getType() != Material.AIR){
-            Entity entity = player.getTargetEntity(10);
+
+            ItemMeta meta = item.getItemMeta();
+            if (!isWeapon(item)){
+                return;
+            }
+
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            Double attackRangeContainer = container.get(GetNamespacedKey(attackRangeKey), PersistentDataType.DOUBLE);
+            assert attackRangeContainer != null;
+            double attackRange = attackRangeContainer;
+            Entity entity = player.getTargetEntity((int)attackRange);
             if (entity instanceof LivingEntity){
                 PlayerMeleeAttack(player, entity);
             }
@@ -1152,10 +1104,10 @@ public class Events implements Listener {
                 return;
             }
 
+            if (!ItemNotBroken(item)){return;}
+
             PersistentDataContainer container = meta.getPersistentDataContainer();
-            if (!container.has(GetNamespacedKey("item"))){
-                return;
-            }
+            if (!container.has(GetNamespacedKey("item"))){return;}
 
             double totalDamage = CalculateDamage(player, target, "melee");
 
@@ -1235,16 +1187,17 @@ public class Events implements Listener {
             ItemMeta meta = item.getItemMeta();
             PersistentDataContainer container = meta.getPersistentDataContainer();
 
-            if (container.has(GetNamespacedKey("item"))){
-                FactoryItem.Type item_type = FactoryItem.Type.parseType(container.get(GetNamespacedKey("type"), PersistentDataType.STRING));
-                FactoryItem.SubType item_subType = FactoryItem.SubType.parseSubType(container.get(GetNamespacedKey("subType"), PersistentDataType.STRING));
-                Double attackDamage = container.get(GetNamespacedKey("attackDamage"), PersistentDataType.DOUBLE);
-                Double attackSpeed = container.get(GetNamespacedKey("attackSpeed"), PersistentDataType.DOUBLE);
-                Double criticalChance = container.get(GetNamespacedKey("criticalChance"), PersistentDataType.DOUBLE);
-                Double steamConsumption = container.get(GetNamespacedKey("steamConsumption"), PersistentDataType.DOUBLE);
-                Double durability = container.get(GetNamespacedKey("durability"), PersistentDataType.DOUBLE);
-                Double maxDurability = container.get(GetNamespacedKey("maxDurability"), PersistentDataType.DOUBLE);
-                Rarity.RarityType rarity = Rarity.RarityType.parseRarity(container.get(GetNamespacedKey("rarity"), PersistentDataType.STRING));
+            if (container.has(GetNamespacedKey(itemKey))){
+                FactoryItem.Type item_type = FactoryItem.Type.parseType(container.get(GetNamespacedKey(typeKey), PersistentDataType.STRING));
+                FactoryItem.SubType item_subType = FactoryItem.SubType.parseSubType(container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING));
+                Double attackDamage = container.get(GetNamespacedKey(attackDamageKey), PersistentDataType.DOUBLE);
+                Double attackRange = container.get(GetNamespacedKey(attackRangeKey), PersistentDataType.DOUBLE);
+                Double attackSpeed = container.get(GetNamespacedKey(attackSpeedKey), PersistentDataType.DOUBLE);
+                Double criticalChance = container.get(GetNamespacedKey(criticalChanceKey), PersistentDataType.DOUBLE);
+                Double steamConsumption = container.get(GetNamespacedKey(steamConsumptionKey), PersistentDataType.DOUBLE);
+                Double durability = container.get(GetNamespacedKey(durabilityKey), PersistentDataType.DOUBLE);
+                Double maxDurability = container.get(GetNamespacedKey(maxDurabilityKey), PersistentDataType.DOUBLE);
+                Rarity.RarityType rarity = Rarity.RarityType.parseRarity(container.get(GetNamespacedKey(rarityKey), PersistentDataType.STRING));
                 String displayname = sendText(meta.getDisplayName());
                 Material material = item.getType();
 
@@ -1252,6 +1205,7 @@ public class Events implements Listener {
                 updatedItem.setType(item_type);
                 updatedItem.setSubType(item_subType);
                 updatedItem.setAttackDamage(attackDamage);
+                updatedItem.setAttackRange(attackRange);
                 updatedItem.setAttackSpeed(attackSpeed);
                 updatedItem.setCriticalChance(criticalChance);
                 updatedItem.setSteamConsumption(steamConsumption);

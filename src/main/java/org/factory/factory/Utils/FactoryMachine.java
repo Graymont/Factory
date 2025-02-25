@@ -17,11 +17,40 @@ import static org.factory.factory.Utils.UserInterface.uncolouredText;
 
 public class FactoryMachine {
 
+    int maxLevel = 30;
 
+    public static String machineKey = "machine";
 
+    public static String dropNameKey = "dropName";
+    public static String potentialDropKey = "potentialDrop";
+    public static String speedKey = "speed";
+    public static String productionRateKey = "productionRate";
+    public static String steamConsumptionKey = "steamConsumption";
+    public static String machineLevelKey = "machineLevel";
+    public static String durabilityKey = "durability";
+    public static String maxDurabilityKey = "maxDurability";
+    public static String rarityKey = "rarity";
+
+    public static String __dropNameKey = ".dropName";
+    public static String __potentialDropKey = ".potentialDrop";
+    public static String __speedKey = ".speed";
+    public static String __productionRateKey = ".productionRate";
+    public static String __steamConsumptionKey = ".steamConsumption";
+    public static String __machineLevelKey = ".machineLevel";
+    public static String __durabilityKey = ".durability";
+    public static String __maxDurabilityKey = ".maxDurability";
+    public static String __rarityKey = ".rarity";
+    public static String __machineNameKey = ".machineName";
+    public static String __locationKey = ".location";
+    public static String __ownerKey = ".owner";
+    public static String __uuidKey = ".uuid";
+    public static String __taskIdKey = ".taskId";
+    public static String __statusKey = ".status";
 
     public static ItemStack CreateMachine(String name, int machineLevel, long speed, int productionRate, int steamConsumption,
-                                          int durability, int maxDurability, Material material, String dropName, int potentialDrop, Rarity.RarityType rarity) {
+                                          int durability, int maxDurability, Material material, String dropName, int potentialDrop,
+                                          Rarity.RarityType rarity) {
+
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
 
@@ -30,19 +59,18 @@ public class FactoryMachine {
         String rarityDisplay = "";
         String rarityColor = "";
 
-
         // Identifier set
         PersistentDataContainer container = meta.getPersistentDataContainer();
-        container.set(GetNamespacedKey("machine"), PersistentDataType.BOOLEAN, true);
-        container.set(GetNamespacedKey("dropName"), PersistentDataType.STRING, dropName);
-        container.set(GetNamespacedKey("potentialDrop"), PersistentDataType.INTEGER, potentialDrop);
-        container.set(GetNamespacedKey("speed"), PersistentDataType.LONG, speed);
-        container.set(GetNamespacedKey("productionRate"), PersistentDataType.INTEGER, productionRate);
-        container.set(GetNamespacedKey("steamConsumption"), PersistentDataType.INTEGER, steamConsumption);
-        container.set(GetNamespacedKey("machineLevel"), PersistentDataType.INTEGER, machineLevel);
-        container.set(GetNamespacedKey("durability"), PersistentDataType.INTEGER, durability);
-        container.set(GetNamespacedKey("maxDurability"), PersistentDataType.INTEGER, maxDurability);
-        container.set(GetNamespacedKey("rarity"), PersistentDataType.STRING, rarity.toString());
+        container.set(GetNamespacedKey(machineKey), PersistentDataType.BOOLEAN, true);
+        container.set(GetNamespacedKey(dropNameKey), PersistentDataType.STRING, dropName);
+        container.set(GetNamespacedKey(potentialDropKey), PersistentDataType.INTEGER, potentialDrop);
+        container.set(GetNamespacedKey(speedKey), PersistentDataType.LONG, speed);
+        container.set(GetNamespacedKey(productionRateKey), PersistentDataType.INTEGER, productionRate);
+        container.set(GetNamespacedKey(steamConsumptionKey), PersistentDataType.INTEGER, steamConsumption);
+        container.set(GetNamespacedKey(machineLevelKey), PersistentDataType.INTEGER, machineLevel);
+        container.set(GetNamespacedKey(durabilityKey), PersistentDataType.INTEGER, durability);
+        container.set(GetNamespacedKey(maxDurabilityKey), PersistentDataType.INTEGER, maxDurability);
+        container.set(GetNamespacedKey(rarityKey), PersistentDataType.STRING, rarity.toString());
 
         ItemStack dropItem = GetItem(dropName).clone();
 

@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.factory.factory.Utils.FactoryMachine.*;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.UserInterface.sendText;
 
@@ -25,6 +26,7 @@ public class FactoryItem {
     private FactoryItem.SubType subType;
     private double attackDamage = 5;
     private double attackSpeed = 1;
+    private double attackRange = 3;
     private double criticalChance = 10;
     private double steamConsumption = 5;
     private double durability = 1000;
@@ -32,6 +34,14 @@ public class FactoryItem {
     private Rarity.RarityType rarity = Rarity.RarityType.COMMON;
     private String displayname = "Unnamed Item";
     private Material material = Material.STICK;
+
+    public static String itemKey = "item";
+    public static String attackDamageKey = "attackDamage";
+    public static String attackRangeKey = "attackRange";
+    public static String attackSpeedKey = "attackSpeed";
+    public static String criticalChanceKey = "criticalChance";
+    public static String typeKey = "type";
+    public static String subTypeKey = "subType";
 
     public FactoryItem setType(FactoryItem.Type type) {
         this.type = type;
@@ -50,6 +60,11 @@ public class FactoryItem {
 
     public FactoryItem setAttackSpeed(double attackSpeed) {
         this.attackSpeed = attackSpeed;
+        return this;
+    }
+
+    public FactoryItem setAttackRange(double attackRange) {
+        this.attackRange = attackRange;
         return this;
     }
 
@@ -90,7 +105,7 @@ public class FactoryItem {
 
     public ItemStack build() {
         return CreateItem(
-                type, subType, attackDamage, attackSpeed, criticalChance, steamConsumption,
+                type, subType, attackDamage, attackRange, attackSpeed, criticalChance, steamConsumption,
                 durability, maxDurability, rarity, displayname, material);
     }
 
@@ -98,6 +113,7 @@ public class FactoryItem {
             Type type,
             SubType subType,
             double attackDamage,
+            double attackRange,
             double attackSpeed,
             double criticalChance,
             double steamConsumption,
@@ -112,31 +128,33 @@ public class FactoryItem {
         meta.setDisplayName(displayname);
         PersistentDataContainer container = meta.getPersistentDataContainer();
 
-        container.set(GetNamespacedKey("item"), PersistentDataType.BOOLEAN, true);
-        container.set(GetNamespacedKey("attackDamage"), PersistentDataType.DOUBLE, attackDamage);
-        container.set(GetNamespacedKey("attackSpeed"), PersistentDataType.DOUBLE, attackSpeed);
-        container.set(GetNamespacedKey("criticalChance"), PersistentDataType.DOUBLE, criticalChance);
-        container.set(GetNamespacedKey("steamConsumption"), PersistentDataType.DOUBLE, steamConsumption);
-        container.set(GetNamespacedKey("durability"), PersistentDataType.DOUBLE, durability);
-        container.set(GetNamespacedKey("maxDurability"), PersistentDataType.DOUBLE, maxDurability);
-        container.set(GetNamespacedKey("type"), PersistentDataType.STRING, type.toString().toLowerCase());
-        container.set(GetNamespacedKey("subType"), PersistentDataType.STRING, subType.toString().toLowerCase());
-        container.set(GetNamespacedKey("rarity"), PersistentDataType.STRING, rarity.toString().toLowerCase());
+        container.set(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN, true);
+        container.set(GetNamespacedKey(attackDamageKey), PersistentDataType.DOUBLE, attackDamage);
+        container.set(GetNamespacedKey(attackRangeKey), PersistentDataType.DOUBLE, attackRange);
+        container.set(GetNamespacedKey(attackSpeedKey), PersistentDataType.DOUBLE, attackSpeed);
+        container.set(GetNamespacedKey(criticalChanceKey), PersistentDataType.DOUBLE, criticalChance);
+        container.set(GetNamespacedKey(steamConsumptionKey), PersistentDataType.DOUBLE, steamConsumption);
+        container.set(GetNamespacedKey(durabilityKey), PersistentDataType.DOUBLE, durability);
+        container.set(GetNamespacedKey(maxDurabilityKey), PersistentDataType.DOUBLE, maxDurability);
+        container.set(GetNamespacedKey(typeKey), PersistentDataType.STRING, type.toString().toLowerCase());
+        container.set(GetNamespacedKey(subTypeKey), PersistentDataType.STRING, subType.toString().toLowerCase());
+        container.set(GetNamespacedKey(rarityKey), PersistentDataType.STRING, rarity.toString().toLowerCase());
 
         List<String> itemLore = new ArrayList<>();
         meta.setDisplayName(sendText(Rarity.getColor(rarity)+displayname));
 
-        itemLore.add(sendText("&8" + type));
+        itemLore.add(sendText("&9" + type));
         itemLore.add(sendText("&8&o" + subType));
         itemLore.add(sendText(" "));
-        itemLore.add(sendText("&c\uD83D\uDDE1 &7Attack Damage: &f" + (int) attackDamage));
-        itemLore.add(sendText("&c⚔ &7Attack Speed: &f" + attackSpeed+"s"));
+        itemLore.add(sendText(" &c\uD83D\uDDE1 &7Attack Damage: &f" + (int) attackDamage));
+        itemLore.add(sendText(" &c༒ &7Attack Range: &f" +(int)  attackRange+"&8&l\uD835\uDDBB"));
+        itemLore.add(sendText(" &c⚔ &7Attack Speed: &f" + attackSpeed+"&8&l\uD835\uDDCC"));
         itemLore.add(sendText(" "));
-        itemLore.add(sendText("&3\uD83C\uDFF9 &7Critical Chance: &f" + (int)  criticalChance));
+        itemLore.add(sendText(" &3\uD83C\uDFF9 &7Critical Chance: &f" + (int)  criticalChance+"%"));
         itemLore.add(sendText(" "));
-        itemLore.add(sendText("&e⚡ &7Steam Consumption: &f" + (int)  steamConsumption));
+        itemLore.add(sendText(" &e⚡ &7Steam Consumption: &f" + (int)  steamConsumption));
         itemLore.add(sendText(" "));
-        itemLore.add(sendText("&7Durability: &f" + (int)  durability + "/" + (int)  maxDurability));
+        itemLore.add(sendText(" &7Durability: &f" + (int)  durability + "/" + (int)  maxDurability));
         itemLore.add(sendText(" "));
         itemLore.add(sendText(Rarity.setRarity(rarity)));
 

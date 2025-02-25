@@ -17,14 +17,17 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.factory.factory.Utils.GUIManager;
 import org.factory.factory.Utils.ItemSerializer;
 import org.factory.factory.Utils.SQLiteDatabase;
+import org.factory.factory.Utils.VaultEconomy;
 
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.factory.factory.Database.SaveAllData;
 import static org.factory.factory.Utils.SQLiteDatabase.parseLocationString;
 import static org.factory.factory.Utils.UserInterface.*;
+import static org.factory.factory.Utils.VaultEconomy.setupEconomy;
 
 public final class Factory extends JavaPlugin {
 
@@ -32,9 +35,12 @@ public final class Factory extends JavaPlugin {
     public Events events = new Events(this);
     public FurnaceManager furnaceManager = new FurnaceManager(this, events);
     public Commands commands = new Commands(events, this);
-    public Database database = new Database(events, this);
 
     public GUIManager guiManager = new GUIManager();
+
+    public static Factory getMainPlugin(){
+        return Factory.getPlugin(Factory.class);
+    }
 
     @Override
     public void onEnable() {
@@ -42,15 +48,16 @@ public final class Factory extends JavaPlugin {
         sqLiteDatabase.connect();
 
         if (!sqLiteDatabase.isConnected()) {
-            getLogger().warning("Failed to connect to SQLite database. Disabling plugin.");
+            getLogger().warning("SQLite Database failed to connect, disabling Factory");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         RegisterAllEvents();
         RegisterAllCommands();
+        setupEconomy();
 
-        database.LoadAllData();
+        Database.LoadAllData();
         events.placedMachines = sqLiteDatabase.LoadMachineData(sqLiteDatabase.connection);
         events.machineItems = sqLiteDatabase.LoadMachineItems(sqLiteDatabase.connection);
 
@@ -62,7 +69,7 @@ public final class Factory extends JavaPlugin {
     @Override
     public void onDisable() {
         // Plugin shutdown logic
-        database.SaveAllData();
+        SaveAllData();
         sqLiteDatabase.SaveMachineData(events.placedMachines);
         sqLiteDatabase.SaveMachineItems(events.machineItems);
         sqLiteDatabase.disconnect();

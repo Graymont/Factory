@@ -1,5 +1,6 @@
 package org.factory.factory.Utils;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -15,11 +16,17 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static org.factory.factory.Factory.getMainPlugin;
+import static org.factory.factory.Utils.FactoryMachine.*;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
+import static org.factory.factory.Utils.SQLiteDatabase.parseLocationString;
 import static org.factory.factory.Utils.UserInterface.*;
+import static org.factory.factory.Utils.VaultEconomy.GetPlayerBalance;
+import static org.factory.factory.Utils.VaultEconomy.RemovePlayerBalance;
 
 public class GUIManager implements Listener {
 
@@ -51,6 +58,14 @@ public class GUIManager implements Listener {
 
         return border;
     }
+    public static ItemStack getBackrgound(Material material){
+        ItemStack border = new ItemStack(material);
+        ItemMeta borderMeta = border.getItemMeta();
+        borderMeta.setDisplayName(" ");
+        border.setItemMeta(borderMeta);
+
+        return border;
+    }
 
     public static void SetHeaderFooter(Inventory inventory){
         int size = inventory.getSize();
@@ -59,6 +74,15 @@ public class GUIManager implements Listener {
         }
         for (int i = size-9; i < size; i++) {
             inventory.setItem(i, getHeaderFooter());
+        }
+    }
+
+    public static void SetBackground(Inventory inventory, Material material){
+        int size = inventory.getSize();
+        for (int i = 0; i < size; i++) {
+            if (inventory.getItem(i) == null){
+                inventory.setItem(i, getBackrgound(material));
+            }
         }
     }
 
@@ -92,30 +116,99 @@ public class GUIManager implements Listener {
 
         ItemStack item = event.getCurrentItem();
 
-        if (inventory.equals(MenuList.MachineUpgrade)){
-            if (GetTag(item).equals("upgrade")){
-                player.sendMessage(sendText("&aYou pressed upgrade button!"));
+        if (item != null && item.getType() != Material.AIR){
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            if (inventory.equals(MenuList.MachineUpgrade)){
+                if (GetTag(item).equals("upgrade")){
+
+                    double playerBalance = GetPlayerBalance(player);
+                    double upgradePrice = 1;
+                    Double upgradeContainer = container.get(GetNamespacedKey("upgradePrice"), PersistentDataType.DOUBLE);
+                    if (upgradeContainer == null){
+                        return;
+                    }
+                    String locationContainer = container.get(GetNamespacedKey("location"), PersistentDataType.STRING);
+                    if (locationContainer == null){
+                        return;
+                    }
+                    upgradePrice = upgradeContainer;
+                    Location machineLocation = parseLocationString(locationContainer);
+                    if (playerBalance >= upgradePrice){
+                        RemovePlayerBalance(player, upgradePrice);
+                        int currentLevel = Integer.parseInt(getMainPlugin().events.placedMachines.get(machineLocation+__machineLevelKey));
+                        currentLevel++;
+
+                        getMainPlugin().events.placedMachines.put(machineLocation+__machineLevelKey, ""+currentLevel);
+
+                        ItemStack previousItem = getMainPlugin().events.machineItems.get(machineLocation);
+                        ItemMeta previousItemMeta = previousItem.getItemMeta();
+                        PersistentDataContainer previousContainer = previousItemMeta.getPersistentDataContainer();
+                        String machineName = sendText(previousItemMeta.getDisplayName());
+                        int machineLevel = currentLevel;
+                        Long speed = previousContainer.get(GetNamespacedKey(speedKey), PersistentDataType.LONG);
+                        Integer productionRate = previousContainer.get(GetNamespacedKey(productionRateKey), PersistentDataType.INTEGER);
+                        Integer steamConsumption = previousContainer.get(GetNamespacedKey(steamConsumptionKey), PersistentDataType.INTEGER);
+                        Integer durability = previousContainer.get(GetNamespacedKey(durabilityKey), PersistentDataType.INTEGER);
+                        Integer maxDurability = previousContainer.get(GetNamespacedKey(maxDurabilityKey), PersistentDataType.INTEGER);
+                        Integer potentialDrop = previousContainer.get(GetNamespacedKey(potentialDropKey), PersistentDataType.INTEGER);
+                        String dropName = previousContainer.get(GetNamespacedKey(dropNameKey), PersistentDataType.STRING);
+                        Rarity.RarityType rarity = Rarity.RarityType.parseRarity(previousContainer.get(GetNamespacedKey(rarityKey), PersistentDataType.STRING));
+                        Material material = previousItem.getType();
+
+                        ItemStack newItem = CreateMachine(machineName, machineLevel, speed, productionRate
+                        , steamConsumption, durability, maxDurability, material, dropName, potentialDrop, rarity);
+
+                        getMainPlugin().events.machineItems.put(machineLocation, newItem);
+
+                        player.sendMessage(sendText("&aSuccessfully upgrade your machine! to level &2"
+                                +getMainPlugin().events.placedMachines.get(machineLocation+".machineLevel")));
+                    }else{
+                        event.setCancelled(true);
+                        player.sendMessage(Notification_NoMoney(player, upgradePrice-playerBalance));
+                        return;
+                    }
+                    player.closeInventory();
+                    OpenMachineUpgrades(player, machineLocation);
+                }
             }
         }
     }
 
-    public static void OpenMachineUpgrades(Player player, int level){
+    public static void OpenMachineUpgrades(Player player, Location location){
+        int level = Integer.parseInt(getMainPlugin().events.placedMachines.get(location+__machineLevelKey));
         Inventory inventory = OpenGUI(player, 3, "Upgrade Machine");
         openedMenu.put(player, MenuList.MachineUpgrade);
         SetHeaderFooter(inventory);
-        inventory.setItem(14, getMachineUpgradesItem("upgrade"));
+        SetBackground(inventory, Material.GRAY_STAINED_GLASS_PANE);
+        inventory.setItem(13, getMachineUpgradesItem(player,"upgrade", location));
         player.openInventory(inventory);
-
     }
 
-    public static ItemStack getMachineUpgradesItem(String name){
+    public static ItemStack getMachineUpgradesItem(Player player, String name, Location location){
+        int level = Integer.parseInt(getMainPlugin().events.placedMachines.get(location+__machineLevelKey));
         ItemStack item = new ItemStack(Material.STRING);
         ItemMeta meta = item.getItemMeta();
         PersistentDataContainer container = meta.getPersistentDataContainer();
+        List<String> itemLore = new ArrayList<>();
 
         if (name.equals("upgrade")){
+            double upgradePrice = level*10000;
             meta.setDisplayName(sendText("&aUpgrade Machine"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Current Level: &f"+level));
+            itemLore.add(sendText(" &7Upgrade Cost: &f"+FormatDouble(upgradePrice)));
+            itemLore.add(sendText(" "));
+            double playerBalance = GetPlayerBalance(player);
+            if (playerBalance >= upgradePrice){
+                itemLore.add(sendText("&aClick to upgrade"));
+            }else{
+                itemLore.add(sendText("&cClick to upgrade"));
+            }
+            container.set(GetNamespacedKey("upgradePrice"), PersistentDataType.DOUBLE, upgradePrice);
+            container.set(GetNamespacedKey("location"), PersistentDataType.STRING, ""+location);
         }
+        meta.setLore(itemLore);
 
         container.set(GetNamespacedKey("gui-icon"), PersistentDataType.STRING, name);
 
