@@ -3,10 +3,7 @@ package org.factory.factory;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Furnace;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -25,6 +22,11 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.factory.factory.Database.SaveAllData;
+import static org.factory.factory.Events.*;
+import static org.factory.factory.Utils.CraftingManager.InitRecipes;
+import static org.factory.factory.Utils.CraftingManager.InitSmeltings;
+import static org.factory.factory.Utils.FactoryItem.InitFactoryItems;
+import static org.factory.factory.Utils.FactoryMachine.*;
 import static org.factory.factory.Utils.SQLiteDatabase.parseLocationString;
 import static org.factory.factory.Utils.UserInterface.*;
 import static org.factory.factory.Utils.VaultEconomy.setupEconomy;
@@ -38,7 +40,7 @@ public final class Factory extends JavaPlugin {
 
     public GUIManager guiManager = new GUIManager();
 
-    public static Factory getMainPlugin(){
+    public static Factory getMainPlugin() {
         return Factory.getPlugin(Factory.class);
     }
 
@@ -60,9 +62,14 @@ public final class Factory extends JavaPlugin {
         Database.LoadAllData();
         events.placedMachines = sqLiteDatabase.LoadMachineData(sqLiteDatabase.connection);
         events.machineItems = sqLiteDatabase.LoadMachineItems(sqLiteDatabase.connection);
+        events.storedMachines = sqLiteDatabase.LoadStoredMachines(sqLiteDatabase.connection);
 
         EverySeconds();
         GenerateMachineTags();
+
+        InitFactoryItems();
+        InitRecipes();
+        InitSmeltings();
     }
 
 
@@ -72,6 +79,7 @@ public final class Factory extends JavaPlugin {
         SaveAllData();
         sqLiteDatabase.SaveMachineData(events.placedMachines);
         sqLiteDatabase.SaveMachineItems(events.machineItems);
+        sqLiteDatabase.SaveStoredMachines(events.storedMachines);
         sqLiteDatabase.disconnect();
 
         ClearMachineTags();
@@ -80,6 +88,9 @@ public final class Factory extends JavaPlugin {
     void RegisterAllCommands(){
         // Commands
         Objects.requireNonNull(getCommand("factory")).setExecutor(commands);
+        Objects.requireNonNull(getCommand("refundmachine")).setExecutor(commands);
+        Objects.requireNonNull(getCommand("shop")).setExecutor(commands);
+        Objects.requireNonNull(getCommand("spawn")).setExecutor(commands);
 
         // Tab Completer
         Objects.requireNonNull(getCommand("factory")).setTabCompleter(commands);
@@ -109,11 +120,11 @@ public final class Factory extends JavaPlugin {
 
     void MachineLog(Player player){
         for (String key : events.placedMachines.keySet()) {
-            if (key.endsWith(".owner")) {
+            if (key.endsWith(__ownerKey)) {
                 String owner = events.placedMachines.get(key);
                 if (owner.equals(player.getName())) {
                     player.sendMessage(sendText("&aMachine at &b"
-                            + key.replace(".owner", "") + " &ais owned by you!"));
+                            + key.replace(__ownerKey, "") + " &ais owned by you!"));
                 }
             }
         }
@@ -121,14 +132,14 @@ public final class Factory extends JavaPlugin {
 
     void ClearMachineTags(){
         for (String key : events.placedMachines.keySet()){
-            if (key.endsWith(".location")){
-                String loc = key.replace(".location", "");
+            if (key.endsWith(__locationKey)){
+                String loc = key.replace(__locationKey, "");
                 Location location = parseLocationString(loc);
-                int taskId = Integer.parseInt(events.placedMachines.get(location+".taskId"));
+                int taskId = Integer.parseInt(events.placedMachines.get(location+__taskIdKey));
                 assert location != null;
                 World world = location.getWorld();
                 for (Entity entity : Bukkit.getWorld(world.getName()).getEntities()){
-                    if (entity instanceof ArmorStand){
+                    if (entity instanceof TextDisplay){
                         if (entity.hasMetadata("MachineTag."+location)){
                             entity.remove();
                             //consoleLog(sendText("&aCleared tags with taskId tag: &6"+taskId));
@@ -145,34 +156,36 @@ public final class Factory extends JavaPlugin {
         Set<String> keys = new HashSet<>(events.placedMachines.keySet());
 
         for (String key : keys) {
-            if (key.endsWith(".location")) {
-                String baseKey = key.replace(".location", "");
+            if (key.endsWith(__locationKey)) {
+                String baseKey = key.replace(__locationKey, "");
                 Location location = parseLocationString(baseKey);
 
                 if (location == null) {
-                    consoleLog(sendText("&cError: Invalid location key - " + baseKey));
+                    consoleLog(sendText("&cInvalid location key - " + baseKey));
                     continue;
                 }
 
-                String ownerKey = baseKey + ".owner";
-                String machineNameKey = baseKey + ".machineName";
-                String statusKey = baseKey + ".status";
-                String taskIdKey = baseKey + ".taskId";
+                String ownerKey = baseKey + __ownerKey;
+                String machineNameKey = baseKey + __machineNameKey;
+                String statusKey = baseKey + __machineStatusKey;
+                String taskIdKey = baseKey + __taskIdKey;
 
                 if (events.placedMachines.containsKey(ownerKey) && events.placedMachines.containsKey(machineNameKey) && events.placedMachines.containsKey(taskIdKey)) {
                     String owner = events.placedMachines.get(ownerKey);
                     String machineName = events.placedMachines.get(machineNameKey);
 
-                    events.placedMachines.put(statusKey, "Inactive");
+                    if (!events.placedMachines.get(location+__machineStatusKey).equals("Disabled")){
+                        events.placedMachines.put(statusKey, "Inactive");
+                    }
 
                     try {
                         int taskId = Integer.parseInt(events.placedMachines.get(taskIdKey));
                         events.SpawnMachineTag(owner, location, machineName, taskId);
                     } catch (NumberFormatException e) {
-                        consoleLog(sendText("&cError: Invalid taskId format for " + baseKey));
+                        consoleLog(sendText("&cInvalid taskId format for " + baseKey));
                     }
                 } else {
-                    consoleLog(sendText("&cError: Missing machine data for " + baseKey));
+                    consoleLog(sendText("&cMissing machine data for " + baseKey));
                 }
             }
         }
@@ -182,27 +195,30 @@ public final class Factory extends JavaPlugin {
 
 
     public void RegenSteam(Player player){
-        double steam = events.playerSteam.get(player);
-        double maxSteam = events.playerMaxSteam.get(player);
+        double steam = playerSteam.get(player);
+        double maxSteam = playerMaxSteam.get(player);
 
         if (steam < maxSteam){
             steam ++;
-            events.playerSteam.put(player, steam);
+            playerSteam.put(player, steam);
         }
 
         else if (steam > maxSteam){
-            events.playerSteam.put(player, maxSteam);
+            playerSteam.put(player, maxSteam);
         }
 
         else if (steam < 0){
-            events.playerSteam.put(player, 0.0);
+            playerSteam.put(player, 0.0);
         }
     }
 
     public void ActionBar(Player player) {
-        double steam = events.playerSteam.get(player);
-        double maxSteam = events.playerMaxSteam.get(player);
-        SendActionBar(player, sendText("&6⚡ &e"+FormatDouble(steam)+"/"+FormatDouble(maxSteam)+" Steam"));
+        double steam = playerSteam.get(player);
+        double maxSteam = playerMaxSteam.get(player);
+        double armor = playerArmor.get(player);
+        double health = player.getHealth();
+        double maxHealth = player.getMaxHealth();
+        SendActionBar(player, sendText("&4❤ &c"+FormatDouble(health)+"/"+FormatDouble(maxHealth)+" Health          "+"&7[&8\uD83D\uDD30&f"+FormatDouble(armor)+" &7Armor&7]"+"          &6\uD83C\uDF0A &e"+FormatDouble(steam)+"/"+FormatDouble(maxSteam)+" Steam"));
     }
 
     public void ManageCooldown(Player player){

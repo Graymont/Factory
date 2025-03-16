@@ -1,5 +1,8 @@
 package org.factory.factory.Utils;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -12,7 +15,9 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 
+import java.awt.*;
 import java.text.DecimalFormat;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,6 +28,14 @@ public class UserInterface {
 
     public static String checkSymbol = "✔";
     public static String xSymbol = "✘";
+
+
+    // color
+
+    public static String color_darkGreenAcid = "#538E1F";
+    public static String color_brightGreenAcid = "#6EDA10";
+
+    //
 
     public static String sendText(String text) {
         return text.replaceAll("&", "§");
@@ -89,7 +102,7 @@ public class UserInterface {
     }
 
     public static Inventory OpenGUI(Player p, int size, String name) {
-        Inventory gui = Bukkit.createInventory(new CustomInventoryHolder(null), size*9, name);
+        Inventory gui = Bukkit.createInventory(new CustomInventoryHolder(null), size*9, sendText("&n"+name));
 
         return gui;
     }
@@ -98,6 +111,77 @@ public class UserInterface {
         PlaySoundAt(Sound.ENTITY_VILLAGER_NO, player.getLocation(), 1, 1);
 
         return sendText("&4You don't have enough money! &c(you need "+FormatDouble(amount)+icon+" more!)");
+    }
+
+    public static String Notification_NoItem(Player player){
+        PlaySoundAt(Sound.ENTITY_VILLAGER_NO, player.getLocation(), 1, 1);
+
+        return sendText("&4You don't have enough ingredient!");
+    }
+
+    public static String Notification_InventoryFull(Player player){
+        PlaySoundAt(Sound.BLOCK_ENDER_CHEST_OPEN, player.getLocation(), 1, 0);
+
+        return sendText("&4Your inventory is full!");
+    }
+
+    public static String Notification_NoSteam(Player player){
+        PlaySoundAt(Sound.BLOCK_MUD_BRICKS_PLACE, player.getLocation(), 1, 0);
+
+        return sendText("&4You don't have enough steam!");
+    }
+
+    public static void Notification_ItemBroken(Player player){
+        PlaySoundAt(Sound.ENTITY_ITEM_BREAK, player.getLocation(), 1, 0);
+        player.sendTitle(" ", sendText("&cYour item is broken!"));
+        player.sendMessage(sendText("&4Your item is broken!"));
+    }
+
+    public static String formatItemName(String itemName) {
+        String[] words = itemName.split("_"); // Split by underscore
+        StringBuilder formattedName = new StringBuilder();
+
+        for (String word : words) {
+            formattedName.append(word.substring(0, 1).toUpperCase()) // Capitalize first letter
+                    .append(word.substring(1).toLowerCase()) // Lowercase rest
+                    .append(" "); // Add space
+        }
+
+        return formattedName.toString().trim(); // Trim trailing space
+    }
+
+    public static String GenerateSerialCode(){
+        return UUID.randomUUID().toString();
+    }
+
+    public static String GetDurabilityPercent(double durability, double maxDurability){
+        double totalPercent = durability/maxDurability*100;
+
+        if (totalPercent <= 5){
+            return sendText(" &8[ &5"+FormatDouble(totalPercent)+"% &8]");
+        }
+        else if (totalPercent <= 25){
+            return sendText(" &8[ &c"+FormatDouble(totalPercent)+"% &8]");
+        }
+        else if (totalPercent <= 35){
+            return sendText(" &8[ &6"+FormatDouble(totalPercent)+"% &8]");
+        }
+        else if (totalPercent <= 45){
+            return sendText(" &8[ &e"+FormatDouble(totalPercent)+"% &8]");
+        }
+        else if (totalPercent <= 55){
+            return sendText(" &8[ &2"+FormatDouble(totalPercent)+"% &8]");
+        }
+
+        return sendText(" &8[ &a"+FormatDouble(totalPercent)+"% &8]");
+    }
+
+    public static String sendRgbText(String text, String hex) {
+        return net.md_5.bungee.api.ChatColor.of(hex)+sendText(text);
+    }
+
+    public static String LocationDisplay(Location location){
+        return sendText("x: "+location.getBlockX()+" y:"+location.getBlockY()+" z:"+location.getBlockZ());
     }
 
 }

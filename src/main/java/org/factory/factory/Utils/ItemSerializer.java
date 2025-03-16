@@ -44,4 +44,35 @@ public class ItemSerializer {
         dataInput.close();
         return items;
     }
+
+    // Convert a single ItemStack to a Base64 string
+    public static String ItemStackToBase64(ItemStack item) throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
+
+        dataOutput.writeObject(item);
+        dataOutput.close();
+
+        return Base64.getEncoder().encodeToString(outputStream.toByteArray());
+    }
+
+    // Convert a Base64 string back to an ItemStack
+    public static ItemStack ItemStackFromBase64(String data) throws Exception {
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
+        BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream);
+
+        ItemStack item = (ItemStack) dataInput.readObject();
+        dataInput.close();
+
+        return item;
+    }
+
+    public static ItemStack loadSerializedItem(String storedData) {
+        try {
+            return ItemSerializer.ItemStackFromBase64(storedData);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null; // Return null if there's an error
+    }
 }

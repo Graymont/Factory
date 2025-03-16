@@ -12,7 +12,7 @@ public class VaultEconomy {
 
     public static Economy econ = null;
 
-    public static String icon = " ⛃";
+    public static String icon = "⛃";
 
     public static void setupEconomy() {
         RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);

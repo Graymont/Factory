@@ -9,7 +9,7 @@ public class Rarity {
         Epic,
         Legendary,
         Immortal,
-        Divine, COMMON;
+        Divine;
 
         public static RarityType parseRarity(String rarity){
             return switch (rarity) {

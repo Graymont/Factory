@@ -1,18 +1,22 @@
 package org.factory.factory;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+import org.factory.factory.Utils.ItemSerializer;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-import static org.factory.factory.Utils.UserInterface.consoleLog;
-import static org.factory.factory.Utils.UserInterface.sendText;
+import static org.factory.factory.Utils.FactoryItem.*;
+import static org.factory.factory.Utils.FactoryMachine.machineKey;
+import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
+import static org.factory.factory.Utils.UserInterface.*;
 
 public class Database {
 
@@ -30,7 +34,10 @@ public class Database {
     public static HashMap<String, Double> worthList = new HashMap<>();
     public static HashMap<String, ItemStack> itemList = new HashMap<>();
 
+    public static HashMap<String, Location> locationList = new HashMap<>();
+
     public static HashMap<String, List<ItemStack>> shopItemList = new HashMap<>();
+    public static HashMap<String, String> categoryList = new HashMap<>();
 
     public Database (Events e, Factory pl){
         events = e;
@@ -38,7 +45,15 @@ public class Database {
     }
 
     public static ItemStack GetItem(String name){
-        return itemList.get(name).clone();
+        ItemStack addedItem = new ItemStack(itemList.get(name).clone());
+        ItemMeta meta = addedItem.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        if (!container.has(GetNamespacedKey(machineKey), PersistentDataType.BOOLEAN) &&
+                !container.has(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN)){
+            container.set(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN, true);
+        }
+        addedItem.setItemMeta(meta);
+        return addedItem;
     }
 
     public static Double GetPrice(String name){
@@ -47,6 +62,10 @@ public class Database {
 
     public static Double GetWorth(String name){
         return worthList.get(name);
+    }
+
+    public static Location GetLocation(String name){
+        return locationList.get(name);
     }
 
     public static void SetPrice(String name, double price){
@@ -60,8 +79,21 @@ public class Database {
     }
 
     public static void SaveItem(String name, ItemStack item){
-        itemList.put(name, item.clone());
+        ItemStack addedItem = new ItemStack(item.clone());
+        ItemMeta meta = addedItem.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        if (!container.has(GetNamespacedKey(machineKey), PersistentDataType.BOOLEAN)
+                && !container.has(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN)){
+            container.set(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN, true);
+        }
+        addedItem.setItemMeta(meta);
+        itemList.put(name, addedItem.clone());
         consoleLog(sendText("&bSaved Items with name: &6"+name));
+    }
+
+    public static void SaveLocation(String name, Location location){
+        locationList.put(name, location);
+        consoleLog(sendText("&bSaved Location with name: &6"+name));
     }
 
 
@@ -78,6 +110,48 @@ public class Database {
     public static void RemoveItem(String name){
         itemList.remove(name);
         consoleLog(sendText("&bRemoved Item with name: &6"+name));
+    }
+
+    public static void RemoveLocation(String name){
+        locationList.remove(name);
+        consoleLog(sendText("&bRemoved Location with name: &6"+name));
+    }
+
+    static void SaveLocations(){
+        File file = new File(developmentPath, developmentItemFile);
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        String parent = "locations.";
+        for (String key : locationList.keySet()){
+            config.set(parent+key, locationList.get(key));
+        }
+        try{
+            config.save(file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void LoadLocations() {
+        File file = new File(developmentPath, developmentItemFile);
+
+        if (!file.exists()) {
+            consoleLog(sendText("&3[Factory Config] &eLocations file does not exist. No data loaded."));
+            return;
+        }
+
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        String parent = "locations";
+        String section = parent+".";
+
+        if (config.isConfigurationSection(parent)) {
+            Set<String> keys = config.getConfigurationSection(parent).getKeys(false);
+            for (String key : keys) {
+                locationList.put(key, config.getLocation(section + key));
+            }
+            consoleLog(sendText("&3[Factory Config] &aLocations loaded successfully!"));
+        } else {
+            consoleLog(sendText("&3[Factory Config] &cNo locations section found in file."));
+        }
     }
 
     static void SavePrices(){
@@ -98,7 +172,7 @@ public class Database {
         File file = new File(developmentPath, developmentDataFile);
 
         if (!file.exists()) {
-            consoleLog(sendText("&3[Factory] &ePrices file does not exist. No data loaded."));
+            consoleLog(sendText("&3[Factory Config] &ePrices file does not exist. No data loaded."));
             return;
         }
 
@@ -111,9 +185,9 @@ public class Database {
             for (String key : keys) {
                 priceList.put(key, config.getDouble(section + key));
             }
-            consoleLog(sendText("&3[Factory] &aPrices loaded successfully!"));
+            consoleLog(sendText("&3[Factory Config] &aPrices loaded successfully!"));
         } else {
-            consoleLog(sendText("&3[Factory] &cNo prices section found in file."));
+            consoleLog(sendText("&3[Factory Config] &cNo prices section found in file."));
         }
     }
 
@@ -135,7 +209,7 @@ public class Database {
         File file = new File(developmentPath, developmentDataFile);
 
         if (!file.exists()) {
-            consoleLog(sendText("&3[Factory] &eWorths file does not exist. No data loaded."));
+            consoleLog(sendText("&3[Factory Config] &eWorths file does not exist. No data loaded."));
             return;
         }
 
@@ -148,9 +222,9 @@ public class Database {
             for (String key : keys) {
                 worthList.put(key, config.getDouble(section + key));
             }
-            consoleLog(sendText("&3[Factory] &aPrices loaded successfully!"));
+            consoleLog(sendText("&3[Factory Config] &aPrices loaded successfully!"));
         } else {
-            consoleLog(sendText("&3[Factory] &cNo prices section found in file."));
+            consoleLog(sendText("&3[Factory Config] &cNo prices section found in file."));
         }
     }
 
@@ -158,86 +232,97 @@ public class Database {
         File file = new File(developmentPath, developmentDataFile);
 
         if (!file.exists()) {
-            consoleLog(sendText("&3[Factory] &eShop Items file does not exist. No data loaded."));
+            consoleLog(sendText("&3[Factory Config] &eShop Items file does not exist. No data loaded."));
             return;
         }
 
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
 
-        String parent = "farm_items";
-        if (config.isList(parent)) {
+        List<String> parentCategory = new ArrayList<>();
 
+        String parent = "category";
+        if (config.isList(parent)) {
             List<String> keys = config.getStringList(parent);
-            List<ItemStack> _iList = new ArrayList<>();
             for (String key : keys) {
-                Material material = Material.getMaterial(key);
-                if (material != null) {
-                    _iList.add(new ItemStack(material));
-                } else {
-                    consoleLog(sendText("&3[Factory] &cInvalid material: " + key));
-                }
+                List<String> keySplit = Arrays.asList(key.split(","));
+                String categoryKey = keySplit.getFirst();
+                String categorySlot = keySplit.get(1);
+                String categoryMaterial = keySplit.get(2);
+                String categoryDisplayname = keySplit.get(3);
+                categoryList.put(categoryKey+".slot", categorySlot);
+                categoryList.put(categoryKey+".material", Material.getMaterial(categoryMaterial).toString());
+                categoryList.put(categoryKey+".name", categoryDisplayname);
+
+                String formatCategory = categoryKey+"_items";
+                parentCategory.add(formatCategory);
+                consoleLog(sendText("&3[Factory Config] &aCategory " + formatCategory + " slot: "+categorySlot+" with material: "+categoryMaterial+" and displayname: "+categoryDisplayname+" loaded successfully!"));
             }
-            shopItemList.put(parent, _iList);
-            consoleLog(sendText("&3[Factory] &aShop Items category " + parent + " loaded successfully!"));
         } else {
-            consoleLog(sendText("&3[Factory] &cNo category " + parent + " section found in file."));
+            consoleLog(sendText("&3[Factory Config] &cNo category " + parent + " section found in file."));
         }
 
-        parent = "mineral_items";
-        if (config.isList(parent)) {
+        for (String category : parentCategory){
+            if (config.isList(category)) {
+                List<String> keys = config.getStringList(category);
+                List<ItemStack> _iList = new ArrayList<>();
+                for (String key : keys) {
+                    if (!key.contains("custom")){
+                        Material material = Material.getMaterial(key);
+                        if (material != null) {
+                            ItemStack addedItem = new ItemStack(material);
+                            ItemMeta addedItemMeta = addedItem.getItemMeta();
 
-            List<String> keys = config.getStringList(parent);
-            List<ItemStack> _iList = new ArrayList<>();
-            for (String key : keys) {
-                Material material = Material.getMaterial(key);
-                if (material != null) {
-                    _iList.add(new ItemStack(material));
-                } else {
-                    consoleLog(sendText("&3[Factory] &cInvalid material: " + key));
+                            PersistentDataContainer container = addedItemMeta.getPersistentDataContainer();
+                            /*Double worth = GetWorth(addedItem.getType().toString().toLowerCase().replaceAll("_", "").trim());
+                            if (worth != null){
+                                container.set(GetNamespacedKey(worthKey), PersistentDataType.DOUBLE, worth);
+                            }
+                            addedItem.setItemMeta(addedItemMeta);*/
+                            addedItem.setItemMeta(ProcessItemMeta(addedItem).getItemMeta());
+
+                            String serializedItem = "";
+                            try {
+                                serializedItem = ItemSerializer.ItemStackToBase64(addedItem);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+
+                            container.set(GetNamespacedKey("storeditem"), PersistentDataType.STRING, serializedItem);
+                            addedItem.setItemMeta(addedItemMeta);
+                            _iList.add(addedItem);
+                        } else {
+                            consoleLog(sendText("&3[Factory Config] &cInvalid material: " + key));
+                        }
+                    }else{
+                        String cItemKey = key.replaceAll(":custom", "").trim();
+                        ItemStack addedItem = GetItem(cItemKey);
+                        ItemMeta addedItemMeta = addedItem.getItemMeta();
+                        PersistentDataContainer container = addedItemMeta.getPersistentDataContainer();
+                        container.set(GetNamespacedKey("customitem"), PersistentDataType.BOOLEAN, true);
+                        container.set(GetNamespacedKey("configkey"), PersistentDataType.STRING, cItemKey+"_custom");
+
+                        String configKey = container.get(GetNamespacedKey("configkey"), PersistentDataType.STRING);
+                        Double worth = GetWorth(configKey);
+                        if (worth != null){
+                            container.set(GetNamespacedKey(worthKey), PersistentDataType.DOUBLE, worth);
+                        }
+                        addedItem.setItemMeta(addedItemMeta);
+                        String serializedItem = "";
+                        try {
+                            serializedItem = ItemSerializer.ItemStackToBase64(addedItem);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        container.set(GetNamespacedKey("storeditem"), PersistentDataType.STRING, serializedItem);
+                        addedItem.setItemMeta(addedItemMeta);
+                        _iList.add(addedItem);
+                    }
                 }
+                shopItemList.put(category, _iList);
+                consoleLog(sendText("&3[Factory Config] &aShop Items category " + category + " loaded successfully!"));
+            } else {
+                consoleLog(sendText("&3[Factory Config] &cNo category " + category + " section found in file."));
             }
-            shopItemList.put(parent, _iList);
-            consoleLog(sendText("&3[Factory] &aShop Items category " + parent + " loaded successfully!"));
-        } else {
-            consoleLog(sendText("&3[Factory] &cNo category " + parent + " section found in file."));
-        }
-
-        parent = "mob_items";
-        if (config.isList(parent)) {
-
-            List<String> keys = config.getStringList(parent);
-            List<ItemStack> _iList = new ArrayList<>();
-            for (String key : keys) {
-                Material material = Material.getMaterial(key);
-                if (material != null) {
-                    _iList.add(new ItemStack(material));
-                } else {
-                    consoleLog(sendText("&3[Factory] &cInvalid material: " + key));
-                }
-            }
-            shopItemList.put(parent, _iList);
-            consoleLog(sendText("&3[Factory] &aShop Items category " + parent + " loaded successfully!"));
-        } else {
-            consoleLog(sendText("&3[Factory] &cNo category " + parent + " section found in file."));
-        }
-
-        parent = "block_items";
-        if (config.isList(parent)) {
-
-            List<String> keys = config.getStringList(parent);
-            List<ItemStack> _iList = new ArrayList<>();
-            for (String key : keys) {
-                Material material = Material.getMaterial(key);
-                if (material != null) {
-                    _iList.add(new ItemStack(material));
-                } else {
-                    consoleLog(sendText("&3[Factory] &cInvalid material: " + key));
-                }
-            }
-            shopItemList.put(parent, _iList);
-            consoleLog(sendText("&3[Factory] &aShop Items category " + parent + " loaded successfully!"));
-        } else {
-            consoleLog(sendText("&3[Factory] &cNo category " + parent + " section found in file."));
         }
     }
 
@@ -263,7 +348,7 @@ public class Database {
         File file = new File(developmentPath, developmentItemFile);
 
         if (!file.exists()) {
-            consoleLog(sendText("&3[Factory] &eItems file does not exist. No data loaded."));
+            consoleLog(sendText("&3[Factory Config] &eItems file does not exist. No data loaded."));
             return;
         }
 
@@ -276,9 +361,9 @@ public class Database {
             for (String key : keys) {
                 itemList.put(key, config.getItemStack(section + key));
             }
-            consoleLog(sendText("&3[Factory] &aItems loaded successfully!"));
+            consoleLog(sendText("&3[Factory Config] &aItems loaded successfully!"));
         } else {
-            consoleLog(sendText("&3[Factory] &cNo items section found in file."));
+            consoleLog(sendText("&3[Factory Config] &cNo items section found in file."));
         }
     }
 
@@ -288,14 +373,16 @@ public class Database {
         LoadWorths();
         LoadItems();
         LoadShopItems();
-        consoleLog(sendText("&3[Factory] &aLoading all configuration data..."));
+        LoadLocations();
+        consoleLog(sendText("&3[Factory Config] &aLoading all configuration data..."));
     }
 
     public static void SaveAllData(){
         SavePrices();
         SaveWorths();
         SaveItems();
-        consoleLog(sendText("&3[Factory] &aSaving all configuration data..."));
+        SaveLocations();
+        consoleLog(sendText("&3[Factory Config] &aSaving all configuration data..."));
     }
 
 }

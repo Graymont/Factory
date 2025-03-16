@@ -11,8 +11,10 @@ import org.factory.factory.Factory;
 
 import java.io.File;
 import java.sql.*;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 public class SQLiteDatabase {
 
@@ -40,7 +42,8 @@ public class SQLiteDatabase {
         String sql = "CREATE TABLE IF NOT EXISTS PlacedMachines (location TEXT PRIMARY KEY, " +
                 "owner TEXT, uuid TEXT, taskId INTEGER, machineLevel INTEGER, speed INTEGER, productionRate INTEGER, " +
                 "steamConsumption INTEGER, durability INTEGER, maxDurability INTEGER, dropName TEXT, " +
-                "potentialDrop INTEGER, rarity TEXT, machineName TEXT)";
+                "potentialDrop INTEGER, rarity TEXT, machineName TEXT, status TEXT, totalProduction INTEGER, " +
+                "machineType TEXT, steamProduction INTEGER)";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sql);
         } catch (SQLException e) {
@@ -51,6 +54,14 @@ public class SQLiteDatabase {
                 "item TEXT)";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sql2);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        String sql3 = "CREATE TABLE IF NOT EXISTS StoredMachines (uuid TEXT PRIMARY KEY, " +
+                "item TEXT)";
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(sql3);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -66,8 +77,10 @@ public class SQLiteDatabase {
 
         createTable();
 
-        String sqlInsert = "INSERT OR REPLACE INTO PlacedMachines (location, owner, uuid, taskId, machineLevel, speed, productionRate, steamConsumption, durability, maxDurability, dropName, potentialDrop, rarity, machineName) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sqlInsert = "INSERT OR REPLACE INTO PlacedMachines (location, owner, uuid, taskId, machineLevel, " +
+                "speed, productionRate, steamConsumption, durability, maxDurability, dropName, potentialDrop, rarity, machineName, " +
+                "status, totalProduction, machineType, steamProduction) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sqlInsert)) {
             for (String key : placedMachines.keySet()) {
@@ -86,6 +99,12 @@ public class SQLiteDatabase {
                     String machineName = placedMachines.get(locationKey + ".machineName");
                     String rarity = placedMachines.get(locationKey + ".rarity");
 
+                    String machineType = placedMachines.get(locationKey + ".machineType");
+                    int steamProduction = Integer.parseInt(placedMachines.getOrDefault(locationKey + ".steamProduction", "0"));
+
+                    String status = placedMachines.get(locationKey + ".status");
+                    int totalProduction = Integer.parseInt(placedMachines.getOrDefault(locationKey + ".totalProduction", "0"));
+
 
                     String drop = placedMachines.get(locationKey + ".dropName");
                     int potentialDrop = Integer.parseInt(placedMachines.getOrDefault(locationKey + ".potentialDrop", "1"));
@@ -103,6 +122,10 @@ public class SQLiteDatabase {
                     pstmt.setInt(12, potentialDrop);
                     pstmt.setString(13, rarity);
                     pstmt.setString(14, machineName);
+                    pstmt.setString(15, status);
+                    pstmt.setInt(16, totalProduction);
+                    pstmt.setString(17, machineType);
+                    pstmt.setInt(18, steamProduction);
 
                     pstmt.addBatch();
                 }
@@ -142,6 +165,10 @@ public class SQLiteDatabase {
                 placedMachines.put(location + ".potentialDrop", String.valueOf(rs.getInt("potentialDrop")));
                 placedMachines.put(location + ".rarity", rs.getString("rarity"));
                 placedMachines.put(location + ".machineName", rs.getString("machineName"));
+                placedMachines.put(location + ".status", rs.getString("status"));
+                placedMachines.put(location + ".totalProduction", String.valueOf(rs.getInt("totalProduction")));
+                placedMachines.put(location + ".machineType", rs.getString("machineType"));
+                placedMachines.put(location + ".steamProduction", String.valueOf(rs.getInt("steamProduction")));
             }
 
         } catch (SQLException e) {
@@ -216,6 +243,71 @@ public class SQLiteDatabase {
         return machineItems;
     }
 
+    public void SaveStoredMachines(HashMap<UUID, List<ItemStack>> storedMachines){
+        if (connection == null || !isConnected()) {
+            System.err.println("SQLite connection is null or closed.");
+            return;
+        }
+
+        clearStoredMachinesTable(); // clear table supaya refresh
+
+        createTable();
+
+        String sqlInsert = "INSERT OR REPLACE INTO StoredMachines (uuid, item) " +
+                "VALUES (?, ?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sqlInsert)) {
+            String serializedItem = "";
+            for (UUID uuid : storedMachines.keySet()) {
+                try {
+                    ItemStack[] itemToAdd = storedMachines.get(uuid).toArray(new ItemStack[0]);
+                    serializedItem = ItemSerializer.ItemStackArrayToBase64(itemToAdd);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                pstmt.setString(1, ""+uuid);
+                pstmt.setString(2, serializedItem);
+
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public HashMap<UUID, List<ItemStack>> LoadStoredMachines(Connection connection) {
+        if (connection == null || !isConnected()) {
+            System.err.println("SQLite connection is null or closed.");
+            return new HashMap<>();
+        }
+
+        createTable();
+        HashMap<UUID, List<ItemStack>> storedMachines = new HashMap<>();
+        String query = "SELECT * FROM StoredMachines";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+
+            while (rs.next()) {
+                UUID uuid = UUID.fromString(rs.getString("uuid"));
+
+                String serializedItem = rs.getString("item");
+                ItemStack[] items = ItemSerializer.ItemStackArrayFromBase64(serializedItem);
+                //ItemStack loadedItem = items[0];
+
+                storedMachines.put(uuid, Arrays.asList(items));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return storedMachines;
+    }
+
     public static Location parseLocationString(String locString) {
         try {
             // Extract the world name
@@ -266,6 +358,15 @@ public class SQLiteDatabase {
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.executeUpdate();
             System.out.println("MachineItems table cleared successfully.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    public void clearStoredMachinesTable() {
+        String sql = "DELETE FROM StoredMachines";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.executeUpdate();
+            System.out.println("StoredMachines table cleared successfully.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
