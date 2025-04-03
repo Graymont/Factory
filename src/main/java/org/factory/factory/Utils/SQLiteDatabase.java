@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -16,9 +17,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+import static org.factory.factory.Events.*;
+import static org.factory.factory.Factory.getMainPlugin;
+import static org.factory.factory.Utils.CooldownManager.*;
+import static org.factory.factory.Utils.PlayerProgress.playerExp;
+import static org.factory.factory.Utils.PlayerProgress.playerLevel;
+import static org.factory.factory.Utils.UserInterface.*;
+
 public class SQLiteDatabase {
 
-    public Connection connection;
+    public static Connection connection;
 
     public void connect() {
         try {
@@ -38,7 +46,7 @@ public class SQLiteDatabase {
         }
     }
 
-    public void createTable() {
+    public static void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS PlacedMachines (location TEXT PRIMARY KEY, " +
                 "owner TEXT, uuid TEXT, taskId INTEGER, machineLevel INTEGER, speed INTEGER, productionRate INTEGER, " +
                 "steamConsumption INTEGER, durability INTEGER, maxDurability INTEGER, dropName TEXT, " +
@@ -65,9 +73,139 @@ public class SQLiteDatabase {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
+        String sql4 = "CREATE TABLE IF NOT EXISTS Backpack (id TEXT PRIMARY KEY, " +
+                "item TEXT)";
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(sql4);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        String sql5 = "CREATE TABLE IF NOT EXISTS PlayerLeveling (uuid TEXT PRIMARY KEY, " +
+                "playerName TEXT, level INTEGER, exp INTEGER)";
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(sql5);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        String sql6 = "CREATE TABLE IF NOT EXISTS PlayerCooldown (uuid TEXT PRIMARY KEY, " +
+                "playerName TEXT, cooldownName TEXT, cooldown INTEGER)";
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(sql6);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void SaveMachineData(HashMap<String, String> placedMachines){
+    public static void SavePlayerProgress(Player player) {
+        String sql = "INSERT OR REPLACE INTO PlayerLeveling (uuid, playerName, level, exp) VALUES (?, ?, ?, ?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, player.getUniqueId().toString());
+            pstmt.setString(2, player.getName());
+            pstmt.setInt(3, playerLevel.get(player));
+            pstmt.setDouble(4, playerExp.get(player));
+            pstmt.executeUpdate();
+
+            consoleLog(sendText("&aSaved Player Leveling of &2" + player.getName() + " &a(level: " + playerLevel.get(player) + " exp: " + playerExp.get(player) + ")"));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        sql = "INSERT OR REPLACE INTO PlayerCooldown (uuid, playerName, cooldownName, cooldown) VALUES (?, ?, ?, ?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            for (CooldownManager.CooldownType cooldownType : CooldownManager.CooldownType.values()){
+                pstmt.setString(1, player.getUniqueId().toString());
+                pstmt.setString(2, player.getName());
+                pstmt.setString(3, cooldownType.toString());
+                pstmt.setLong(4, getRemainingTime(player, cooldownType));
+                pstmt.executeUpdate();
+                consoleLog(sendText("&aSaved Player Cooldown of &2" + player.getName() + " &a(cooldownType: " + cooldownType.toString() + " cooldown: " + getRemainingTime(player, cooldownType) + ")"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void LoadPlayerProgress(Player player) {
+        String sql = "SELECT level, exp FROM PlayerLeveling WHERE uuid = ?"; // Fixed column names
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, player.getUniqueId().toString());
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                playerLevel.put(player, rs.getInt("level"));
+                playerExp.put(player, rs.getDouble("exp"));
+
+                consoleLog(sendText("&aLoaded Player Leveling of &2" + player.getName() + " &a(level: " + playerLevel.get(player) + " exp: " + playerExp.get(player) + ")"));
+            } else {
+                consoleLog(sendText("&cNo progress found for &4" + player.getName()));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        sql = "SELECT cooldownName, cooldown FROM PlayerCooldown WHERE uuid = ?"; // Fixed column names
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, player.getUniqueId().toString());
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                String cooldownName = rs.getString("cooldownName");
+                long cooldown = rs.getLong("cooldown");
+
+                setCooldown(player, CooldownType.parseCooldown(cooldownName), (int) cooldown);
+
+                consoleLog(sendText("&aLoaded Player Cooldown of &2" + player.getName() + " &a(cooldownName: " + cooldownName + " cooldown: " + cooldown + ")"));
+            } else {
+                consoleLog(sendText("&cNo progress found for &4" + player.getName()));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static void SaveBackpack(String id, String itemData) {
+        String sql = "INSERT INTO Backpack (id, item) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET item = excluded.item";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, id);
+            pstmt.setString(2, itemData);
+            pstmt.executeUpdate();
+
+            consoleLog(sendText("&aSaved Backpack with id: &2"+id));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String GetBackpackItem(String id) {
+        String sql = "SELECT item FROM Backpack WHERE id = ?";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, id); // Set the backpack ID
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("item"); // Return the stored serialized item data
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public static void SaveMachineData(HashMap<String, String> placedMachines){
         if (connection == null || !isConnected()) {
             System.err.println("SQLite connection is null or closed.");
             return;
@@ -136,7 +274,7 @@ public class SQLiteDatabase {
         }
     }
 
-    public HashMap<String, String> LoadMachineData(Connection connection) {
+    public static HashMap<String, String> LoadMachineData(Connection connection) {
         if (connection == null || !isConnected()) {
             System.err.println("SQLite connection is null or closed.");
             return new HashMap<>();
@@ -178,7 +316,7 @@ public class SQLiteDatabase {
         return placedMachines;
     }
 
-    public void SaveMachineItems(HashMap<Location, ItemStack> machineItems){
+    public static void SaveMachineItems(HashMap<Location, ItemStack> machineItems){
         if (connection == null || !isConnected()) {
             System.err.println("SQLite connection is null or closed.");
             return;
@@ -210,7 +348,7 @@ public class SQLiteDatabase {
         }
     }
 
-    public HashMap<Location, ItemStack> LoadMachineItems(Connection connection) {
+    public static HashMap<Location, ItemStack> LoadMachineItems(Connection connection) {
         if (connection == null || !isConnected()) {
             System.err.println("SQLite connection is null or closed.");
             return new HashMap<>();
@@ -243,7 +381,7 @@ public class SQLiteDatabase {
         return machineItems;
     }
 
-    public void SaveStoredMachines(HashMap<UUID, List<ItemStack>> storedMachines){
+    public static void SaveStoredMachines(HashMap<UUID, List<ItemStack>> storedMachines){
         if (connection == null || !isConnected()) {
             System.err.println("SQLite connection is null or closed.");
             return;
@@ -276,7 +414,7 @@ public class SQLiteDatabase {
         }
     }
 
-    public HashMap<UUID, List<ItemStack>> LoadStoredMachines(Connection connection) {
+    public static HashMap<UUID, List<ItemStack>> LoadStoredMachines(Connection connection) {
         if (connection == null || !isConnected()) {
             System.err.println("SQLite connection is null or closed.");
             return new HashMap<>();
@@ -344,7 +482,7 @@ public class SQLiteDatabase {
         }
     }
 
-    public void clearPlacedMachineTable() {
+    public static void clearPlacedMachineTable() {
         String sql = "DELETE FROM PlacedMachines";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.executeUpdate();
@@ -353,7 +491,7 @@ public class SQLiteDatabase {
             e.printStackTrace();
         }
     }
-    public void clearMachineItemsTable() {
+    public static void clearMachineItemsTable() {
         String sql = "DELETE FROM MachineItems";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.executeUpdate();
@@ -362,7 +500,7 @@ public class SQLiteDatabase {
             e.printStackTrace();
         }
     }
-    public void clearStoredMachinesTable() {
+    public static void clearStoredMachinesTable() {
         String sql = "DELETE FROM StoredMachines";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.executeUpdate();
@@ -372,7 +510,7 @@ public class SQLiteDatabase {
         }
     }
 
-    public void disconnect() {
+    public static void disconnect() {
         try {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
@@ -383,16 +521,35 @@ public class SQLiteDatabase {
         }
     }
 
-    public Connection getConnection() {
+    public static Connection getConnection() {
         return connection;
     }
 
-    public boolean isConnected() {
+    public static boolean isConnected() {
         try {
             return connection != null && !connection.isClosed();
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public static void SaveAllPlayerProgress(){
+        for (Player player : Bukkit.getOnlinePlayers()){
+            SavePlayerProgress(player);
+            HandleCloseEvent(player);
+        }
+    }
+
+
+    public static void SaveAllProgress(){
+        Broadcast(" ");
+        Broadcast(" &8☗ &7Saving&8...");
+        //Broadcast(" &4⚠ &7&o(please do not quit until saving process completed)");
+        SaveMachineData(placedMachines);
+        SaveMachineItems(machineItems);
+        SaveStoredMachines(storedMachines);
+        SaveAllPlayerProgress();
+        Broadcast(" &8☗ &8[&aSaving Completed&8]");
     }
 }

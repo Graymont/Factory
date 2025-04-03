@@ -12,8 +12,7 @@ public class Rarity {
         Divine;
 
         public static RarityType parseRarity(String rarity){
-            return switch (rarity) {
-                case "common" -> RarityType.Common;
+            return switch (rarity.toLowerCase()) {
                 case "uncommon" -> RarityType.Uncommon;
                 case "rare" -> RarityType.Rare;
                 case "epic" -> RarityType.Epic;

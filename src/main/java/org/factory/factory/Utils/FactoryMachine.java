@@ -11,8 +11,11 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.factory.factory.Database.GetItem;
+import static org.factory.factory.Database.*;
+import static org.factory.factory.Events.machineItems;
+import static org.factory.factory.Events.placedMachines;
 import static org.factory.factory.Factory.getMainPlugin;
+import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.UserInterface.*;
 
@@ -36,14 +39,37 @@ public class FactoryMachine {
             name = "Steam";
             material = Material.SMOKER;
         }
-        ItemStack obtainedMachine = CreateMachine(formatItemName(name)+" Machine", 1, machineBaseSpeed, 1,
-                machineBaseSteamConsumption, machineBaseDurability, machineBaseDurability, material, name.toLowerCase(), 1,
-                Rarity.RarityType.Common, "Active", 0, type, machineBaseSteamProduction);
 
-        return obtainedMachine;
+        String removedUnderscore = name.replaceAll("_", "").trim();
+        Double sConsumption = GetPrice(removedUnderscore+"machine_custom");
+
+        if (sConsumption == null){
+            sConsumption = 0.0;
+        }
+
+        int steamConsumptionCalculation = (int) (sConsumption*0.01);
+        if (steamConsumptionCalculation < 1){
+            steamConsumptionCalculation = 1;
+        }
+
+        Integer machineLevelMinimum = GetLevelMinimum(removedUnderscore.toLowerCase()+"machine");
+        if (machineLevelMinimum == null){
+            machineLevelMinimum = 1;
+        }
+        consoleLog("Machine Level Minimum: "+removedUnderscore.toLowerCase()+"machine"+" ("+machineLevelMinimum+")");
+
+        ItemStack obtainedMachine = new ItemStack(CreateMachine(formatItemName(name)+" Machine", 1, machineBaseSpeed, 1,
+                machineBaseSteamConsumption+steamConsumptionCalculation, machineBaseDurability, machineBaseDurability, material, name.toLowerCase().replaceAll("_", "").trim().replaceAll(" ", "").trim(), 1,
+                Rarity.RarityType.Common, "Active", 0, type, machineBaseSteamProduction, true, machineLevelMinimum));
+
+
+        /*consoleLog("Removed Underscore: "+removedUnderscore);
+        consoleLog("sConsumption from price: "+sConsumption);
+        consoleLog("SteamConsumption of "+removedUnderscore+": "+steamConsumptionCalculation);*/
+        return obtainedMachine.clone();
     }
 
-    public static int machineMaxLevel = 100;
+    public static int machineMaxLevel = 30;
     public static int machineBaseSpeed = 35;
     public static int machineBaseSteamConsumption = 3;
     public static int machineBaseSteamProduction = 3;
@@ -90,7 +116,8 @@ public class FactoryMachine {
 
     public static ItemStack CreateMachine(String name, int machineLevel, long speed, int productionRate, int steamConsumption,
                                           int durability, int maxDurability, Material material, String dropName, int potentialDrop,
-                                          Rarity.RarityType rarity, String status, int totalProduction, MachineType machineType, int steamProduction) {
+                                          Rarity.RarityType rarity, String status, int totalProduction, MachineType machineType,
+                                          int steamProduction, boolean canUse, int levelMinimum) {
 
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -120,7 +147,20 @@ public class FactoryMachine {
 
         container.set(GetNamespacedKey(serialCodeKey), PersistentDataType.STRING, GenerateSerialCode());
 
+
+
+        container.set(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN, canUse);
+
+
+
+        container.set(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER, levelMinimum);
+
         ItemStack dropItem = GetItem(dropName).clone();
+
+        Double productValue = dropItem.getItemMeta().getPersistentDataContainer().get(GetNamespacedKey(worthKey), PersistentDataType.DOUBLE);
+        if (productValue == null){
+            productValue = 0.0;
+        }
 
         // Set item display name and lore
         meta.setDisplayName(sendText(Rarity.getColor(rarity)+name));
@@ -131,6 +171,12 @@ public class FactoryMachine {
         itemLore.add(sendText(" &8♦ &7Machine Level: "+machineLevel));
         itemLore.add(sendText(" &8♦ &7Machine Status: "+status));
         itemLore.add(sendText(" &8♦ &7Total Production: "+totalProduction));
+        itemLore.add(sendText(" &8♦ &7Product Value: "+FormatDouble(productValue)));
+        if (canUse){
+            itemLore.add(sendText(" &8♦ &7Level Minimum to Place: &a"+levelMinimum+" &2✔"));
+        }else{
+            itemLore.add(sendText(" &8♦ &7Level Minimum to Place: &c"+levelMinimum+" &4✘"));
+        }
         itemLore.add(sendText(" "));
         itemLore.add(sendText(rarityColor+"&9Attributes"));
         itemLore.add(sendText(" &e⚡ &7Speed: &f" + speed+" &9seconds"));
@@ -206,60 +252,75 @@ public class FactoryMachine {
         Integer totalProduction = container.get(GetNamespacedKey(totalProductionKey), PersistentDataType.INTEGER);
         String machineType = container.get(GetNamespacedKey(machineTypeKey), PersistentDataType.STRING);
         Integer steamProduction = container.get(GetNamespacedKey(steamProductionKey), PersistentDataType.INTEGER);
+        Integer levelMinimum = container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER);
+
+        Boolean canUse = container.get(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN);
 
         item = new ItemStack(CreateMachine(name, machineLevel, speed, productionRate
                 , steamConsumption, durability, maxDurability, material, dropName, potentialDrop, Rarity.RarityType.parseRarity(rarity),
-                status, totalProduction, MachineType.parseType(machineType), steamProduction));
+                status, totalProduction, MachineType.parseType(machineType), steamProduction, canUse, levelMinimum));
+
+        /*meta = item.getItemMeta();
+        container = meta.getPersistentDataContainer();
+        container.set(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN, canUse);
+        item.setItemMeta(meta);*/
 
         return item;
     }
 
     public static void RefreshMachine(Location location){
-        ItemStack previousItem = getMainPlugin().events.machineItems.get(location);
+        ItemStack previousItem = machineItems.get(location);
         ItemMeta previousItemMeta = previousItem.getItemMeta();
         PersistentDataContainer previousContainer = previousItemMeta.getPersistentDataContainer();
-        int currentLevel = Integer.parseInt(getMainPlugin().events.placedMachines.get(location+__machineLevelKey));
+        int currentLevel = Integer.parseInt(placedMachines.get(location+__machineLevelKey));
+        //consoleLog(sendText("Level from refresh: "+currentLevel));
 
-        String machineName = sendText(previousItemMeta.getDisplayName());
 
         // -- Upgrade
-        Long speed = (long) (machineBaseSpeed-(currentLevel/4));
-        getMainPlugin().events.placedMachines.put(location+__speedKey, ""+speed);
+        Long speed = (long) (machineBaseSpeed-(currentLevel));
+        placedMachines.put(location+__speedKey, ""+speed);
 
         Integer steamConsumption = machineBaseSteamConsumption+currentLevel+2;
-        getMainPlugin().events.placedMachines.put(location+__steamConsumptionKey, ""+steamConsumption);
+        placedMachines.put(location+__steamConsumptionKey, ""+steamConsumption);
 
         Integer durability = (machineBaseDurability+currentLevel*100);
-        getMainPlugin().events.placedMachines.put(location+__durabilityKey, ""+durability);
+        placedMachines.put(location+__durabilityKey, ""+durability);
 
         Integer maxDurability = durability;
-        getMainPlugin().events.placedMachines.put(location+__maxDurabilityKey, ""+maxDurability);
+        placedMachines.put(location+__maxDurabilityKey, ""+maxDurability);
 
         Integer steamProduction = machineBaseSteamProduction+currentLevel+2;
-        getMainPlugin().events.placedMachines.put(location+__steamProductionKey, ""+steamProduction);
+        placedMachines.put(location+__steamProductionKey, ""+steamProduction);
 
-        Integer productionRate = 1;
+        Integer potentialDrop = previousContainer.get(GetNamespacedKey(potentialDropKey), PersistentDataType.INTEGER);
 
-        Rarity.RarityType rarity = Rarity.RarityType.parseRarity(previousContainer.get(GetNamespacedKey(rarityKey), PersistentDataType.STRING));
+        Rarity.RarityType rarity = Rarity.RarityType.parseRarity(placedMachines.get(location+__rarityKey));
+
+        String machineName = uncolouredText(previousItemMeta.getDisplayName());
+        placedMachines.put(location+__machineNameKey, Rarity.getColor(rarity)+machineName);
+
+        consoleLog(sendText("Machine Name: "+placedMachines.get(location+__machineNameKey)));
+
         switch (rarity){
             case Rarity.RarityType.Common ->
-                    productionRate = 1;
+                    potentialDrop = 1;
             case Rarity.RarityType.Uncommon ->
-                    productionRate = 2;
+                    potentialDrop = 2;
             case Rarity.RarityType.Rare ->
-                    productionRate = 3;
+                    potentialDrop = 3;
             case Rarity.RarityType.Epic ->
-                    productionRate = 4;
+                    potentialDrop = 4;
             case Rarity.RarityType.Legendary ->
-                    productionRate = 5;
+                    potentialDrop = 5;
             case Rarity.RarityType.Immortal ->
-                    productionRate = 6;
+                    potentialDrop = 6;
         }
+
+        placedMachines.put(location+__potentialDropKey, ""+potentialDrop);
 
         // ---
 
 
-        Integer potentialDrop = previousContainer.get(GetNamespacedKey(potentialDropKey), PersistentDataType.INTEGER);
         String dropName = previousContainer.get(GetNamespacedKey(dropNameKey), PersistentDataType.STRING);
         Material material = previousItem.getType();
 
@@ -267,13 +328,15 @@ public class FactoryMachine {
 
         String machineType = previousContainer.get(GetNamespacedKey(machineTypeKey), PersistentDataType.STRING);
 
-        Integer totalProduction = Integer.parseInt(getMainPlugin().events.placedMachines.get(location+__totalProductionKey));
+        Integer totalProduction = Integer.parseInt(placedMachines.get(location+__totalProductionKey));
 
-        ItemStack newItem = CreateMachine(machineName, currentLevel, speed, productionRate
+        Integer levelMinimum = previousContainer.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER);
+
+        ItemStack newItem = new ItemStack(CreateMachine(machineName, currentLevel, speed, 1
                 , steamConsumption, durability, maxDurability, material, dropName, potentialDrop, rarity,
-                status, totalProduction, MachineType.parseType(machineType), steamProduction);
+                status, totalProduction, MachineType.parseType(machineType), steamProduction, true, levelMinimum));
 
-        getMainPlugin().events.machineItems.put(location, newItem);
+        machineItems.put(location, newItem.clone());
     }
 
 }

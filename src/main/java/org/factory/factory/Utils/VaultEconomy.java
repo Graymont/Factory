@@ -5,8 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
 import static org.bukkit.Bukkit.getServer;
-import static org.factory.factory.Utils.UserInterface.FormatDouble;
-import static org.factory.factory.Utils.UserInterface.sendText;
+import static org.factory.factory.Utils.UserInterface.*;
 
 public class VaultEconomy {
 
@@ -31,13 +30,13 @@ public class VaultEconomy {
         getEconomy().depositPlayer(player, amount);
 
         if (amount > 0){
-            player.sendMessage(sendText("&a+"+FormatDouble(amount)+icon));
+            player.sendMessage(sendRgbText("+"+FormatDouble(amount)+icon, color_brightGreenAcid));
         }
     }
 
     public static void RemovePlayerBalance(Player player, double amount){
         getEconomy().withdrawPlayer(player, amount);
-        player.sendMessage(sendText("&c-"+FormatDouble(amount)+icon));
+        player.sendMessage(sendRgbText("-"+FormatDouble(amount)+icon, color_darkRed));
     }
 
 }

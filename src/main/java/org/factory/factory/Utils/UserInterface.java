@@ -16,12 +16,15 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 
 import java.awt.*;
+import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
+import java.util.Base64;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.bukkit.Bukkit.getServer;
+import static org.factory.factory.Utils.CooldownManager.*;
 import static org.factory.factory.Utils.VaultEconomy.icon;
 
 public class UserInterface {
@@ -34,6 +37,8 @@ public class UserInterface {
 
     public static String color_darkGreenAcid = "#538E1F";
     public static String color_brightGreenAcid = "#6EDA10";
+
+    public static String color_darkRed = "#A4162D";
 
     //
 
@@ -107,6 +112,18 @@ public class UserInterface {
         return gui;
     }
 
+    public static Inventory OpenChest(Player p, int size, String name) {
+        Inventory gui = Bukkit.createInventory(p, size*9, sendText("&n"+name));
+
+        return gui;
+    }
+
+    public static Inventory OpenBackpack(int size, String name) {
+        Inventory gui = Bukkit.createInventory(new BackpackHolder(null), size*9, sendText("&n"+name));
+
+        return gui;
+    }
+
     public static String Notification_NoMoney(Player player, double amount){
         PlaySoundAt(Sound.ENTITY_VILLAGER_NO, player.getLocation(), 1, 1);
 
@@ -137,6 +154,14 @@ public class UserInterface {
         player.sendMessage(sendText("&4Your item is broken!"));
     }
 
+    public static String Notification_NoLevel(Player player){
+        return sendText("&4Your level is too low!");
+    }
+
+    public static String Notification_HasCooldown(Player player, CooldownManager.CooldownType type){
+        return sendText("&4Still on cooldown! &c("+getFormattedRemainingTime(player, type)+" left)");
+    }
+
     public static String formatItemName(String itemName) {
         String[] words = itemName.split("_"); // Split by underscore
         StringBuilder formattedName = new StringBuilder();
@@ -154,8 +179,20 @@ public class UserInterface {
         return UUID.randomUUID().toString();
     }
 
+    public static String GenerateShortSerialCode() {
+        UUID uuid = UUID.randomUUID();
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[16]);
+        buffer.putLong(uuid.getMostSignificantBits());
+        buffer.putLong(uuid.getLeastSignificantBits());
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(buffer.array());
+    }
+
     public static String GetDurabilityPercent(double durability, double maxDurability){
         double totalPercent = durability/maxDurability*100;
+
+        if (totalPercent == 0){
+            return sendText(" &8[ &4"+FormatDouble(totalPercent)+"% &8]");
+        }
 
         if (totalPercent <= 5){
             return sendText(" &8[ &5"+FormatDouble(totalPercent)+"% &8]");
@@ -182,6 +219,12 @@ public class UserInterface {
 
     public static String LocationDisplay(Location location){
         return sendText("x: "+location.getBlockX()+" y:"+location.getBlockY()+" z:"+location.getBlockZ());
+    }
+
+    public static void Broadcast(String text){
+        for (Player player : Bukkit.getOnlinePlayers()){
+            player.sendMessage(sendText(text));
+        }
     }
 
 }

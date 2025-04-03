@@ -39,6 +39,8 @@ public class Database {
     public static HashMap<String, List<ItemStack>> shopItemList = new HashMap<>();
     public static HashMap<String, String> categoryList = new HashMap<>();
 
+    public static HashMap<String, Integer> levelMinimumList = new HashMap<>();
+
     public Database (Events e, Factory pl){
         events = e;
         plugin = pl;
@@ -68,6 +70,10 @@ public class Database {
         return locationList.get(name);
     }
 
+    public static Integer GetLevelMinimum(String name){
+        return levelMinimumList.get(name);
+    }
+
     public static void SetPrice(String name, double price){
         priceList.put(name, price);
         consoleLog(sendText("&bSaved Price: &6"+name+" &b(&eprice"+price+"&b)"));
@@ -76,6 +82,11 @@ public class Database {
     public static void SetWorth(String name, double price){
         worthList.put(name, price);
         consoleLog(sendText("&bSaved Worth: &6"+name+" &b(&eprice"+price+"&b)"));
+    }
+
+    public static void SetLevelMinimum(String name, int level){
+        levelMinimumList.put(name, level);
+        consoleLog(sendText("&bSaved Level Requirement: &6"+name+" &b(&eprice"+level+"&b)"));
     }
 
     public static void SaveItem(String name, ItemStack item){
@@ -117,7 +128,7 @@ public class Database {
         consoleLog(sendText("&bRemoved Location with name: &6"+name));
     }
 
-    static void SaveLocations(){
+    public static void SaveLocations(){
         File file = new File(developmentPath, developmentItemFile);
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
         String parent = "locations.";
@@ -131,7 +142,7 @@ public class Database {
         }
     }
 
-    static void LoadLocations() {
+    public static void LoadLocations() {
         File file = new File(developmentPath, developmentItemFile);
 
         if (!file.exists()) {
@@ -154,7 +165,7 @@ public class Database {
         }
     }
 
-    static void SavePrices(){
+    public static void SavePrices(){
         File file = new File(developmentPath, developmentDataFile);
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
         String parent = "prices.";
@@ -168,7 +179,7 @@ public class Database {
         }
     }
 
-    static void LoadPrices() {
+    public static void LoadPrices() {
         File file = new File(developmentPath, developmentDataFile);
 
         if (!file.exists()) {
@@ -191,7 +202,7 @@ public class Database {
         }
     }
 
-    static void SaveWorths(){
+    public static void SaveWorths(){
         File file = new File(developmentPath, developmentDataFile);
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
         String parent = "worths.";
@@ -205,7 +216,7 @@ public class Database {
         }
     }
 
-    static void LoadWorths() {
+    public static void LoadWorths() {
         File file = new File(developmentPath, developmentDataFile);
 
         if (!file.exists()) {
@@ -228,7 +239,9 @@ public class Database {
         }
     }
 
-    static void LoadShopItems() {
+    public static int maxCategoryPage = 10;
+
+    public static void LoadShopItems() {
         File file = new File(developmentPath, developmentDataFile);
 
         if (!file.exists()) {
@@ -298,15 +311,10 @@ public class Database {
                         ItemStack addedItem = GetItem(cItemKey);
                         ItemMeta addedItemMeta = addedItem.getItemMeta();
                         PersistentDataContainer container = addedItemMeta.getPersistentDataContainer();
+
                         container.set(GetNamespacedKey("customitem"), PersistentDataType.BOOLEAN, true);
                         container.set(GetNamespacedKey("configkey"), PersistentDataType.STRING, cItemKey+"_custom");
 
-                        String configKey = container.get(GetNamespacedKey("configkey"), PersistentDataType.STRING);
-                        Double worth = GetWorth(configKey);
-                        if (worth != null){
-                            container.set(GetNamespacedKey(worthKey), PersistentDataType.DOUBLE, worth);
-                        }
-                        addedItem.setItemMeta(addedItemMeta);
                         String serializedItem = "";
                         try {
                             serializedItem = ItemSerializer.ItemStackToBase64(addedItem);
@@ -318,7 +326,20 @@ public class Database {
                         _iList.add(addedItem);
                     }
                 }
-                shopItemList.put(category, _iList);
+
+                for (int i = 1; i < maxCategoryPage+1; i++) {
+                    shopItemList.put(category+i, new ArrayList<>());
+                }
+
+                int currentPage = 1;
+                for (ItemStack item : _iList){
+                    if (shopItemList.get(category+currentPage).size() >= 46){
+                        currentPage++;
+                    }
+                    shopItemList.get(category+currentPage).add(item.clone());
+                }
+
+                //shopItemList.put(category, _iList);
                 consoleLog(sendText("&3[Factory Config] &aShop Items category " + category + " loaded successfully!"));
             } else {
                 consoleLog(sendText("&3[Factory Config] &cNo category " + category + " section found in file."));
@@ -326,14 +347,51 @@ public class Database {
         }
     }
 
+    // level requirements
+    public static void SaveLevelMinimums(){
+        File file = new File(developmentPath, developmentDataFile);
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        String parent = "level-minimums.";
+        for (String key : levelMinimumList.keySet()){
+            config.set(parent+key, levelMinimumList.get(key));
+        }
+        try{
+            config.save(file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    public static void LoadLevelMinimums() {
+        File file = new File(developmentPath, developmentDataFile);
+
+        if (!file.exists()) {
+            consoleLog(sendText("&3[Factory Config] &eLevel Requirements file does not exist. No data loaded."));
+            return;
+        }
+
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        String parent = "level-minimums";
+        String section = parent+".";
+
+        if (config.isConfigurationSection(parent)) {
+            Set<String> keys = config.getConfigurationSection(parent).getKeys(false);
+            for (String key : keys) {
+                levelMinimumList.put(key, config.getInt(section + key));
+            }
+            consoleLog(sendText("&3[Factory Config] &aLevel Requirements loaded successfully!"));
+        } else {
+            consoleLog(sendText("&3[Factory Config] &cNo Level Requirements section found in file."));
+        }
+    }
 
     // items
 
-    static void SaveItems(){
+    public static void SaveItems(){
         File file = new File(developmentPath, developmentItemFile);
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
         String parent = "items.";
+        config.set("items", null);
         for (String key : itemList.keySet()){
             config.set(parent+key, itemList.get(key));
         }
@@ -344,7 +402,7 @@ public class Database {
         }
     }
 
-    static void LoadItems() {
+    public static void LoadItems() {
         File file = new File(developmentPath, developmentItemFile);
 
         if (!file.exists()) {
@@ -371,6 +429,7 @@ public class Database {
     public static void LoadAllData(){
         LoadPrices();
         LoadWorths();
+        LoadLevelMinimums();
         LoadItems();
         LoadShopItems();
         LoadLocations();
@@ -380,6 +439,7 @@ public class Database {
     public static void SaveAllData(){
         SavePrices();
         SaveWorths();
+        SaveLevelMinimums();
         SaveItems();
         SaveLocations();
         consoleLog(sendText("&3[Factory Config] &aSaving all configuration data..."));

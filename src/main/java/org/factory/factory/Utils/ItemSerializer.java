@@ -1,12 +1,16 @@
 package org.factory.factory.Utils;
 
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 public class ItemSerializer {
 
@@ -75,4 +79,72 @@ public class ItemSerializer {
         }
         return null; // Return null if there's an error
     }
+
+    public static ItemStack[] loadSerializedArrayItems(String storedData) {
+        try {
+            return ItemSerializer.ItemStackArrayFromBase64(storedData);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new ItemStack[0]; // Return an empty array instead of null
+    }
+
+
+    //bukkit
+    public static String BukkitItemToBase64(ItemStack item) {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("item", item);
+
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            outputStream.write(config.saveToString().getBytes());
+            return Base64.getEncoder().encodeToString(outputStream.toByteArray());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static ItemStack BukkitBase64ToItem(String base64) {
+        try {
+            byte[] bytes = Base64.getDecoder().decode(base64);
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
+            YamlConfiguration config = new YamlConfiguration();
+            config.loadFromString(new String(inputStream.readAllBytes()));
+            return config.getItemStack("item");
+        } catch (org.bukkit.configuration.InvalidConfigurationException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static String BukkitItemsToBase64Array(List<ItemStack> items) {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("items", items);
+
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            outputStream.write(config.saveToString().getBytes());
+            return Base64.getEncoder().encodeToString(outputStream.toByteArray());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static List<ItemStack> BukkitBase64ArrayToItem(String base64) {
+        try {
+            byte[] bytes = Base64.getDecoder().decode(base64);
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
+            YamlConfiguration config = new YamlConfiguration();
+            config.loadFromString(new String(inputStream.readAllBytes()));
+
+            List<ItemStack> itemList = (List<ItemStack>) (List<?>) config.getList("items"); // Safe conversion
+            return itemList; // Convert list to array
+        } catch (org.bukkit.configuration.InvalidConfigurationException e) {
+            e.printStackTrace();
+            return new ArrayList<>(); // Return empty array instead of null
+        }
+    }
+
 }

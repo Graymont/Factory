@@ -1,15 +1,22 @@
 package org.factory.factory.Utils;
 
+import com.google.common.collect.Multimap;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.block.CreatureSpawner;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
+import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionType;
 import org.bukkit.util.Vector;
 import org.factory.factory.Factory;
 import org.jetbrains.annotations.NotNull;
@@ -50,11 +57,14 @@ public class FactoryItem {
     private List<String> bonusStats = new ArrayList<>();
     private double durability = 1000;
     private double maxDurability = 1000;
+    private int levelMinimum = 1;
     private Sound attackSound = Sound.ENTITY_PLAYER_ATTACK_SWEEP;
     private AttackEffect attackEffect = AttackEffect.Slash;
 
     private double toolPower = 10;
     private double toolSpeed = 1;
+
+    private Color color = Color.NAVY;
 
     private Rarity.RarityType rarity = Rarity.RarityType.Common;
     private String displayname = "Unnamed Item";
@@ -86,9 +96,17 @@ public class FactoryItem {
     public static String toolSpeedKey = "toolSpeedKey";
     public static String attackSoundKey = "attackSound";
     public static String attackEffectKey = "attackEffect";
+    public static String canUseKey = "canUse";
+
+    public static String colorKey = "color";
 
     public static String worthKey = "worth";
 
+    public static String levelMinimumKey = "levelMinimum";
+
+    public static String backpackSizeKey = "backpackSize";
+
+    public static Boolean canUse = true;
 
     public static void SpawnAttackEffect(Player player, AttackEffect e, double range){
         if (e == AttackEffect.Slash){
@@ -105,6 +123,15 @@ public class FactoryItem {
             PlaySound(Sound.BLOCK_LAVA_EXTINGUISH, player, 1, 1);
             PlaySound(Sound.ENTITY_BLAZE_SHOOT, player, 1, 2);
         }
+
+        else if (e == AttackEffect.Arrow){
+            PlaySound(Sound.ENTITY_ARROW_SHOOT, player, 1, 1);
+        }
+
+        else if (e == AttackEffect.Bullet){
+            PlaySound(Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, player, 1, 3);
+            PlaySound(Sound.ENTITY_LIGHTNING_BOLT_IMPACT, player, 0.1f, 0);
+        }
     }
 
     public static HashMap<String, ItemStack> factoryItemList = new HashMap<>();
@@ -114,52 +141,92 @@ public class FactoryItem {
 
         // Tool Data (Material, Breaking Power, Display Name, Rarity)
         Object[][] toolData = {
+                // Fishing Rod
+                { "fishingrod", Material.FISHING_ROD, 1, 1, "Fishing Rod", Rarity.RarityType.Common, Type.Tool, SubType.FishingRod, 100, 1 },
+
                 // Pickaxes
-                { "woodenpickaxe", Material.WOODEN_PICKAXE, 1, 1, "Wooden Pickaxe", Rarity.RarityType.Common, Type.Tool, SubType.Pickaxe, 100 },
-                { "stonepickaxe", Material.STONE_PICKAXE, 2, 1, "Stone Pickaxe", Rarity.RarityType.Uncommon, Type.Tool, SubType.Pickaxe, 250 },
-                { "ironpickaxe", Material.IRON_PICKAXE, 3, 1, "Iron Pickaxe", Rarity.RarityType.Rare, Type.Tool, SubType.Pickaxe, 500 },
-                { "goldenpickaxe", Material.GOLDEN_PICKAXE, 4, 1, "Golden Pickaxe", Rarity.RarityType.Epic, Type.Tool, SubType.Pickaxe, 850 },
-                { "diamondpickaxe", Material.DIAMOND_PICKAXE, 5, 1, "Diamond Pickaxe", Rarity.RarityType.Legendary, Type.Tool, SubType.Pickaxe, 1200 },
-                { "netheritepickaxe", Material.NETHERITE_PICKAXE, 6, 1, "Netherite Pickaxe", Rarity.RarityType.Immortal, Type.Tool, SubType.Pickaxe, 2500 },
+                { "woodenpickaxe", Material.WOODEN_PICKAXE, 1, 1, "Wooden Pickaxe", Rarity.RarityType.Common, Type.Tool, SubType.Pickaxe, 100, 1 },
+                { "stonepickaxe", Material.STONE_PICKAXE, 2, 1, "Stone Pickaxe", Rarity.RarityType.Uncommon, Type.Tool, SubType.Pickaxe, 250, 2 },
+                { "ironpickaxe", Material.IRON_PICKAXE, 3, 1, "Iron Pickaxe", Rarity.RarityType.Rare, Type.Tool, SubType.Pickaxe, 500, 3 },
+                { "goldenpickaxe", Material.GOLDEN_PICKAXE, 4, 1, "Golden Pickaxe", Rarity.RarityType.Epic, Type.Tool, SubType.Pickaxe, 850, 10 },
+                { "diamondpickaxe", Material.DIAMOND_PICKAXE, 5, 1, "Diamond Pickaxe", Rarity.RarityType.Legendary, Type.Tool, SubType.Pickaxe, 1200, 20 },
+                { "netheritepickaxe", Material.NETHERITE_PICKAXE, 6, 1, "Netherite Pickaxe", Rarity.RarityType.Immortal, Type.Tool, SubType.Pickaxe, 2500, 35 },
 
                 // Shovels
-                { "woodenshovel", Material.WOODEN_SHOVEL, 1, 1, "Wooden Shovel", Rarity.RarityType.Common, Type.Tool, SubType.Shovel, 100 },
-                { "stoneshovel", Material.STONE_SHOVEL, 2, 1, "Stone Shovel", Rarity.RarityType.Uncommon, Type.Tool, SubType.Shovel, 250 },
-                { "ironshovel", Material.IRON_SHOVEL, 3, 1, "Iron Shovel", Rarity.RarityType.Rare, Type.Tool, SubType.Shovel, 500 },
-                { "goldenshovel", Material.GOLDEN_SHOVEL, 4, 1, "Golden Shovel", Rarity.RarityType.Epic, Type.Tool, SubType.Shovel, 850 },
-                { "diamondshovel", Material.DIAMOND_SHOVEL, 5, 1, "Diamond Shovel", Rarity.RarityType.Legendary, Type.Tool, SubType.Shovel, 1200 },
-                { "netheriteshovel", Material.NETHERITE_SHOVEL, 6, 1, "Netherite Shovel", Rarity.RarityType.Immortal, Type.Tool, SubType.Shovel, 2500 },
+                { "woodenshovel", Material.WOODEN_SHOVEL, 1, 1, "Wooden Shovel", Rarity.RarityType.Common, Type.Tool, SubType.Shovel, 100, 1 },
+                { "stoneshovel", Material.STONE_SHOVEL, 2, 1, "Stone Shovel", Rarity.RarityType.Uncommon, Type.Tool, SubType.Shovel, 250, 2 },
+                { "ironshovel", Material.IRON_SHOVEL, 3, 1, "Iron Shovel", Rarity.RarityType.Rare, Type.Tool, SubType.Shovel, 500, 3 },
+                { "goldenshovel", Material.GOLDEN_SHOVEL, 4, 1, "Golden Shovel", Rarity.RarityType.Epic, Type.Tool, SubType.Shovel, 850, 10 },
+                { "diamondshovel", Material.DIAMOND_SHOVEL, 5, 1, "Diamond Shovel", Rarity.RarityType.Legendary, Type.Tool, SubType.Shovel, 1200, 20 },
+                { "netheriteshovel", Material.NETHERITE_SHOVEL, 6, 1, "Netherite Shovel", Rarity.RarityType.Immortal, Type.Tool, SubType.Shovel, 2500, 35 },
 
                 // Axes
-                { "woodenaxe", Material.WOODEN_AXE, 1, 1, "Wooden Axe", Rarity.RarityType.Common, Type.Tool, SubType.Axe, 100 },
-                { "stoneaxe", Material.STONE_AXE, 2, 1, "Stone Axe", Rarity.RarityType.Uncommon, Type.Tool, SubType.Axe, 250 },
-                { "ironaxe", Material.IRON_AXE, 3, 1, "Iron Axe", Rarity.RarityType.Rare, Type.Tool, SubType.Axe, 500 },
-                { "goldenaxe", Material.GOLDEN_AXE, 4, 1, "Golden Axe", Rarity.RarityType.Epic, Type.Tool, SubType.Axe, 850 },
-                { "diamondaxe", Material.DIAMOND_AXE, 5, 1, "Diamond Axe", Rarity.RarityType.Legendary, Type.Tool, SubType.Axe, 1200 },
-                { "netheriteaxe", Material.NETHERITE_AXE, 6, 1, "Netherite Axe", Rarity.RarityType.Immortal, Type.Tool, SubType.Axe, 2500 },
+                { "woodenaxe", Material.WOODEN_AXE, 1, 1, "Wooden Axe", Rarity.RarityType.Common, Type.Tool, SubType.Axe, 100, 1 },
+                { "stoneaxe", Material.STONE_AXE, 2, 1, "Stone Axe", Rarity.RarityType.Uncommon, Type.Tool, SubType.Axe, 250, 2 },
+                { "ironaxe", Material.IRON_AXE, 3, 1, "Iron Axe", Rarity.RarityType.Rare, Type.Tool, SubType.Axe, 500, 3 },
+                { "goldenaxe", Material.GOLDEN_AXE, 4, 1, "Golden Axe", Rarity.RarityType.Epic, Type.Tool, SubType.Axe, 850, 10 },
+                { "diamondaxe", Material.DIAMOND_AXE, 5, 1, "Diamond Axe", Rarity.RarityType.Legendary, Type.Tool, SubType.Axe, 1200, 20 },
+                { "netheriteaxe", Material.NETHERITE_AXE, 6, 1, "Netherite Axe", Rarity.RarityType.Immortal, Type.Tool, SubType.Axe, 2500, 35 },
 
                 // Hoes
-                { "woodenhoe", Material.WOODEN_HOE, 1, 1, "Wooden Hoe", Rarity.RarityType.Common, Type.Tool, SubType.Hoe, 100 },
-                { "stonehoe", Material.STONE_HOE, 2, 1, "Stone Hoe", Rarity.RarityType.Uncommon, Type.Tool, SubType.Hoe, 250 },
-                { "ironhoe", Material.IRON_HOE, 3, 1, "Iron Hoe", Rarity.RarityType.Rare, Type.Tool, SubType.Hoe, 500 },
-                { "goldenhoe", Material.GOLDEN_HOE, 4, 1, "Golden Hoe", Rarity.RarityType.Epic, Type.Tool, SubType.Hoe, 850 },
-                { "diamondhoe", Material.DIAMOND_HOE, 5, 1, "Diamond Hoe", Rarity.RarityType.Legendary, Type.Tool, SubType.Hoe, 1200 },
-                { "netheritehoe", Material.NETHERITE_HOE, 6, 1, "Netherite Hoe", Rarity.RarityType.Immortal, Type.Tool, SubType.Hoe, 2500 },
+                { "woodenhoe", Material.WOODEN_HOE, 1, 1, "Wooden Hoe", Rarity.RarityType.Common, Type.Tool, SubType.Hoe, 100, 1 },
+                { "stonehoe", Material.STONE_HOE, 2, 1, "Stone Hoe", Rarity.RarityType.Uncommon, Type.Tool, SubType.Hoe, 250, 2 },
+                { "ironhoe", Material.IRON_HOE, 3, 1, "Iron Hoe", Rarity.RarityType.Rare, Type.Tool, SubType.Hoe, 500, 3 },
+                { "goldenhoe", Material.GOLDEN_HOE, 4, 1, "Golden Hoe", Rarity.RarityType.Epic, Type.Tool, SubType.Hoe, 850, 10 },
+                { "diamondhoe", Material.DIAMOND_HOE, 5, 1, "Diamond Hoe", Rarity.RarityType.Legendary, Type.Tool, SubType.Hoe, 1200, 20 },
+                { "netheritehoe", Material.NETHERITE_HOE, 6, 1, "Netherite Hoe", Rarity.RarityType.Immortal, Type.Tool, SubType.Hoe, 2500, 35 },
 
                 // Swords
-                { "woodensword", Material.WOODEN_SWORD, 4, 1.2d, 2, "Wooden Sword", Rarity.RarityType.Common, Type.Weapon, SubType.Sword, 100 },
-                { "stonesword", Material.STONE_SWORD, 5, 1.1d, 3, "Stone Sword", Rarity.RarityType.Uncommon, Type.Weapon, SubType.Sword, 250 },
-                { "ironsword", Material.IRON_SWORD, 6, 0.9d, 3, "Iron Sword", Rarity.RarityType.Rare, Type.Weapon, SubType.Sword, 500 },
-                { "goldensword", Material.GOLDEN_SWORD, 7, 0.7d, 4, "Golden Sword", Rarity.RarityType.Epic, Type.Weapon, SubType.Sword, 850 },
-                { "diamondsword", Material.DIAMOND_SWORD, 8, 0.5d, 5, "Diamond Sword", Rarity.RarityType.Legendary, Type.Weapon, SubType.Sword, 1200 },
-                { "netheritesword", Material.NETHERITE_SWORD, 10, 0.3d, 6, "Netherite Sword", Rarity.RarityType.Immortal, Type.Weapon, SubType.Sword, 2500 },
+                { "woodensword", Material.WOODEN_SWORD, 4, 1.2d, 2, "Wooden Sword", Rarity.RarityType.Common, Type.Weapon, SubType.Sword, 100, 1 },
+                { "stonesword", Material.STONE_SWORD, 5, 1.1d, 3, "Stone Sword", Rarity.RarityType.Uncommon, Type.Weapon, SubType.Sword, 250, 2 },
+                { "ironsword", Material.IRON_SWORD, 6, 0.9d, 3, "Iron Sword", Rarity.RarityType.Rare, Type.Weapon, SubType.Sword, 500, 3 },
+                { "goldensword", Material.GOLDEN_SWORD, 7, 0.7d, 4, "Golden Sword", Rarity.RarityType.Epic, Type.Weapon, SubType.Sword, 850, 10 },
+                { "diamondsword", Material.DIAMOND_SWORD, 8, 0.5d, 5, "Diamond Sword", Rarity.RarityType.Legendary, Type.Weapon, SubType.Sword, 1200, 20 },
+                { "netheritesword", Material.NETHERITE_SWORD, 10, 0.3d, 6, "Netherite Sword", Rarity.RarityType.Immortal, Type.Weapon, SubType.Sword, 2500, 35 },
+                { "bow", Material.BOW, 8, 1.5d, 10, "Bow", Rarity.RarityType.Common, Type.Weapon, SubType.Bow, 100, 1 },
+
+                // Armor
+                { "leatherhelmet", Material.LEATHER_HELMET, 1, 1, 0, "Leather Helmet", Rarity.RarityType.Common, Type.Equipment, SubType.Helmet, 100, 1 },
+                { "leatherchestplate", Material.LEATHER_CHESTPLATE, 3, 1, 0, "Leather Chestplate", Rarity.RarityType.Common, Type.Equipment, SubType.Chestplate, 100, 1 },
+                { "leatherleggings", Material.LEATHER_LEGGINGS, 2, 1, 0, "Leather Leggings", Rarity.RarityType.Common, Type.Equipment, SubType.Leggings, 100, 1 },
+                { "leatherboots", Material.LEATHER_BOOTS, 1, 1, 0, "Leather Boots", Rarity.RarityType.Common, Type.Equipment, SubType.Boots, 100, 1 },
+
+                { "chainmailhelmet", Material.CHAINMAIL_HELMET, 2, 2, 0, "Chainmail Helmet", Rarity.RarityType.Uncommon, Type.Equipment, SubType.Helmet, 250, 2 },
+                { "chainmailchestplate", Material.CHAINMAIL_CHESTPLATE, 4, 2, 0, "Chainmail Chestplate", Rarity.RarityType.Uncommon, Type.Equipment, SubType.Chestplate, 250, 2 },
+                { "chainmailleggings", Material.CHAINMAIL_LEGGINGS, 3, 2, 0, "Chainmail Leggings", Rarity.RarityType.Uncommon, Type.Equipment, SubType.Leggings, 250, 2 },
+                { "chainmailboots", Material.CHAINMAIL_BOOTS, 2, 2, 0, "Chainmail Boots", Rarity.RarityType.Uncommon, Type.Equipment, SubType.Boots, 250, 2 },
+
+                { "ironhelmet", Material.IRON_HELMET, 5, 3, 0, "Iron Helmet", Rarity.RarityType.Rare, Type.Equipment, SubType.Helmet, 500, 3 },
+                { "ironchestplate", Material.IRON_CHESTPLATE, 7, 3, 0, "Iron Chestplate", Rarity.RarityType.Rare, Type.Equipment, SubType.Chestplate, 500, 3 },
+                { "ironleggings", Material.IRON_LEGGINGS, 6, 3, 0, "Iron Leggings", Rarity.RarityType.Rare, Type.Equipment, SubType.Leggings, 500, 3 },
+                { "ironboots", Material.IRON_BOOTS, 5, 3, 0, "Iron Boots", Rarity.RarityType.Rare, Type.Equipment, SubType.Boots, 500, 3 },
+
+                { "goldenhelmet", Material.GOLDEN_HELMET, 9, 4, 0, "Golden Helmet", Rarity.RarityType.Epic, Type.Equipment, SubType.Helmet, 850, 1 },
+                { "goldenchestplate", Material.GOLDEN_CHESTPLATE, 11, 4, 0, "Golden Chestplate", Rarity.RarityType.Epic, Type.Equipment, SubType.Chestplate, 850, 10 },
+                { "goldenleggings", Material.GOLDEN_LEGGINGS, 10, 4, 0, "Golden Leggings", Rarity.RarityType.Epic, Type.Equipment, SubType.Leggings, 850, 10 },
+                { "goldenboots", Material.GOLDEN_BOOTS, 9, 4, 0, "Golden Boots", Rarity.RarityType.Epic, Type.Equipment, SubType.Boots, 850, 10 },
+
+                { "diamondhelmet", Material.DIAMOND_HELMET, 11, 5, 0, "Diamond Helmet", Rarity.RarityType.Legendary, Type.Equipment, SubType.Helmet, 1200, 20 },
+                { "diamondchestplate", Material.DIAMOND_CHESTPLATE, 15, 5, 0, "Diamond Chestplate", Rarity.RarityType.Legendary, Type.Equipment, SubType.Chestplate, 1200, 20 },
+                { "diamondleggings", Material.DIAMOND_LEGGINGS, 12, 5, 0, "Diamond Leggings", Rarity.RarityType.Legendary, Type.Equipment, SubType.Leggings, 1200, 20 },
+                { "diamondboots", Material.DIAMOND_BOOTS, 11, 5, 0, "Diamond Boots", Rarity.RarityType.Legendary, Type.Equipment, SubType.Boots, 1200, 20 },
+
+                { "netheritehelmet", Material.NETHERITE_HELMET, 15, 8, 0, "Netherite Helmet", Rarity.RarityType.Immortal, Type.Equipment, SubType.Helmet, 2500, 35 },
+                { "netheritechestplate", Material.NETHERITE_CHESTPLATE, 20, 12, 0, "Netherite Chestplate", Rarity.RarityType.Immortal, Type.Equipment, SubType.Chestplate, 2500, 35 },
+                { "netheriteleggings", Material.NETHERITE_LEGGINGS, 18, 10, 0, "Netherite Leggings", Rarity.RarityType.Immortal, Type.Equipment, SubType.Leggings, 2500, 35 },
+                { "netheriteboots", Material.NETHERITE_BOOTS, 15, 7, 0, "Netherite Boots", Rarity.RarityType.Immortal, Type.Equipment, SubType.Boots, 2500, 35 },
+
         };
 
         // Iterate and create factory items
         for (Object[] data : toolData) {
             String key = (String) data[0];
             Material material = (Material) data[1];
-            if (!material.toString().contains("SWORD")){
+            if (material.toString().contains("PICKAXE") ||
+            material.toString().contains("AXE")||
+                    material.toString().contains("SHOVEL")||
+                    material.toString().contains("HOE")||
+                    material.toString().contains("FISHING")){
                 int toolPower = (int) data[2];
                 int toolSpeed = (int) data[3];
                 String displayName = (String) data[4];
@@ -167,6 +234,8 @@ public class FactoryItem {
                 Type type = (Type) data[6];
                 SubType subType = (SubType) data[7];
                 int durability = (int) data[8];
+
+                int levelMinimum = (int) data[9];
 
                 FactoryItem item = new FactoryItem();
                 item.setType(type);
@@ -178,9 +247,18 @@ public class FactoryItem {
                 item.setRarity(rarity);
                 item.setDurability(durability);
                 item.setMaxDurability(durability);
+                item.setSteamConsumption(0);
+                item.setHealth(0);
+                item.setSteam(0);
+                item.setArmor(0);
+
+                item.setLevelMinimum(levelMinimum);
 
                 factoryItemList.put(key, item);
-            }else{
+            }
+
+            else if (material.toString().contains("SWORD") ||
+                    material.toString().contains("BOW")){
                 int attackDamage = (int) data[2];
                 double attackSpeed = (double) data[3];
                 int attackRange = (int) data[4];
@@ -189,6 +267,8 @@ public class FactoryItem {
                 Type type = (Type) data[7];
                 SubType subType = (SubType) data[8];
                 int durability = (int) data[9];
+
+                int levelMinimum = (int) data[10];
 
                 FactoryItem item = new FactoryItem();
                 item.setType(type);
@@ -202,7 +282,54 @@ public class FactoryItem {
                 item.setDurability(durability);
                 item.setMaxDurability(durability);
                 item.setSteamConsumption(0);
-                item.setAttackEffect(AttackEffect.Slash);
+                item.setHealth(0);
+                item.setSteam(0);
+                item.setArmor(0);
+
+                item.setLevelMinimum(levelMinimum);
+
+                if (material.toString().contains("SWORD")){
+                    item.setAttackEffect(AttackEffect.Slash);
+                }
+                else if (material.toString().contains("BOW")){
+                    item.setAttackEffect(AttackEffect.Arrow);
+                }
+                else if (material.toString().contains("GUN")){
+                    item.setAttackEffect(AttackEffect.Bullet);
+                }
+
+                factoryItemList.put(key, item);
+            }
+
+            else if (material.toString().contains("HELMET") ||
+                    material.toString().contains("CHESTPLATE") ||
+                    material.toString().contains("LEGGINGS")||
+                    material.toString().contains("BOOTS")){
+                int health = (int) data[2];
+                int armor = (int) data[3];
+                int steam = (int) data[4];
+                String displayName = (String) data[5];
+                Rarity.RarityType rarity = (Rarity.RarityType) data[6];
+                Type type = (Type) data[7];
+                SubType subType = (SubType) data[8];
+                int durability = (int) data[9];
+
+                int levelMinimum = (int) data[10];
+
+                FactoryItem item = new FactoryItem();
+                item.setType(type);
+                item.setSubType(subType);
+                item.setHealth(health);
+                item.setArmor(armor);
+                item.setSteam(steam);
+                item.setMaterial(material);
+                item.setDisplayname(displayName);
+                item.setRarity(rarity);
+                item.setDurability(durability);
+                item.setMaxDurability(durability);
+                item.setSteamConsumption(0);
+
+                item.setLevelMinimum(levelMinimum);
 
                 factoryItemList.put(key, item);
             }
@@ -235,53 +362,359 @@ public class FactoryItem {
             itemList.put(mat.toString().toLowerCase().replaceAll("_", "").trim(), ProcessItemMeta(addedItem));
         }
 
+        for (int i = 1; i < 7; i++) {
+            ItemStack backpackItem = new ItemStack(CreateBackpack(i));
+            itemList.put("backpack"+i, backpackItem);
+        }
+
         InitMachineDrops();
         InitMachineItems();
+        InitSpawners();
+        InitEquipments();
 
         consoleLog(sendText("&aFactory items initialized successfully!"));
     }
+
+    public static void InitEquipments(){
+
+        Map<String, Color> preparedEquipments = new HashMap<>();
+
+// 🌾 Crops
+        preparedEquipments.put("wheat", Color.fromRGB(255, 223, 0)); // Golden Yellow
+        preparedEquipments.put("barley", Color.fromRGB(194, 178, 128)); // Light Brown
+        preparedEquipments.put("corn", Color.fromRGB(255, 216, 0)); // Bright Gold
+        preparedEquipments.put("carrot", Color.fromRGB(255, 117, 24)); // Deep Orange
+        preparedEquipments.put("potato", Color.fromRGB(218, 165, 32)); // Golden Brown
+        preparedEquipments.put("beetroot", Color.fromRGB(156, 0, 60)); // Deep Beet Red
+        preparedEquipments.put("whiteonion", Color.fromRGB(255, 250, 240)); // Off-White
+        preparedEquipments.put("redonion", Color.fromRGB(160, 32, 240)); // Purple
+
+// 🥦 Vegetables
+        preparedEquipments.put("lettuce", Color.fromRGB(154, 205, 50)); // Lettuce Green
+        preparedEquipments.put("cabbage", Color.fromRGB(85, 107, 47)); // Dark Green
+        preparedEquipments.put("broccoli", Color.fromRGB(34, 139, 34)); // Forest Green
+        preparedEquipments.put("cauliflower", Color.fromRGB(245, 245, 220)); // Beige White
+        preparedEquipments.put("radish", Color.fromRGB(255, 0, 102)); // Bright Reddish-Pink
+        preparedEquipments.put("cucumber", Color.fromRGB(50, 205, 50)); // Fresh Green
+        preparedEquipments.put("greenbeans", Color.fromRGB(0, 128, 0)); // Deep Green
+        preparedEquipments.put("eggplant", Color.fromRGB(138, 43, 226)); // Eggplant Purple
+        preparedEquipments.put("chilipepper", Color.fromRGB(220, 20, 60)); // Dark Red
+
+// 🍏 Fruits
+        preparedEquipments.put("apple", Color.fromRGB(255, 0, 0)); // Bright Red
+        preparedEquipments.put("banana", Color.fromRGB(255, 255, 102)); // Banana Yellow
+        preparedEquipments.put("orange", Color.fromRGB(255, 140, 0)); // Rich Orange
+        preparedEquipments.put("mango", Color.fromRGB(255, 165, 0)); // Vibrant Orange
+        preparedEquipments.put("pineapple", Color.fromRGB(255, 223, 0)); // Golden Yellow
+        preparedEquipments.put("grape", Color.fromRGB(75, 0, 130)); // Dark Indigo
+        preparedEquipments.put("melon", Color.fromRGB(154, 205, 50)); // Light Green
+        preparedEquipments.put("pumpkin", Color.fromRGB(255, 117, 24)); // Deep Orange
+        preparedEquipments.put("strawberry", Color.fromRGB(220, 20, 60)); // Deep Crimson
+        preparedEquipments.put("blueberry", Color.fromRGB(25, 25, 112)); // Dark Blue
+        preparedEquipments.put("blackberry", Color.fromRGB(0, 0, 0)); // Pure Black
+        preparedEquipments.put("kiwi", Color.fromRGB(139, 69, 19)); // Brown
+        preparedEquipments.put("lemon", Color.fromRGB(255, 255, 0)); // Lemon Yellow
+        preparedEquipments.put("peach", Color.fromRGB(255, 218, 185)); // Peachy
+        preparedEquipments.put("papaya", Color.fromRGB(255, 165, 79)); // Light Orange
+
+// 🍄 Mushrooms
+        preparedEquipments.put("purplemushroom", Color.fromRGB(147, 112, 219)); // Light Purple
+        preparedEquipments.put("redmushroom", Color.fromRGB(237, 41, 57)); // Bright Red
+        preparedEquipments.put("bluemushroom", Color.fromRGB(70, 130, 180)); // Steel Blue
+        preparedEquipments.put("brownmushroom", Color.fromRGB(123, 63, 0)); // Mushroom Brown
+        preparedEquipments.put("greenmushroom", Color.fromRGB(34, 139, 34)); // Dark Green
+        preparedEquipments.put("pinkmushroom", Color.fromRGB(255, 105, 180)); // Hot Pink
+        preparedEquipments.put("yellowmushroom", Color.fromRGB(255, 255, 51)); // Bright Yellow
+
+// 🌲 Logs
+        preparedEquipments.put("cherrylog", Color.fromRGB(255, 182, 193)); // Soft Pink
+        preparedEquipments.put("birchlog", Color.fromRGB(245, 222, 179)); // Birch Beige
+        preparedEquipments.put("crimsonstem", Color.fromRGB(153, 0, 0)); // Dark Red
+        preparedEquipments.put("junglelog", Color.fromRGB(139, 69, 19)); // Brown
+        preparedEquipments.put("mangrovelog", Color.fromRGB(178, 34, 34)); // Firebrick Red
+        preparedEquipments.put("sprucelog", Color.fromRGB(101, 67, 33)); // Dark Wood
+        preparedEquipments.put("warpedstem", Color.fromRGB(0, 139, 139)); // Teal
+        preparedEquipments.put("oaklog", Color.fromRGB(160, 82, 45)); // Wood Brown
+        preparedEquipments.put("acacialog", Color.fromRGB(210, 105, 30)); // Reddish Brown
+        preparedEquipments.put("darkoaklog", Color.fromRGB(92, 51, 23)); // Darkest Brown
+
+// 🍁 Leaves
+        preparedEquipments.put("oakleaves", Color.fromRGB(34, 139, 34)); // Oak Green
+        preparedEquipments.put("pinkleaves", Color.fromRGB(255, 182, 193)); // Light Pink
+        preparedEquipments.put("purpleleaves", Color.fromRGB(147, 112, 219)); // Purple
+        preparedEquipments.put("redleaves", Color.fromRGB(237, 41, 57)); // Bright Red
+        preparedEquipments.put("wisterialeaves", Color.fromRGB(173, 216, 230)); // Light Blue
+        preparedEquipments.put("fallleaves", Color.fromRGB(255, 140, 0)); // Autumn Orange
+        preparedEquipments.put("autumnleaves", Color.fromRGB(255, 215, 0)); // Golden Yellow
+        preparedEquipments.put("azalealeaves", Color.fromRGB(154, 205, 50)); // Light Green
+        preparedEquipments.put("acacialeaves", Color.fromRGB(255, 140, 0)); // Orange
+        preparedEquipments.put("spruceleaves", Color.fromRGB(46, 139, 87)); // Dark Green
+        preparedEquipments.put("sakuraleaves", Color.fromRGB(255, 105, 180)); // Sakura Pink
+        preparedEquipments.put("birchleaves", Color.fromRGB(245, 222, 179)); // Beige
+        preparedEquipments.put("cherryleaves", Color.fromRGB(255, 105, 180)); // Hot Pink
+        preparedEquipments.put("jungleleaves", Color.fromRGB(34, 139, 34)); // Jungle Green
+        preparedEquipments.put("mangroveleaves", Color.fromRGB(46, 139, 87)); // Deep Green
+
+
+
+        List<String> equipmentVariants = Arrays.asList("helmet", "chestplate", "leggings", "boots");
+
+        for (String variant : equipmentVariants){
+            String materialKey = "leather_"+variant;
+
+            FactoryItem item = new FactoryItem();
+
+            for (String key : preparedEquipments.keySet()){
+                item.setType(Type.Equipment);
+                item.setSubType(SubType.parseSubType(variant));
+
+                int levelMinimum = GetLevelMinimum(key+"machine");
+
+                double percent = switch (variant) {
+                    case "helmet" -> 0.3;
+                    case "chestplate" -> 0.8;
+                    case "leggings" -> 0.7;
+                    case "boots" -> 0.45;
+                    default -> 0.1;
+                };
+
+                double steam = levelMinimum*percent;
+
+                item.setSteam(steam);
+                item.setHealth(0);
+                item.setArmor(0);
+
+                item.setLevelMinimum(levelMinimum);
+
+                String displayname = key.replaceAll("(log|leaves|mushroom|stem)$", "_$1");
+                item.setDisplayname(formatItemName("carbon_"+displayname+"_"+variant));
+
+                item.setMaterial(Material.getMaterial(materialKey.toUpperCase()));
+
+                ItemStack resultItem = new ItemStack(item.build());
+                LeatherArmorMeta meta = (LeatherArmorMeta) resultItem.getItemMeta();
+
+                meta.setColor(preparedEquipments.get(key));
+
+                resultItem.setItemMeta(meta);
+
+                itemList.put("carbon"+key+variant, resultItem.clone());
+            }
+        }
+
+    }
+
+    public static void InitSpawners(){
+        itemList.put("pigspawner", CreateSpawner(EntityType.PIG));
+        itemList.put("chickenspawner", CreateSpawner(EntityType.CHICKEN));
+        itemList.put("sheepspawner", CreateSpawner(EntityType.SHEEP));
+        itemList.put("cowspawner", CreateSpawner(EntityType.COW));
+        itemList.put("rabbitspawner", CreateSpawner(EntityType.RABBIT));
+
+        itemList.put("zombiespawner", CreateSpawner(EntityType.ZOMBIE));
+        itemList.put("skeletonspawner", CreateSpawner(EntityType.SKELETON));
+        itemList.put("spiderspawner", CreateSpawner(EntityType.SPIDER));
+        itemList.put("creeperspawner", CreateSpawner(EntityType.CREEPER));
+        itemList.put("endermanspawner", CreateSpawner(EntityType.ENDERMAN));
+    }
+
+    public static HashMap<String, List<ItemStack>> itemDatabase = new HashMap<>();
+
     static void InitMachineDrops(){
 
         // 🥦🌶🍆🔴🌿🧅🥒🥬🥕🥔
 
         List<String> itemLore = new ArrayList<>();
         itemLore.add(sendText("&9Machine Product"));
-        itemLore.add(sendText(" "));
-        itemLore.add(sendText("&aCommon"));
 
         List<String> dropList = Arrays.asList(
+
+                "steam",
 
                 "wheat", "barley", "corn",
 
                 "carrot", "potato", "beetroot", "whiteonion", "redonion", "lettuce",
                 "cabbage", "broccoli", "cauliflower", "radish", "cucumber", "greenbeans",
-                "eggplant", "chilipepper"
+                "eggplant", "chilipepper",
+                "apple", "banana", "orange", "mango", "pineapple", "grape", "melon",
+                "pumpkin", "strawberry", "blueberry", "blackberry", "kiwi", "lemon", "peach",
+                "papaya",
+
+
+                "purplemushroom", "redmushroom", "bluemushroom",
+                "brownmushroom", "greenmushroom", "pinkmushroom", "yellowmushroom", "cherrylog", "birchlog",
+                "crimsonstem", "junglelog", "mangrovelog", "sprucelog", "warpedstem", "oaklog",
+                "acacialog", "darkoaklog",
+                "oakleaves", "pinkleaves", "purpleleaves", "redleaves", "wisterialeaves", "fallleaves", "autumnleaves",
+                "azalealeaves", "acacialeaves", "spruceleaves", "sakuraleaves", "birchleaves", "cherryleaves", "jungleleaves",
+                "mangroveleaves"
 
         );
 
         for (String drop : dropList){
             ItemStack item = new ItemStack(GetItem(drop+"model"));
             ItemMeta meta = item.getItemMeta();
+
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            Double worth = GetWorth(drop+"_custom");
+            if (worth == null){
+                worth = 0.0;
+            }
+
+            container.set(GetNamespacedKey(worthKey), PersistentDataType.DOUBLE, worth);
+
+            drop = drop.replaceAll("(log|leaves|mushroom|stem)$", "_$1");
             meta.setDisplayName(sendText("&a"+formatItemName(drop)));
             meta.setLore(itemLore);
             item.setItemMeta(meta);
-            itemList.put(drop, item.clone());
+
+            item.setItemMeta(ProcessItemMeta(item).getItemMeta());
+            meta = item.getItemMeta();
+            List<String> lastLore = meta.getLore();
+            lastLore.add(sendText("&aCommon"));
+
+            meta.setLore(lastLore);
+            item.setItemMeta(meta);
+
+            itemList.put(drop.replaceAll("_", "").trim(), item.clone());
+            //itemList.remove(drop);
         }
 
     }
 
-    static void InitMachineItems(){
+    static void InitMachineItems() {
         // Farm Machine
+        List<ItemStack> storedItems = new ArrayList<>();
+        String name;
+        ItemStack m;
 
-        // farm - grain
-        String name = "wheat";
-        itemList.put(name+"machine", GetMachine(name, Material.HAY_BLOCK, MachineType.Item));
+        // farm - grains, vegetables, and fruits
+        Map<String, Material> preparedMachines = new HashMap<>();
 
-        name = "barley";
-        itemList.put(name+"machine", GetMachine(name, Material.SPONGE, MachineType.Item));
+        // Grains
+        preparedMachines.put("wheat", Material.HAY_BLOCK);
+        preparedMachines.put("barley", Material.DIRT_PATH);
+        preparedMachines.put("corn", Material.BAMBOO_MOSAIC);
 
-        name = "corn";
-        itemList.put(name+"machine", GetMachine(name, Material.YELLOW_TERRACOTTA, MachineType.Item));
+        // Vegetables
+        preparedMachines.put("carrot", Material.ORANGE_TERRACOTTA);
+        preparedMachines.put("potato", Material.YELLOW_TERRACOTTA);
+        preparedMachines.put("beetroot", Material.RED_TERRACOTTA);
+        preparedMachines.put("whiteonion", Material.WHITE_TERRACOTTA);
+        preparedMachines.put("redonion", Material.MAGENTA_TERRACOTTA);
+        preparedMachines.put("lettuce", Material.GREEN_TERRACOTTA);
+        preparedMachines.put("cabbage", Material.LIME_TERRACOTTA);
+        preparedMachines.put("broccoli", Material.JUNGLE_LEAVES);
+        preparedMachines.put("cauliflower", Material.ANDESITE);
+        preparedMachines.put("radish", Material.NETHER_WART_BLOCK);
+        preparedMachines.put("cucumber", Material.MOSS_BLOCK);
+        preparedMachines.put("greenbeans", Material.GREEN_WOOL);
+        preparedMachines.put("eggplant", Material.PURPLE_CONCRETE);
+        preparedMachines.put("chilipepper", Material.FIRE_CORAL_BLOCK);
+
+        // Fruits
+        preparedMachines.put("apple", Material.RED_WOOL);
+        preparedMachines.put("banana", Material.SANDSTONE);
+        preparedMachines.put("orange", Material.HONEYCOMB_BLOCK);
+        preparedMachines.put("mango", Material.MANGROVE_LOG);
+        preparedMachines.put("pineapple", Material.YELLOW_WOOL);
+        preparedMachines.put("grape", Material.PURPLE_CONCRETE);
+        preparedMachines.put("melon", Material.MELON);
+        preparedMachines.put("pumpkin", Material.PUMPKIN);
+        preparedMachines.put("strawberry", Material.RED_CONCRETE);
+        preparedMachines.put("blueberry", Material.BLUE_CONCRETE);
+        preparedMachines.put("blackberry", Material.BLACK_WOOL);
+        preparedMachines.put("kiwi", Material.BROWN_WOOL);
+        preparedMachines.put("lemon", Material.HORN_CORAL_BLOCK);
+        preparedMachines.put("peach", Material.HONEY_BLOCK);
+        preparedMachines.put("papaya", Material.BROWN_WOOL);
+
+        // Mushrooms
+        preparedMachines.put("purplemushroom", Material.PURPLE_GLAZED_TERRACOTTA);
+        preparedMachines.put("redmushroom", Material.RED_MUSHROOM_BLOCK);
+        preparedMachines.put("bluemushroom", Material.BLUE_GLAZED_TERRACOTTA);
+        preparedMachines.put("brownmushroom", Material.BROWN_MUSHROOM_BLOCK);
+        preparedMachines.put("greenmushroom", Material.GREEN_GLAZED_TERRACOTTA);
+        preparedMachines.put("pinkmushroom", Material.PINK_GLAZED_TERRACOTTA);
+        preparedMachines.put("yellowmushroom", Material.YELLOW_GLAZED_TERRACOTTA);
+
+        // Logs
+        preparedMachines.put("cherrylog", Material.CHERRY_LOG);
+        preparedMachines.put("birchlog", Material.BIRCH_LOG);
+        preparedMachines.put("crimsonstem", Material.CRIMSON_STEM);
+        preparedMachines.put("junglelog", Material.JUNGLE_LOG);
+        preparedMachines.put("mangrovelog", Material.MANGROVE_LOG);
+        preparedMachines.put("sprucelog", Material.SPRUCE_LOG);
+        preparedMachines.put("warpedstem", Material.WARPED_STEM);
+        preparedMachines.put("oaklog", Material.OAK_LOG);
+        preparedMachines.put("acacialog", Material.ACACIA_LOG);
+        preparedMachines.put("darkoaklog", Material.DARK_OAK_LOG);
+
+        // Leaves
+        preparedMachines.put("oakleaves", Material.OAK_LEAVES);
+        preparedMachines.put("pinkleaves", Material.PINK_WOOL);
+        preparedMachines.put("purpleleaves", Material.PURPLE_WOOL);
+        preparedMachines.put("redleaves", Material.RED_WOOL);
+        preparedMachines.put("wisterialeaves", Material.LIGHT_BLUE_WOOL);
+        preparedMachines.put("fallleaves", Material.ORANGE_WOOL);
+        preparedMachines.put("autumnleaves", Material.YELLOW_WOOL);
+        preparedMachines.put("azalealeaves", Material.AZALEA_LEAVES);
+        preparedMachines.put("acacialeaves", Material.ACACIA_LEAVES);
+        preparedMachines.put("spruceleaves", Material.SPRUCE_LEAVES);
+        preparedMachines.put("sakuraleaves", Material.PINK_TERRACOTTA);
+        preparedMachines.put("birchleaves", Material.BIRCH_LEAVES);
+        preparedMachines.put("cherryleaves", Material.CHERRY_LEAVES);
+        preparedMachines.put("jungleleaves", Material.JUNGLE_LEAVES);
+        preparedMachines.put("mangroveleaves", Material.MANGROVE_LEAVES);
+
+        for (Map.Entry<String, Material> entry : preparedMachines.entrySet()) {
+            name = entry.getKey();
+
+            // Add underscore before suffixes
+            name = name.replaceAll("(log|leaves|mushroom|stem)$", "_$1");
+
+            m = GetMachine(name, entry.getValue(), MachineType.Item);
+            itemList.put(name.replaceAll("_", "").trim() + "machine", m.clone());
+
+            String fixedName = name.replaceAll("_", "").trim();
+
+            // Init Ingredient
+            ItemStack ingredient = new ItemStack(itemList.get(entry.getKey()));
+            ItemMeta ingredientMeta = ingredient.getItemMeta();
+            ingredientMeta.setDisplayName(sendText("&fCarbon "+formatItemName(fixedName)));
+            List<String> itemLore = new ArrayList<>();
+            itemLore.add(sendText("&9Machine Product"));
+            itemLore.add(sendText("&9Material"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Can be used to craft &fEquipments"));
+            itemLore.add(sendText(" &7at &eCarbon Forge &7(MultiBlock)"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&fBasic"));
+            ingredientMeta.setLore(itemLore);
+            ingredient.setItemMeta(ingredientMeta);
+            itemList.put("carbon"+fixedName, ingredient.clone());
+
+
+
+            //itemList.remove(name);
+            storedItems.add(m.clone());
+            consoleLog(fixedName);
+        }
+
+        itemDatabase.put("machine", storedItems);
+
+        itemList.put("steammachine", GetMachine("steam", Material.DECORATED_POT, MachineType.Steam));
+    }
+
+
+
+
+    public static void OpenMachineDatabase(Player player, String page){
+        Inventory inventory = Bukkit.createInventory(player, 54, "Machine Database");
+        for (int i = 0; i < itemDatabase.get(page).size(); i++) {
+            inventory.setItem(i, itemDatabase.get(page).get(i));
+        }
+        player.openInventory(inventory);
     }
 
 
@@ -421,11 +854,27 @@ public class FactoryItem {
         return this;
     }
 
+    public FactoryItem setLevelMinimum(int levelMinimum) {
+        this.levelMinimum = levelMinimum;
+        return this;
+    }
+    public FactoryItem canUse(boolean canUse) {
+        this.canUse = canUse;
+        return this;
+    }
+
+    public FactoryItem setColor(Color color) {
+        this.color = color;
+        return this;
+    }
+
+
     public ItemStack build() {
         return CreateItem(
                 type, subType, attackDamage, attackRange, attackSpeed, criticalChance, criticalDamage, steamConsumption,
                 health, steam, armor, undeadDamage, undeadDefense, mutantDamage, mutantDefense, meleeDamage, rangeDamage,
-                durability, maxDurability, toolPower, toolSpeed, bonusStats, rarity, displayname, material, attackEffect);
+                durability, maxDurability, toolPower, toolSpeed, bonusStats, rarity, displayname, material, attackEffect, levelMinimum,
+                canUse, color);
     }
 
     public ItemStack testItem(){
@@ -435,7 +884,7 @@ public class FactoryItem {
         return CreateItem(
                 Type.Weapon, SubType.Sword, attackDamage, attackRange, attackSpeed, criticalChance, criticalDamage, steamConsumption,
                 health, steam, armor, undeadDamage, undeadDefense, mutantDamage, mutantDefense, meleeDamage, rangeDamage,
-                durability, maxDurability, toolPower, toolSpeed, addedBonus, rarity, displayname, material, attackEffect);
+                durability, maxDurability, toolPower, toolSpeed, addedBonus, rarity, displayname, material, attackEffect, levelMinimum, canUse, color);
     }
 
     public String getBonusKey(String key){
@@ -477,8 +926,17 @@ public class FactoryItem {
             Rarity.RarityType rarity,
             String displayname,
             Material material,
-            AttackEffect attackEffect) {
+            AttackEffect attackEffect,
+            int levelMinimum,
+            boolean canUse,
+            Color color) {
         ItemStack item = new ItemStack(material);
+        if (material == Material.LEATHER_HELMET || material == Material.LEATHER_CHESTPLATE
+                || material == Material.LEATHER_LEGGINGS || material == Material.LEATHER_BOOTS){
+            LeatherArmorMeta leatherMeta = (LeatherArmorMeta) item.getItemMeta();
+            leatherMeta.setColor(color);
+            item.setItemMeta(leatherMeta);
+        }
         ItemMeta meta = item.getItemMeta();
 
         meta.setDisplayName(displayname);
@@ -599,6 +1057,11 @@ public class FactoryItem {
 
         container.set(GetNamespacedKey(attackEffectKey), PersistentDataType.STRING, attackEffect.toString().toLowerCase());
 
+        container.set(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN, canUse);
+
+
+        container.set(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER, levelMinimum);
+
         if (!bonusStats.isEmpty()){
             container.set(GetNamespacedKey(bonusStatsKey), PersistentDataType.STRING, String.join(",", bonusStats));
         }
@@ -621,9 +1084,15 @@ public class FactoryItem {
             }
         }
         else if (type.equals(Type.Equipment)){
-            itemLore.add(sendText(" &4❤ &7Health: &c➕" + (int) health));
-            itemLore.add(sendText(" &6\uD83C\uDF0A &7Steam: &e➕" +(int) steam));
-            itemLore.add(sendText(" &8\uD83D\uDD30 &7Armor: &f➕"+(int) armor));
+            if (health > 0){
+                itemLore.add(sendText(" &4❤ &7Health: &c➕" + FormatDouble(health)));
+            }
+            if (steam > 0){
+                itemLore.add(sendText(" &6\uD83C\uDF0A &7Steam: &e➕" +FormatDouble(steam)));
+            }
+            if (armor > 0){
+                itemLore.add(sendText(" &8\uD83D\uDD30 &7Armor: &f➕"+FormatDouble(armor)));
+            }
         }
         else if (type.equals(Type.Tool)){
             String toolLogo = "";
@@ -649,6 +1118,12 @@ public class FactoryItem {
         }
         for (String stats : bonusStats){
             itemLore.add(sendText(" &a+"+numberInText(stats)+" &7"+uncolouredText(stats)));
+        }
+        itemLore.add(sendText(" "));
+        if (canUse){
+            itemLore.add(sendText(" &8♦ &7Level Minimum: &a"+levelMinimum+" &2✔"));
+        }else{
+            itemLore.add(sendText(" &8♦ &7Level Minimum: &c"+levelMinimum+" &4✘"));
         }
         itemLore.add(sendText(" "));
         itemLore.add(sendText(" &7Durability: &f" + (int)  durability + "&8/&f" + (int)  maxDurability));
@@ -702,7 +1177,8 @@ public class FactoryItem {
         Slash,
         Steam,
         Acid,
-        Bullet;
+        Bullet,
+        Arrow;
 
         public static AttackEffect parseEffect(String type) {
             return switch (type.toLowerCase()) {
@@ -710,6 +1186,7 @@ public class FactoryItem {
                 case "steam" -> AttackEffect.Steam;
                 case "acid" -> AttackEffect.Acid;
                 case "bullet" -> AttackEffect.Bullet;
+                case "arrow" -> AttackEffect.Arrow;
                 default -> null;
             };
         }
@@ -833,6 +1310,16 @@ public class FactoryItem {
     public static boolean isFishingRod(ItemStack item) {
         if (item != null) {
             Material type = item.getType();
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(subTypeKey), PersistentDataType.STRING)){
+                    return false;
+                }
+                if (!container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.FishingRod.toString().toLowerCase())){
+                    return false;
+                }
+            }
             return
                     type == Material.FISHING_ROD;
         }
@@ -863,9 +1350,17 @@ public class FactoryItem {
 
     public static boolean isArmor(ItemStack item) {
         if (item != null) {
+
+            if (item.getType() == Material.AIR){
+                return false;
+            }
+
             ItemMeta meta = item.getItemMeta();
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(typeKey), PersistentDataType.STRING)){
+                    return false;
+                }
                 if (!container.get(GetNamespacedKey(typeKey), PersistentDataType.STRING).equals(Type.Equipment.toString().toLowerCase())){
                     return false;
                 }
@@ -895,6 +1390,9 @@ public class FactoryItem {
             ItemMeta meta = item.getItemMeta();
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(subTypeKey), PersistentDataType.STRING)){
+                    return false;
+                }
                 if (!container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.Helmet.toString().toLowerCase())){
                     return false;
                 }
@@ -920,6 +1418,9 @@ public class FactoryItem {
             ItemMeta meta = item.getItemMeta();
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(subTypeKey), PersistentDataType.STRING)){
+                    return false;
+                }
                 if (!container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.Chestplate.toString().toLowerCase())){
                     return false;
                 }
@@ -942,6 +1443,9 @@ public class FactoryItem {
             ItemMeta meta = item.getItemMeta();
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(subTypeKey), PersistentDataType.STRING)){
+                    return false;
+                }
                 if (!container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.Leggings.toString().toLowerCase())){
                     return false;
                 }
@@ -964,6 +1468,9 @@ public class FactoryItem {
             ItemMeta meta = item.getItemMeta();
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(subTypeKey), PersistentDataType.STRING)){
+                    return false;
+                }
                 if (!container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.Boots.toString().toLowerCase())){
                     return false;
                 }
@@ -1076,9 +1583,9 @@ public class FactoryItem {
                 ||
                 type == Material.WOODEN_HOE || type == Material.STONE_HOE || type == Material.GOLDEN_HOE ||
                 type == Material.DIAMOND_HOE || type == Material.IRON_HOE || type == Material.NETHERITE_HOE
-                || type == Material.STICK || type == Material.BLAZE_ROD || type == Material.SHEARS
+                //|| type == Material.STICK || type == Material.BLAZE_ROD || type == Material.SHEARS
                 || type == Material.LEATHER_HORSE_ARMOR || type == Material.IRON_HORSE_ARMOR || type == Material.GOLDEN_HORSE_ARMOR
-                || type == Material.DIAMOND_HORSE_ARMOR || type == Material.BOOK || type == Material.MACE;
+                || type == Material.DIAMOND_HORSE_ARMOR  || type == Material.MACE;
     }
 
     public static boolean isTool(ItemStack item) {
@@ -1120,27 +1627,60 @@ public class FactoryItem {
         return false;
     }
 
-    public static ItemMeta SetAditMeta(ItemMeta meta){
+    public static ItemMeta SetAditMeta(ItemMeta meta) {
+        if (meta == null) return null;
 
-        NamespacedKey damageKey = new NamespacedKey(Factory.getPlugin(Factory.class), "attack_damage");
-        AttributeModifier damageModifier = new AttributeModifier(damageKey, -100, AttributeModifier.Operation.ADD_NUMBER);
+        Factory plugin = Factory.getPlugin(Factory.class);
 
-        NamespacedKey speedKey = new NamespacedKey(Factory.getPlugin(Factory.class), "attack_speed");
-        AttributeModifier speedModifier = new AttributeModifier(speedKey, 0, AttributeModifier.Operation.ADD_NUMBER);
+        boolean hasDamageModifier = false;
+        boolean hasSpeedModifier = false;
 
-        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, damageModifier);
-        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, speedModifier);
+        if (meta.hasAttributeModifiers()) {
+            Multimap<Attribute, AttributeModifier> modifiers = meta.getAttributeModifiers();
 
-        meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
-        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-        meta.addItemFlags(ItemFlag.HIDE_ARMOR_TRIM);
-        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        meta.addItemFlags(ItemFlag.HIDE_STORED_ENCHANTS);
-        meta.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
-        meta.addItemFlags(ItemFlag.HIDE_DYE);
+            if (modifiers != null) { // Ensure it's not null
+                for (Attribute attribute : modifiers.keySet()) {
+                    if (attribute == Attribute.GENERIC_ATTACK_DAMAGE) {
+                        hasDamageModifier = true;
+                    }
+                    if (attribute == Attribute.GENERIC_ATTACK_SPEED) {
+                        hasSpeedModifier = true;
+                    }
+                }
+            }
+        }
+
+        // Add attack damage modifier if missing
+        if (!hasDamageModifier) {
+            AttributeModifier damageModifier = new AttributeModifier(
+                    new NamespacedKey(plugin, "attack_damage"), -100, AttributeModifier.Operation.ADD_NUMBER);
+            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, damageModifier);
+        }
+
+        // Add attack speed modifier if missing
+        if (!hasSpeedModifier) {
+            AttributeModifier speedModifier = new AttributeModifier(
+                    new NamespacedKey(plugin, "attack_speed"), 0, AttributeModifier.Operation.ADD_NUMBER);
+            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, speedModifier);
+        }
+
+        // Hide unnecessary item flags
+        meta.addItemFlags(
+                ItemFlag.HIDE_UNBREAKABLE,
+                ItemFlag.HIDE_ATTRIBUTES,
+                ItemFlag.HIDE_ARMOR_TRIM,
+                ItemFlag.HIDE_ENCHANTS,
+                ItemFlag.HIDE_STORED_ENCHANTS,
+                ItemFlag.HIDE_ADDITIONAL_TOOLTIP,
+                ItemFlag.HIDE_DYE
+        );
 
         return meta;
     }
+
+
+
+
 
     public static void shootParticleLine(Player player, Particle particle, double length, double step, JavaPlugin plugin, Color color) {
         Location startLocation = player.getEyeLocation();
@@ -1176,33 +1716,38 @@ public class FactoryItem {
 
         ItemMeta meta = item.getItemMeta();
         meta = SetAditMeta(meta);
-        meta.setDisplayName(sendText("&f"+formatItemName(item.getType().toString())));
+        if (!meta.hasDisplayName()){
+            meta.setDisplayName(sendText("&f"+formatItemName(item.getType().toString())));
+        }
         List<String> itemLore = new ArrayList<>();
         if (meta.hasLore()){
             for (String lore : meta.getLore()){
                 itemLore.add(sendText(lore));
             }
         }
-        if (item.getType().isFuel()){
-            itemLore.add(sendText("&9Fuel"));
-        }
-        if (isMaterial(item.getType())){
-            itemLore.add(sendText("&9Material"));
-        }
-        if (item.getType().isBlock()){
-            itemLore.add(sendText("&9Placeable"));
-        }
-        if (item.getType().isEdible()){
-            itemLore.add(sendText("&9Consumable"));
-        }
-        if (item.getType().isBurnable()){
-            itemLore.add(sendText("&9Burnable"));
-        }
-        if (item.getType().isFlammable()){
-            itemLore.add(sendText("&9Flammable"));
-        }
-        if (item.getType().isCompostable()){
-            itemLore.add(sendText("&9Compostable"));
+        if (!meta.hasLore()){
+
+            /*if (item.getType().isFuel()){
+                itemLore.add(sendText("&9Fuel"));
+            }*/
+            if (isMaterial(item.getType())){
+                itemLore.add(sendText("&9Material"));
+            }
+            if (item.getType().isBlock()){
+                itemLore.add(sendText("&9Placeable"));
+            }
+            if (item.getType().isEdible()){
+                itemLore.add(sendText("&9Consumable"));
+            }
+            /*if (item.getType().isBurnable()){
+                itemLore.add(sendText("&9Burnable"));
+            }
+            if (item.getType().isFlammable()){
+                itemLore.add(sendText("&9Flammable"));
+            }
+            if (item.getType().isCompostable()){
+                itemLore.add(sendText("&9Compostable"));
+            }*/
         }
         itemLore.add(sendText(" "));
 
@@ -1210,55 +1755,57 @@ public class FactoryItem {
         Double worth = container.get(GetNamespacedKey(worthKey), PersistentDataType.DOUBLE);
         if (worth == null){
             worth = GetWorth(item.getType().toString().toLowerCase().replaceAll("_", "").trim());
+            if (worth != null){
+                container.set(GetNamespacedKey(worthKey), PersistentDataType.DOUBLE, worth);
+                itemLore.add(sendText(" &7Worth: &f"+FormatDouble(worth)+icon));
+                itemLore.add(sendText(" &8✧ &7Sell this item at &e/sellitem"));
+                itemLore.add(sendText(" &8✧ &e/sellall &7to sell all from your inventory"));
+                itemLore.add(sendText(" &8✧ &7or put in a chest for &f&nSell Wand&7 Multiplier"));
+                itemLore.add(sendText(" "));
+            }
         }
 
-        if (worth != null){
-            itemLore.add(sendText(" &7Worth: &f"+FormatDouble(worth)+icon));
-            itemLore.add(sendText(" &8✧ &7Sell this item at &e/sellitem"));
-            itemLore.add(sendText(" &8✧ &e/sellall &7to sell all from your inventory"));
-            itemLore.add(sendText(" &8✧ &7or put in a chest for &f&nSell Wand &7Multiplier"));
-            itemLore.add(sendText(" "));
-        }
+        if (!meta.hasLore()){
+            if (isCommonItem(item)){
+                Rarity.RarityType rarityDisplay = Rarity.RarityType.Common;
 
-        if (isCommonItem(item)){
-            Rarity.RarityType rarityDisplay = Rarity.RarityType.Common;
+                meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
+                        +formatItemName(item.getType().toString())));
 
-            meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
-                    +formatItemName(item.getType().toString())));
-
-            itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
-        }
-        else if (isUncommonItem(item)){
-            Rarity.RarityType rarityDisplay = Rarity.RarityType.Uncommon;
-            meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
-                    +formatItemName(item.getType().toString())));
-            itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
-        }
-        else if (isRareItem(item)){
-            Rarity.RarityType rarityDisplay = Rarity.RarityType.Rare;
-            meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
-                    +formatItemName(item.getType().toString())));
-            itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
-        }
-        else if (isEpicItem(item)){
-            Rarity.RarityType rarityDisplay = Rarity.RarityType.Epic;
-            meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
-                    +formatItemName(item.getType().toString())));
-            itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
-        }
-        else if (isLegendaryItem(item)){
-            Rarity.RarityType rarityDisplay = Rarity.RarityType.Legendary;
-            meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
-                    +formatItemName(item.getType().toString())));
-            itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
-        }
-        else if (isImmortalItem(item)){
-            Rarity.RarityType rarityDisplay = Rarity.RarityType.Immortal;
-            meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
-                    +formatItemName(item.getType().toString())));
-            itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
-        }else{
-            itemLore.add(sendText("&fBasic"));
+                itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
+            }
+            else if (isUncommonItem(item)){
+                Rarity.RarityType rarityDisplay = Rarity.RarityType.Uncommon;
+                meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
+                        +formatItemName(item.getType().toString())));
+                itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
+            }
+            else if (isRareItem(item)){
+                Rarity.RarityType rarityDisplay = Rarity.RarityType.Rare;
+                meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
+                        +formatItemName(item.getType().toString())));
+                itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
+            }
+            else if (isEpicItem(item)){
+                Rarity.RarityType rarityDisplay = Rarity.RarityType.Epic;
+                meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
+                        +formatItemName(item.getType().toString())));
+                itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
+            }
+            else if (isLegendaryItem(item)){
+                Rarity.RarityType rarityDisplay = Rarity.RarityType.Legendary;
+                meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
+                        +formatItemName(item.getType().toString())));
+                itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
+            }
+            else if (isImmortalItem(item)){
+                Rarity.RarityType rarityDisplay = Rarity.RarityType.Immortal;
+                meta.setDisplayName(sendText(Rarity.getColor(rarityDisplay)
+                        +formatItemName(item.getType().toString())));
+                itemLore.add(sendText(Rarity.setRarity(rarityDisplay)));
+            }else{
+                itemLore.add(sendText("&fBasic"));
+            }
         }
         meta.setLore(itemLore);
         item.setItemMeta(meta);
@@ -1266,31 +1813,45 @@ public class FactoryItem {
     }
 
     public static boolean isMaterial(Material material) {
-        for (Recipe recipe : Bukkit.getServer().getRecipesFor(new ItemStack(material))) {
-            return true; // The material is used as an output in a recipe
-        }
+        // Check if the material is an output of any recipe
+       /* if (!Bukkit.getServer().getRecipesFor(new ItemStack(material)).isEmpty()) {
+            return true;
+        }*/
 
-        for (@NotNull Iterator<Recipe> it = Bukkit.recipeIterator(); it.hasNext(); ) {
+        // Iterate through all registered recipes
+        for (Iterator<Recipe> it = Bukkit.recipeIterator(); it.hasNext(); ) {
             Recipe recipe = it.next();
+
             if (recipe instanceof ShapedRecipe shapedRecipe) {
-                if (shapedRecipe.getIngredientMap().containsValue(new ItemStack(material))) {
-                    return true; // The material is used as an ingredient
+                // Check if the material is in the ingredient map
+                for (ItemStack ingredient : shapedRecipe.getIngredientMap().values()) {
+                    if (ingredient != null && ingredient.getType() == material) {
+                        return true;
+                    }
                 }
             } else if (recipe instanceof ShapelessRecipe shapelessRecipe) {
+                // Check if the material is in the ingredient list
                 for (ItemStack ingredient : shapelessRecipe.getIngredientList()) {
                     if (ingredient.getType() == material) {
-                        return true; // The material is used as an ingredient
+                        return true;
                     }
                 }
             } else if (recipe instanceof FurnaceRecipe furnaceRecipe) {
+                // Check if the material is used as furnace input
                 if (furnaceRecipe.getInput().getType() == material) {
-                    return true; // The material is used as an ingredient in smelting
+                    return true;
+                }
+            } else if (recipe instanceof CookingRecipe<?> cookingRecipe) {
+                // Check Blast Furnace / Smoker recipes
+                if (cookingRecipe.getInput().getType() == material) {
+                    return true;
                 }
             }
         }
 
         return false; // The item is not used in any recipe
     }
+
 
     public static boolean isCommonItem(ItemStack item){
         return item.getType() == Material.COPPER_INGOT || item.getType() == Material.LAPIS_LAZULI
@@ -1380,5 +1941,82 @@ public class FactoryItem {
             // Not enough items found, handle this case
             //player.sendMessage("Not enough items to remove.");
         }
+    }
+
+
+    public static ItemStack CreateBackpack(int size){
+        ItemStack item = new ItemStack(Material.CHEST);
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        container.set(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN, true);
+        container.set(GetNamespacedKey(backpackSizeKey), PersistentDataType.INTEGER, size);
+
+        meta.setDisplayName(sendText("&fBackpack"));
+
+        List<String> itemLore =
+
+                Arrays.asList(
+
+                        sendText("&9Tool"),
+                        sendText(" "),
+                        sendText(" &e❐ &7Size: &6"+size),
+                        sendText(" "),
+                        sendText("&8➤ &7Right-Click to store items")
+
+                );
+
+        container.set(GetNamespacedKey(serialCodeKey), PersistentDataType.STRING, GenerateSerialCode());
+
+        meta.setLore(itemLore);
+
+        item.setItemMeta(meta);
+        return item;
+    }
+
+
+    public static ItemStack GetPotion(PotionType type){
+
+        ItemStack item = new ItemStack(Material.POTION);
+        ItemMeta meta = item.getItemMeta();
+
+        meta = SetAditMeta(meta);
+        item.setItemMeta(meta);
+
+        PotionMeta potionMeta = (PotionMeta) item.getItemMeta();
+        potionMeta.setBasePotionType(type);
+
+        item.setItemMeta(potionMeta);
+
+        return item;
+
+    }
+
+    public static ItemStack CreateSpawner(EntityType type){
+
+        ItemStack item = new ItemStack(Material.SPAWNER);
+        BlockStateMeta blockMeta = (BlockStateMeta) item.getItemMeta();
+        CreatureSpawner spawner = (CreatureSpawner) blockMeta.getBlockState();
+        spawner.setSpawnedType(type);
+        blockMeta.setBlockState(spawner);
+
+        item.setItemMeta(blockMeta);
+
+        ItemMeta meta = item.getItemMeta();
+        meta = SetAditMeta(meta);
+
+        meta.setDisplayName(sendText("&f"+formatItemName(type.toString().toLowerCase())+" Spawner"));
+
+        List<String> itemLore = new ArrayList<>();
+
+        itemLore.add(sendText("&9Spawner"));
+        itemLore.add(sendText("&9Placeable"));
+        //itemLore.add(sendText("&8&o"+formatItemName(type.toString().toLowerCase())));
+
+        meta.setLore(itemLore);
+
+        item.setItemMeta(meta);
+
+        return item;
     }
 }

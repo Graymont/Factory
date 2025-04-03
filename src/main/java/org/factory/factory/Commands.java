@@ -12,9 +12,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.factory.factory.Utils.FactoryItem;
-import org.factory.factory.Utils.GUIManager;
-import org.factory.factory.Utils.Rarity;
+import org.factory.factory.Utils.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,14 +22,20 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.factory.factory.Database.*;
-import static org.factory.factory.Events.SetSteam;
-import static org.factory.factory.Events.UpdateItem;
+import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
-import static org.factory.factory.Utils.FactoryItem.baseKey;
-import static org.factory.factory.Utils.FactoryItem.itemKey;
+import static org.factory.factory.Utils.CooldownManager.resetCooldown;
+import static org.factory.factory.Utils.CooldownManager.setCooldown;
+import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.FactoryMachine.*;
-import static org.factory.factory.Utils.GUIManager.OpenMenu;
+import static org.factory.factory.Utils.FactoryQuest.*;
+import static org.factory.factory.Utils.GUIManager.*;
+import static org.factory.factory.Utils.MultiBlock.ObtainMultiBlockGuide;
+import static org.factory.factory.Utils.MultiBlock.OpenCarbonForge;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
+import static org.factory.factory.Utils.PlayerProgress.*;
+import static org.factory.factory.Utils.RewardsManager.*;
+import static org.factory.factory.Utils.SQLiteDatabase.SaveAllProgress;
 import static org.factory.factory.Utils.UserInterface.*;
 
 
@@ -49,7 +53,7 @@ public class Commands implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String s, @NotNull String[] args) {
-        if (command.getName().equalsIgnoreCase("factory")){
+        if (command.getName().equalsIgnoreCase("factoryutils")){
 
             if (sender instanceof Player){
                 if (!sender.hasPermission("factory.admin")){
@@ -101,7 +105,8 @@ public class Commands implements CommandExecutor, TabCompleter {
 
 
                 ItemStack machine = CreateMachine(machineName, machineLevel, speed, productionRate, steamConsumption, durability, maxDurability,
-                        material, drop, potentialDrop, rarity, "Active", 0, MachineType.parseType(machineType), steamProduction);
+                        material, drop, potentialDrop, rarity, "Active", 0, MachineType.parseType(machineType), steamProduction, true,
+                        1);
                 player.getInventory().addItem(machine);
             }
 
@@ -175,7 +180,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                 }
                 player.sendMessage(sendText("&aSet &2"+statsKey+" &ato &6"+value));
                 item.setItemMeta(meta);
-                UpdateItem(player, "hand");
+                UpdateItem(player, "hand", item);
             }
             else if (args[0].equalsIgnoreCase("testitem")){
                 FactoryItem item = new FactoryItem();
@@ -254,13 +259,15 @@ public class Commands implements CommandExecutor, TabCompleter {
             }
 
             else if (args[0].equalsIgnoreCase("save-data")){
-                SaveData();
+                //SaveAllData();
+
+                SaveAllProgress();
                 sender.sendMessage(sendText("&aSaved all data to &6database.db"));
             }
-            else if (args[0].equalsIgnoreCase("load-data")){
+            /*else if (args[0].equalsIgnoreCase("load-data")){
                 LoadData();
                 sender.sendMessage(sendText("&aLoaded all data from &6database.db"));
-            }
+            }*/
 
             else if (args[0].equalsIgnoreCase("setmachinestats")){
                 assert sender instanceof Player;
@@ -304,6 +311,10 @@ public class Commands implements CommandExecutor, TabCompleter {
                 events.RefundMachines((Player) target);
             }
 
+            else if (args[0].equalsIgnoreCase("machinedatabase")){
+                OpenMachineDatabase((Player) sender, "machine");
+            }
+
             else if (args[0].equalsIgnoreCase("checkitem")){
                 Player player = (Player) sender;
                 ItemStack item = player.getInventory().getItemInMainHand();
@@ -333,46 +344,230 @@ public class Commands implements CommandExecutor, TabCompleter {
                 SetSteam(player, amount);
             }
 
+            else if (args[0].equalsIgnoreCase("init")){
+                InitFactoryItems();
+                String msg = "&aAll things has been initialized!";
+                sender.sendMessage(sendText(msg));
+                consoleLog(sendText(msg));
+            }
+
+            else if (args[0].equalsIgnoreCase("setlevel")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                SetLevel(player, amount);
+            }
+            else if (args[0].equalsIgnoreCase("addlevel")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                AddLevel(player, amount);
+            }
+            else if (args[0].equalsIgnoreCase("removelevel")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                RemoveLevel(player, amount);
+            }
+
+            else if (args[0].equalsIgnoreCase("setexp")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                SetExp(player, amount);
+            }
+            else if (args[0].equalsIgnoreCase("addexp")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                AddExp(player, amount);
+            }
+            else if (args[0].equalsIgnoreCase("removeexp")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                RemoveExp(player, amount);
+            }
+
+            else if (args[0].equalsIgnoreCase("deleteunderscorekey")){
+                /*List<String> keyList = itemList.keySet().stream().toList();
+                for (String key : keyList){
+                    if (key.contains("_")){
+                        itemList.remove(key);
+                        sender.sendMessage(sendText("&aRemoved: &2"+key));
+                    }
+                }*/
+
+                List<String> materialList = Arrays.asList(
+                        "wheat", "barley", "corn", "carrot", "potato", "beetroot", "whiteonion", "redonion",
+                        "lettuce", "cabbage", "broccoli", "cauliflower", "radish", "cucumber", "greenbeans",
+                        "eggplant", "chilipepper", "apple", "banana", "orange", "grape", "melon", "pumpkin",
+                        "strawberry", "blueberry", "blackberry", "kiwi", "lemon", "peach", "papaya", "pineapple",
+                        "mango", "purplemushroom", "redmushroom", "bluemushroom", "brownmushroom", "greenmushroom",
+                        "pinkmushroom", "yellowmushroom", "cherrylog", "birchlog", "crimsonstem", "junglelog",
+                        "mangrovelog", "sprucelog", "warpedstem", "oaklog", "acacialog", "darkoaklog", "oakleaves",
+                        "pinkleaves", "purpleleaves", "redleaves", "wisterialeaves", "fallleaves", "autumnleaves",
+                        "azalealeaves", "acacialeaves", "spruceleaves", "sakuraleaves", "birchleaves", "cherryleaves",
+                        "jungleleaves", "mangroveleaves"
+                );
+
+                List<String> eType = Arrays.asList("helmet", "chestplate", "leggings", "boots");
+
+                for (String type : eType){
+                    for (String mat : materialList){
+                        itemList.remove(mat+type);
+                        sender.sendMessage(sendText("&aRemoved: &2"+mat+type));
+                    }
+                }
+
+            }
+
+            else if (args[0].equalsIgnoreCase("refreshmachinetag")){
+                RefreshMachineTag(args[1], args[2]);
+                if (args[1].equals("all")){
+                    sender.sendMessage(sendText("&aRefreshed all machine's tags!"));
+                }else{
+                    sender.sendMessage(sendText("&aRefreshed all machine's tags of &2"+args[2]+"!"));
+                }
+            }
+
+            else if (args[0].equalsIgnoreCase("givereward")){
+                Player target = Bukkit.getPlayer(args[1]);
+                RewardsManager.RewardType type = RewardsManager.RewardType.parseReward(args[2]);
+                if (type == null){
+                    sender.sendMessage(sendText("&c"+args[2]+" &4Reward Type is not exist!"));
+                    return false;
+                }
+                GiveReward(target, type);
+                sender.sendMessage(sendText("&aGived &2"+type+" &aReward to &2"+target.getName()));
+            }
+
+            else if (args[0].equalsIgnoreCase("getbackpack")){
+                assert sender instanceof Player;
+                Player player = (Player) sender;
+                player.getInventory().addItem(CreateBackpack(Integer.parseInt(args[1])));
+                player.sendMessage(sendText("&aObtained backpack with size: &2"+Integer.parseInt(args[1])));
+            }
+
+            else if (args[0].equalsIgnoreCase("openarmormaker")){
+                assert sender instanceof Player;
+                OpenCarbonForge((Player) sender);
+            }
+
+            else if (args[0].equalsIgnoreCase("resetcooldown")){
+                Player target = Bukkit.getPlayer(args[1]);
+                assert target != null;
+                String key = args[2];
+                CooldownManager.CooldownType cooldownType = CooldownManager.CooldownType.parseCooldown(key);
+                if (cooldownType == CooldownManager.CooldownType.None){
+                    sender.sendMessage(sendText("&c"+key+" &4is not a valid Cooldowns key!"));
+                    return false;
+                }
+
+                resetCooldown(target, CooldownManager.CooldownType.parseCooldown(key));
+                sender.sendMessage(sendText("&aCooldowns of &2"+target.getName()+" &a(&b"+key+"&a) &ahas been reset!"));
+            }
+
+            else if (args[0].equalsIgnoreCase("testquest")){
+                assert sender instanceof Player;
+                ClaimQuest((Player) sender, FactoryQuest.Quest.Hunter_1);
+            }
+            else if (args[0].equalsIgnoreCase("completequest")){
+                assert sender instanceof Player;
+                CompleteQuest((Player) sender, quest.get(sender));
+            }
         }
         else if (command.getName().equalsIgnoreCase("refundmachine")){
             events.RefundMachines(((Player) sender));
+        }
+        else if (command.getName().equalsIgnoreCase("multiblock")){
+            ObtainMultiBlockGuide((Player) sender);
         }
         else if (command.getName().equalsIgnoreCase("shop")){
             Player player = (Player) sender;
             OpenMenu(player, GUIManager.MenuList.Shop);
         }
+        else if (command.getName().equalsIgnoreCase("viewmaxexp")){
+            ViewMaxExp();
+        }
+        else if (command.getName().equalsIgnoreCase("abandonquest")){
+            assert sender instanceof Player;
+            AbandonQuest((Player)sender);
+        }
+        else if (command.getName().equalsIgnoreCase("quest")){
+
+        }
+
+
         else if (command.getName().equalsIgnoreCase("spawn")){
             Player player = (Player) sender;
             Location spawnLocation = GetLocation("spawn");
             if (spawnLocation != null){
-                player.sendTitle(sendRgbText("Teleported", color_darkGreenAcid), sendRgbText("You've been teleported to &bSpawn", color_brightGreenAcid));
-                player.sendMessage(sendRgbText("You've been teleported to &bSpawn", "#6EDA10"));
+                //player.sendTitle(sendRgbText("Teleported", color_darkGreenAcid), sendRgbText("You've been teleported to &bSpawn", color_brightGreenAcid));
+                //player.sendMessage(sendRgbText("You've been teleported to &bSpawn", "#6EDA10"));
                 player.teleport(spawnLocation);
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    PlaySound(Sound.ENTITY_ENDERMAN_TELEPORT, player, 1, 1);
-                }, 20L);
+                //Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                PlaySound(Sound.ENTITY_ENDERMAN_TELEPORT, player, 1, 1);
+                //}, 20L);
             }
+        }
+
+
+        else if (command.getName().equalsIgnoreCase("sellall")){
+            Player player = (Player) sender;
+            SellAll(player);
+        }
+
+        else if (command.getName().equalsIgnoreCase("sellgui")){
+            Player player = (Player) sender;
+            OpenSellGui(player);
+        }
+
+        else if (command.getName().equalsIgnoreCase("warp")){
+            Player player = (Player) sender;
+            OpenMenu(player, MenuList.WarpMenu);
+        }
+
+        else if (command.getName().equalsIgnoreCase("profile")){
+            Player player = (Player) sender;
+            OpenMenu(player, MenuList.Profile);
+        }
+
+        else if (command.getName().equalsIgnoreCase("hazmat")){
+            GiveReward((Player) sender, RewardsManager.RewardType.Hazmat);
+        }
+
+        else if (command.getName().equalsIgnoreCase("rewards")){
+            OpenMenu((Player) sender, MenuList.Rewards);
+        }
+
+        else if (command.getName().equalsIgnoreCase("catalog")){
+            Player player = (Player) sender;
+            int page = 1;
+            if (args.length == 1){
+                page = Integer.parseInt(args[0]);
+            }
+            if (page >= maxCatalogPage){
+                sender.sendMessage(sendText("&4Max Catalog Page &c"+maxCatalogPage));
+                return false;
+            }
+            OpenCatalog(player, page);
+            menuPage.put(player, page);
         }
         return false;
     }
 
-    void SaveData(){
-        plugin.sqLiteDatabase.SaveMachineData(plugin.events.placedMachines);
-        plugin.sqLiteDatabase.SaveMachineItems(plugin.events.machineItems);
+    /*void SaveData(){
+        getMainPlugin().sqLiteDatabase.SaveMachineData(placedMachines);
+        getMainPlugin().sqLiteDatabase.SaveMachineItems(machineItems);
         consoleLog(sendText("&aSaved SQL Data!"));
     }
 
     void LoadData(){
-        plugin.sqLiteDatabase.LoadMachineData(plugin.sqLiteDatabase.getConnection());
-        plugin.sqLiteDatabase.LoadMachineItems(plugin.sqLiteDatabase.getConnection());
+        getMainPlugin().sqLiteDatabase.LoadMachineData(plugin.sqLiteDatabase.getConnection());
+        getMainPlugin().sqLiteDatabase.LoadMachineItems(plugin.sqLiteDatabase.getConnection());
         consoleLog(sendText("&aLoaded SQL Data!"));
-    }
+    }*/
 
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String s, @NotNull String[] args) {
         List<String> suggestions = new ArrayList<>();
 
-        if (command.getName().equalsIgnoreCase("factory")){
+        if (command.getName().equalsIgnoreCase("factoryutils")){
             if (args.length == 1){
                 List<String> argsList = new ArrayList<>();
                 argsList.add("setmachinespeed");
@@ -380,6 +575,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("createitem");
                 argsList.add("setitemstats");
                 argsList.add("setmachinestats");
+                argsList.add("machinedatabase");
                 argsList.add("testitem");
                 argsList.add("saveitem");
                 argsList.add("loaditem");
@@ -387,12 +583,29 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("savelocation");
                 argsList.add("tplocation");
                 argsList.add("removeitem");
+                argsList.add("init");
                 argsList.add("reload");
                 argsList.add("save-all-config");
                 argsList.add("save-data");
                 argsList.add("load-data");
                 argsList.add("viewattributes");
                 argsList.add("refundmachine");
+                argsList.add("refreshmachinetag");
+                argsList.add("getbackpack");
+                argsList.add("givereward");
+                argsList.add("setsteam");
+                argsList.add("removesteam");
+                argsList.add("addsteam");
+
+                argsList.add("setlevel");
+                argsList.add("addlevel");
+                argsList.add("removelevel");
+                argsList.add("resetcooldown");
+
+                argsList.add("setexp");
+                argsList.add("addexp");
+                argsList.add("removeexp");
+
                 String partialInput = args[0].toLowerCase();
                 for (String key : argsList) {
                     if (key.toLowerCase().startsWith(partialInput)) {
@@ -420,6 +633,39 @@ public class Commands implements CommandExecutor, TabCompleter {
                 else if (args[0].equalsIgnoreCase("loaditem")
                 || args[0].equalsIgnoreCase("removeitem")){
                     for (String key : itemList.keySet()) {
+                        if (key.toLowerCase().startsWith(partialInput)) {
+                            suggestions.add(key);
+                        }
+                    }
+                }
+
+                else if (args[0].equalsIgnoreCase("setlevel")
+                        || args[0].equalsIgnoreCase("addlevel")
+                        || args[0].equalsIgnoreCase("removelevel")
+                ||
+                        args[0].equalsIgnoreCase("setsteam")
+                        || args[0].equalsIgnoreCase("addsteam")
+                        || args[0].equalsIgnoreCase("removesteam")
+                        || args[0].equalsIgnoreCase("givereward")
+
+                || args[0].equalsIgnoreCase("setexp")
+                        || args[0].equalsIgnoreCase("addexp")
+                        || args[0].equalsIgnoreCase("removeexp")
+
+                        || args[0].equalsIgnoreCase("resetcooldown")){
+                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                        if (onlinePlayer.getName().toLowerCase().startsWith(partialInput)) {
+                            suggestions.add(onlinePlayer.getName());
+                        }
+                    }
+                }
+            }
+            else if (args.length == 3){
+                if (args[0].equalsIgnoreCase("givereward")){
+                    List<String> argsList = new ArrayList<>();
+                    argsList.add("starter");
+                    String partialInput = args[2].toLowerCase();
+                    for (String key : argsList) {
                         if (key.toLowerCase().startsWith(partialInput)) {
                             suggestions.add(key);
                         }

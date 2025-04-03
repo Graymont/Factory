@@ -2,8 +2,20 @@ name: Factory
 version: '1.0-Factory'
 main: org.factory.factory.Factory
 api-version: '1.21'
+
+softdepend: [ProtocolLib]
+
 commands:
-  factory:
+  factoryutils:
   refundmachine:
   shop:
   spawn:
+  sellall:
+  sellgui:
+  catalog:
+  multiblock:
+  warp:
+  profile:
+  hazmat:
+  rewards:
+  abandonquest:

@@ -74,7 +74,29 @@ public class CraftingManager implements Listener {
                 Material.BAMBOO_PLANKS,
                 Material.MANGROVE_PLANKS
         };
+        // bow
+        String indieKey = "bow";
+        ItemStack indieResult = GetItem(indieKey);
+        ShapedRecipe indieRecipe = new ShapedRecipe(NamespacedKey.minecraft(indieKey+"1"), indieResult);
+        indieRecipe.shape(
+                    " PS",
+                    "P S",
+                    " PS");
+        indieRecipe.setIngredient('P', Material.STICK);
+        indieRecipe.setIngredient('S', Material.STRING);
+        Bukkit.getServer().addRecipe(indieRecipe);
 
+        // bow
+        indieKey = "fishingrod";
+        indieResult = GetItem(indieKey);
+        indieRecipe = new ShapedRecipe(NamespacedKey.minecraft(indieKey+"1"), indieResult);
+        indieRecipe.shape(
+                "  P",
+                " PS",
+                "P S");
+        indieRecipe.setIngredient('P', Material.STICK);
+        indieRecipe.setIngredient('S', Material.STRING);
+        Bukkit.getServer().addRecipe(indieRecipe);
 
         for (Material tool : woodenTools) {
             int variant = 1;
@@ -250,5 +272,21 @@ public class CraftingManager implements Listener {
         ItemStack goldingot2 = new ItemStack(GetItem("goldingot"));
         FurnaceRecipe goldingotrecipe2 = new FurnaceRecipe(GetNamespacedKey("goldingotkey2"), goldingot2, Material.GOLD_ORE, 0f, 200);
         Bukkit.addRecipe(goldingotrecipe2);
+    }
+
+
+    public static boolean isDisabledItem(ItemStack item){
+        if (item == null){
+            return false;
+        }
+
+        if (item.getType() == Material.AIR){
+            return false;
+        }
+
+        return item.getType().toString().toLowerCase().contains("helmet")
+                || item.getType().toString().toLowerCase().contains("chestplate")
+                || item.getType().toString().toLowerCase().contains("leggings")
+                || item.getType().toString().toLowerCase().contains("boots");
     }
 }
