@@ -22,6 +22,7 @@ import static org.factory.factory.Database.SaveAllData;
 import static org.factory.factory.Events.*;
 import static org.factory.factory.Utils.CraftingManager.InitRecipes;
 import static org.factory.factory.Utils.CraftingManager.InitSmeltings;
+import static org.factory.factory.Utils.FactoryEvents.ScheduleRollEvents;
 import static org.factory.factory.Utils.FactoryItem.InitFactoryItems;
 import static org.factory.factory.Utils.FactoryMachine.*;
 import static org.factory.factory.Utils.GUIManager.GameMenu;
@@ -86,6 +87,9 @@ public final class Factory extends JavaPlugin {
         InitMobs();
 
         //registerPacketListener(this);
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new PlaceholderManager().register();
+        }
     }
 
 
@@ -119,6 +123,7 @@ public final class Factory extends JavaPlugin {
         Objects.requireNonNull(getCommand("rewards")).setExecutor(commands);
         Objects.requireNonNull(getCommand("abandonquest")).setExecutor(commands);
         Objects.requireNonNull(getCommand("quest")).setExecutor(commands);
+        Objects.requireNonNull(getCommand("sell")).setExecutor(commands);
 
         // Tab Completer
         Objects.requireNonNull(getCommand("factoryutils")).setTabCompleter(commands);
@@ -145,6 +150,8 @@ public final class Factory extends JavaPlugin {
                     PlayerInventoryItems(player);
                     ManageProgress(player);
                     GameMenu(player);
+
+                    ScheduleRollEvents();
                 }
             }
         }.runTaskTimer(getMainPlugin(), 0L, 20L);

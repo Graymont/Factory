@@ -3,20 +3,24 @@ version: '1.0-Factory'
 main: org.factory.factory.Factory
 api-version: '1.21'
 
-softdepend: [ProtocolLib]
+softdepend: [ProtocolLib, PlaceholderAPI]
 
 commands:
   factoryutils:
   refundmachine:
   shop:
+    aliases: [buy, market]
   spawn:
   sellall:
   sellgui:
+    aliases: [sellitem]
   catalog:
   multiblock:
   warp:
+    aliases: [warps, warplist]
   profile:
   hazmat:
   rewards:
   abandonquest:
   quest:
+  sell:

@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.factory.factory.Database.GetItem;
+import static org.factory.factory.Utils.FactoryItem.ProcessItemMeta;
 import static org.factory.factory.Utils.FactoryItem.SetAditMeta;
 import static org.factory.factory.Utils.FactoryMachine.serialCodeKey;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
@@ -56,6 +57,18 @@ public class MultiBlock {
         Location blockLocation = block.getLocation();
 
         if (block.getType() == Material.FURNACE){
+            if (block.getRelative(BlockFace.UP).getType() == Material.ANVIL){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean isArmorCrafter(Block block){
+        Location blockLocation = block.getLocation();
+
+        if (block.getType() == Material.DISPENSER){
             if (block.getRelative(BlockFace.UP).getType() == Material.ANVIL){
                 return true;
             }
@@ -132,6 +145,60 @@ public class MultiBlock {
 
                 // Create required material item
                 ItemStack materialItem = GetItem("carbon"+material);
+                materialItem.setAmount(requiredAmount);
+
+                // Create trade
+                MerchantRecipe trade = new MerchantRecipe(armorItem, 9999);
+                trade.addIngredient(materialItem);
+                trades.add(trade);
+            }
+        }
+
+        merchant.setRecipes(trades);
+        player.openMerchant(merchant, true);
+    }
+
+    public static void OpenArmorCrafter(Player player) {
+        Merchant merchant = Bukkit.createMerchant(sendText("&nArmor Crafter"));
+        List<MerchantRecipe> trades = new ArrayList<>();
+
+        // Machine Material Names (order preserved, no "_custom")
+        String[] materials = {
+                "leather", "chainmail", "iron", "golden", "diamond", "netherite"
+        };
+
+        // Armor Types & Required Materials
+        String[] armorTypes = {"helmet", "chestplate", "leggings", "boots"};
+        int[] materialCosts = {5, 8, 7, 4}; // Helmet = 5, Chestplate = 8, Leggings = 7, Boots = 4
+
+        for (String material : materials) {
+            for (int i = 0; i < armorTypes.length; i++) {
+                String armorType = armorTypes[i];
+                int requiredAmount = materialCosts[i];
+
+                // Create armor item as result
+                ItemStack armorItem = GetItem(material + armorType);
+
+                // Create required material item
+                ItemStack materialItem = ProcessItemMeta(new ItemStack(Material.LEATHER));
+
+                if (material.contains("leather")){
+                    materialItem = ProcessItemMeta(new ItemStack(Material.LEATHER));
+                }
+                else if (material.contains("chainmail")){
+                    materialItem = ProcessItemMeta(new ItemStack(Material.CHAIN));
+                }
+                else if (material.contains("diamond")){
+                    materialItem = ProcessItemMeta(new ItemStack(Material.DIAMOND));
+                }
+                else if (material.contains("golden")){
+                    materialItem = ProcessItemMeta(new ItemStack(Material.GOLD_INGOT));
+                }
+                else{
+                    String materialKey = material+"_ingot";
+                    materialItem = ProcessItemMeta(new ItemStack(Material.getMaterial(materialKey.toUpperCase())));
+                }
+
                 materialItem.setAmount(requiredAmount);
 
                 // Create trade

@@ -144,8 +144,10 @@ public class Events implements Listener {
         storedMachines.putIfAbsent(player.getUniqueId(), new ArrayList<>());
         isBackpack.putIfAbsent(player, false);
 
-        playerLevel.putIfAbsent(player, 1);
-        playerExp.putIfAbsent(player, 0.0);
+        maxMachines.putIfAbsent(player.getUniqueId(), defaultMaxMachine);
+
+        playerLevel.putIfAbsent(player.getUniqueId(), 1);
+        playerExp.putIfAbsent(player.getUniqueId(), 0.0);
 
         consoleLog(sendText("&aAttributes of &2"+player.getName()+" &ahas been Initialized Successfully!"));
     }
@@ -591,6 +593,9 @@ public class Events implements Listener {
         player.sendMessage(sendText("&aMachine has been enabled!"));
     }
 
+    public static int globalMaxMachine = 50;
+    public static HashMap<UUID, Integer> maxMachines = new HashMap<>();
+
     public static void StartAllMachines(Player player){
         int mCount = 0;
 
@@ -736,7 +741,7 @@ public class Events implements Listener {
                     levelMinimum = 100;
                 }
 
-                if (playerLevel.get(player) < levelMinimum){
+                if (playerLevel.get(player.getUniqueId()) < levelMinimum){
                     event.setCancelled(true);
                     player.sendMessage(sendText(Notification_NoLevel(player)));
                     return;
@@ -753,7 +758,7 @@ public class Events implements Listener {
 
             playerCooldown.put(player.getName()+".cooldown.Place Machine", 2);
             int mc = machineCount.get(player.getUniqueId());
-            if (mc >= defaultMaxMachine){
+            if (mc >= maxMachines.get(player.getUniqueId())){
                 event.setCancelled(true);
                 player.sendMessage(sendText("&4You already reach the maximum machine placement!"));
                 PlaySoundAt(Sound.BLOCK_MUD_BRICKS_PLACE, location, 1, 3);
@@ -796,7 +801,7 @@ public class Events implements Listener {
             PlaySoundAt(Sound.BLOCK_ANVIL_PLACE, location, 1, 3);
 
             //player.sendMessage(" ");
-            player.sendMessage(sendText("&bPlaced Machine "+meta.getDisplayName()+" &6["+mc+"&e/&6"+defaultMaxMachine+"]"));
+            player.sendMessage(sendText("&bPlaced Machine "+meta.getDisplayName()+" &6["+mc+"&e/&6"+maxMachines.get(player.getUniqueId())+"]"));
         }
     }
 
@@ -937,7 +942,7 @@ public class Events implements Listener {
 
         if (onlinePlayer != null){
             //onlinePlayer.sendMessage(" ");
-            onlinePlayer.sendMessage(sendText("&bRemoved Machine "+obtainedMachine.getItemMeta().getDisplayName()+" &6["+mc+"&e/&6"+defaultMaxMachine+"]"));
+            onlinePlayer.sendMessage(sendText("&bRemoved Machine "+obtainedMachine.getItemMeta().getDisplayName()+" &6["+mc+"&e/&6"+maxMachines.get(player)+"]"));
         }
 
         RemoveMachineTags(location, taskId);
@@ -1282,7 +1287,7 @@ public class Events implements Listener {
                         }
 
                         Boolean canUseIndicator = container.get(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN);
-                        if (playerLevel.get(player) < levelMinimum){
+                        if (playerLevel.get(player.getUniqueId()) < levelMinimum){
                             if (canUseIndicator){
                                 container.set(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN, false);
                                 item.setItemMeta(meta);
@@ -1295,7 +1300,7 @@ public class Events implements Listener {
                             }
                         }
 
-                        else if (playerLevel.get(player) >= levelMinimum){
+                        else if (playerLevel.get(player.getUniqueId()) >= levelMinimum){
                             if (!canUseIndicator){
                                 container.set(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN, true);
                                 item.setItemMeta(meta);
@@ -1510,6 +1515,10 @@ public class Events implements Listener {
                     event.getEntity().getItemStack().setItemMeta(ProcessItemMeta(event.getEntity().getItemStack()).getItemMeta());
                 }
             }
+        }
+
+        if (item.getType() == Material.SPAWNER){
+            event.setCancelled(true);
         }
     }
 
@@ -2431,6 +2440,10 @@ public class Events implements Listener {
                     event.setCancelled(true);
                     OpenCarbonForge(player);
                 }
+                else if (isArmorCrafter(block)){
+                    event.setCancelled(true);
+                    OpenArmorCrafter(player);
+                }
             }
         }
 
@@ -2740,84 +2753,134 @@ public class Events implements Listener {
     public void OnMobSpawn(EntitySpawnEvent event){
         Entity entity = event.getEntity();
         Location location = entity.getLocation();
-        World world = location.getWorld();
-        Island island = SuperiorSkyblockAPI.getIslandAt(location);
+
 
 
         if (entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.BUILD_IRONGOLEM ||
-                entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER ||
                 entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER
-        || entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.OMINOUS_ITEM_SPAWNER ||
-                entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.BUILD_WITHER
-                ||
-                entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL){
-            event.setCancelled(true);
+                || entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.OMINOUS_ITEM_SPAWNER ||
+                entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.BUILD_WITHER){
 
-            if (entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER){
-                Random random = new Random();
-                int randomDropAmount = 1;
-                int randomDropAmount2 = 1;
-
-                ItemStack item = new ItemStack(Material.AIR);
-                ItemStack item2 = new ItemStack(Material.AIR);
-
-                if (entity instanceof Pig){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.PORKCHOP);
-                }
-                else if (entity instanceof Chicken){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.CHICKEN);
-                    item2= new ItemStack(Material.FEATHER);
-                }
-                else if (entity instanceof Sheep){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.MUTTON);
-                    item2= new ItemStack(Material.WHITE_WOOL);
-                }
-                else if (entity instanceof Cow){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.BEEF);
-                    item2= new ItemStack(Material.LEATHER);
-                }
-                else if (entity instanceof Rabbit){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.RABBIT);
-                    item2= new ItemStack(Material.RABBIT_HIDE);
-                }
-                else if (entity instanceof Zombie){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.ROTTEN_FLESH);
-                }
-                else if (entity instanceof Skeleton){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.BONE);
-                }
-                else if (entity instanceof Spider){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.STRING);
-                    item2= new ItemStack(Material.SPIDER_EYE);
-                }
-                else if (entity instanceof Creeper){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.GUNPOWDER);
-                }
-                else if (entity instanceof Enderman){
-                    randomDropAmount = random.nextInt(2)+1;
-                    item = new ItemStack(Material.ENDER_PEARL);
-                    item2= new ItemStack(Material.ENDER_EYE);
-                }
-                DropItem(location, item, randomDropAmount);
-                DropItem(location, item2, randomDropAmount2);
-                PlaySoundAt(Sound.ENTITY_PLAYER_LEVELUP, location, 1, 3);
-                PlaySoundAt(Sound.ENTITY_ITEM_PICKUP, location, 1, 3);
-            }
+                event.setCancelled(true);
         }
+
+        else if (entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER ||
+                entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL
+                || entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG
+        ){
+
+            int level = 1;
+
+            if (entity.getWorld().getName().equals("SuperiorWorld")){
+                Island island = SuperiorSkyblockAPI.getIslandAt(entity.getLocation());
+                SuperiorPlayer owner = island.getOwner();
+                OfflinePlayer player = Bukkit.getOfflinePlayer(owner.getUniqueId());
+                level = playerLevel.get(player.getUniqueId());
+            }
+
+            entity.addScoreboardTag("custom");
+            entity.setCustomNameVisible(true);
+            entity.setCustomName(sendText("&f"+formatItemName(entity.getType().toString())+" &8[&9Lv."+level+"&8]"));
+
+            ((Mob) entity).setMaxHealth(level*5);
+            ((Mob) entity).heal(((Mob) entity).getMaxHealth());
+
+
+            PlaySoundAt(Sound.ENTITY_PLAYER_LEVELUP, location, 1, 3);
+
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (entity.isValid()){
+                    entity.remove();
+                    PlaySoundAt(Sound.ENTITY_ITEM_PICKUP, location, 1, 3);
+                }
+            }, 1200L);
+        }
+
 
         if (entity instanceof ExperienceOrb){
             event.setCancelled(true);
         }
 
+    }
+
+    public static Integer ClearMobs(World world){
+        int amount = 0;
+        for (Entity entity : world.getEntities()){
+            if (entity instanceof Mob){
+                if (entity.getScoreboardTags().contains("custom")){
+                    entity.remove();
+                    amount++;
+                }
+            }
+        }
+
+        return amount;
+    }
+
+    @EventHandler
+    public void OnEntityDeath(EntityDeathEvent event){
+        Entity entity = event.getEntity();
+
+        if (!(entity instanceof Mob)){
+            return;
+        }
+
+        Random random = new Random();
+        int randomDropAmount = 1;
+        int randomDropAmount2 = 1;
+
+        ItemStack item = new ItemStack(Material.AIR);
+        ItemStack item2 = new ItemStack(Material.AIR);
+
+        if (entity instanceof Pig){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.PORKCHOP);
+        }
+        else if (entity instanceof Chicken){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.CHICKEN);
+            item2= new ItemStack(Material.FEATHER);
+        }
+        else if (entity instanceof Sheep){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.MUTTON);
+            item2= new ItemStack(Material.WHITE_WOOL);
+        }
+        else if (entity instanceof Cow){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.BEEF);
+            item2= new ItemStack(Material.LEATHER);
+        }
+        else if (entity instanceof Rabbit){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.RABBIT);
+            item2= new ItemStack(Material.RABBIT_HIDE);
+        }
+        else if (entity instanceof Zombie){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.ROTTEN_FLESH);
+        }
+        else if (entity instanceof Skeleton){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.BONE);
+        }
+        else if (entity instanceof Spider){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.STRING);
+            item2= new ItemStack(Material.SPIDER_EYE);
+        }
+        else if (entity instanceof Creeper){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.GUNPOWDER);
+        }
+        else if (entity instanceof Enderman){
+            randomDropAmount = random.nextInt(2)+1;
+            item = new ItemStack(Material.ENDER_PEARL);
+            item2= new ItemStack(Material.ENDER_EYE);
+        }
+        Location location = entity.getLocation();
+        DropItem(location, item, randomDropAmount);
+        DropItem(location, item2, randomDropAmount2);
     }
 
     public static HashMap<String, Entity> entityList = new HashMap<>();
@@ -2861,6 +2924,7 @@ public class Events implements Listener {
                 ItemMeta meta = item.getItemMeta();
                 Block block = event.getClickedBlock();
                 if (block.getType() == Material.SPAWNER){
+                    event.setCancelled(true);
                     if (!hasIslandAccess(player)){
                         if (!player.hasPermission("admin")){
                             player.sendMessage(sendText("&4You don't have access to remove this spawner"));
@@ -2880,6 +2944,9 @@ public class Events implements Listener {
                         if (addedItem.isEmpty()){
                             event.getClickedBlock().setType(Material.AIR);
                             PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, event.getClickedBlock().getLocation(), 1, 3);
+
+                            block.breakNaturally();
+
                         }else{
                             event.setCancelled(true);
                             player.sendMessage(sendText("&4Your inventory is full!"));

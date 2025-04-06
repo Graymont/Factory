@@ -3,6 +3,7 @@ package org.factory.factory.Utils;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -12,8 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.factory.factory.Database.*;
-import static org.factory.factory.Events.machineItems;
-import static org.factory.factory.Events.placedMachines;
+import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
 import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
@@ -337,6 +337,36 @@ public class FactoryMachine {
                 status, totalProduction, MachineType.parseType(machineType), steamProduction, true, levelMinimum));
 
         machineItems.put(location, newItem.clone());
+    }
+
+
+    public static void AddMaxMachine(Player player, int amount){
+        int current = maxMachines.get(player.getUniqueId());
+
+        current += amount;
+        if (current < globalMaxMachine){
+            maxMachines.put(player.getUniqueId(), current);
+        }else{
+            current = globalMaxMachine;
+            maxMachines.put(player.getUniqueId(), current);
+        }
+    }
+
+    public static void RemoveMaxMachine(Player player, int amount){
+        int current = maxMachines.get(player.getUniqueId());
+
+        current -= amount;
+        if (current > 0){
+            maxMachines.put(player.getUniqueId(), current);
+        }else{
+            maxMachines.put(player.getUniqueId(), 1);
+        }
+    }
+
+    public static void SetMaxMachine(Player player, int amount){
+        if (amount <= globalMaxMachine){
+            maxMachines.put(player.getUniqueId(), amount);
+        }
     }
 
 }

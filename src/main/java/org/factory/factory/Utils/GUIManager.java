@@ -40,10 +40,12 @@ import static org.factory.factory.Utils.CooldownManager.getFormattedRemainingTim
 import static org.factory.factory.Utils.CooldownManager.hasCooldown;
 import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.FactoryMachine.*;
+import static org.factory.factory.Utils.FactoryQuest.*;
 import static org.factory.factory.Utils.ItemSerializer.ItemStackFromBase64;
 import static org.factory.factory.Utils.ItemSerializer.loadSerializedItem;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.PlayerProgress.*;
+import static org.factory.factory.Utils.QuestManager.questCount;
 import static org.factory.factory.Utils.RewardsManager.ClaimRewards;
 import static org.factory.factory.Utils.SQLiteDatabase.parseLocationString;
 import static org.factory.factory.Utils.UserInterface.*;
@@ -64,7 +66,8 @@ public class GUIManager implements Listener {
         WarpMenu,
         Profile,
         AcidMaker,
-        Rewards;
+        Rewards,
+        Quest;
 
         public static MenuList parseMenu(String m){
             return switch (m.toLowerCase()) {
@@ -80,6 +83,7 @@ public class GUIManager implements Listener {
                 case "profile" -> MenuList.Profile;
                 case "acidmaker" -> MenuList.AcidMaker;
                 case "rewards" -> MenuList.Rewards;
+                case "quest" -> MenuList.Quest;
 
                 default -> MenuList.None;
             };
@@ -139,6 +143,7 @@ public class GUIManager implements Listener {
 
             inventory.setItem(9, getBasicUi("multiblock_acid_pipe"));
             inventory.setItem(10, getBasicUi("multiblock_acid_maker"));
+            inventory.setItem(11, getBasicUi("multiblock_carbon_forge"));
 
             player.openInventory(inventory);
         }
@@ -185,7 +190,14 @@ public class GUIManager implements Listener {
         else if (menu.equals(MenuList.Rewards)){
             Inventory inventory = OpenGUI(player, 3, "Rewards");
             SetHeaderFooter(inventory);
-            inventory.setItem(10, getRewardsIcon(player, "daily"));
+
+            inventory.setItem(9, getRewardsIcon(player, "hourly"));
+            inventory.setItem(11, getRewardsIcon(player, "daily"));
+            inventory.setItem(13, getRewardsIcon(player, "weekly"));
+            inventory.setItem(15, getRewardsIcon(player, "monthly"));
+
+            inventory.setItem(17, getRewardsIcon(player, "ocd"));
+
             player.openInventory(inventory);
 
             int taskId = new BukkitRunnable() {
@@ -194,7 +206,96 @@ public class GUIManager implements Listener {
                     Inventory topInventory = player.getOpenInventory().getTopInventory();
                     for (ItemStack item : topInventory.getContents()){
                         if (item != null){
-                            inventory.setItem(10, getRewardsIcon(player, "daily"));
+                            inventory.setItem(9, getRewardsIcon(player, "hourly"));
+                            inventory.setItem(11, getRewardsIcon(player, "daily"));
+                            inventory.setItem(13, getRewardsIcon(player, "weekly"));
+                            inventory.setItem(15, getRewardsIcon(player, "monthly"));
+
+                            inventory.setItem(17, getRewardsIcon(player, "ocd"));
+                        }
+                    }
+                    player.updateInventory();
+                }
+            }.runTaskTimer(getMainPlugin(), 0L, 20L).getTaskId();
+
+            openedMachine.put(player, taskId);
+        }
+
+        else if (menu.equals(MenuList.Quest)){
+            Inventory inventory = OpenGUI(player, 6, "Quest");
+            SetHeaderFooter(inventory);
+
+            List<String> questKeyList = Arrays.asList("miner", "hunter", "fisherman");
+
+            for (String questKey : questKeyList){
+                int start = 9;
+                int end = start+5;
+                int index = 1;
+                if (questKey.equals("miner")){
+                    start = 9;
+                    end = start+5;
+                    for (int i = start; i < end; i++) {
+                        inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
+                        index++;
+                    }
+                }
+                else if (questKey.equals("hunter")){
+                    start = 18;
+                    end = start+5;
+                    for (int i = start; i < end; i++) {
+                        inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
+                        index++;
+                    }
+                }
+                else if (questKey.equals("fisherman")){
+                    start = 27;
+                    end = start+5;
+                    for (int i = start; i < end; i++) {
+                        inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
+                        index++;
+                    }
+                }
+            }
+
+            inventory.setItem(49, getQuestIcon(player, "complete"));
+            player.openInventory(inventory);
+
+            int taskId = new BukkitRunnable() {
+                @Override
+                public void run() {
+                    Inventory topInventory = player.getOpenInventory().getTopInventory();
+                    for (ItemStack item : topInventory.getContents()){
+                        if (item != null){
+                            for (String questKey : questKeyList){
+                                int start = 9;
+                                int end = start+5;
+                                int index = 1;
+                                if (questKey.equals("miner")){
+                                    start = 9;
+                                    end = start+5;
+                                    for (int i = start; i < end; i++) {
+                                        inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
+                                        index++;
+                                    }
+                                }
+                                else if (questKey.equals("hunter")){
+                                    start = 18;
+                                    end = start+5;
+                                    for (int i = start; i < end; i++) {
+                                        inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
+                                        index++;
+                                    }
+                                }
+                                else if (questKey.equals("fisherman")){
+                                    start = 27;
+                                    end = start+5;
+                                    for (int i = start; i < end; i++) {
+                                        inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
+                                        index++;
+                                    }
+                                }
+                                inventory.setItem(49, getQuestIcon(player, "complete"));
+                            }
                         }
                     }
                     player.updateInventory();
@@ -213,8 +314,8 @@ public class GUIManager implements Listener {
         List<String> itemLore = new ArrayList<>();
         PersistentDataContainer container = meta.getPersistentDataContainer();
         if (name.equals("progress")){
-            int level = playerLevel.get(player);
-            double exp = playerExp.get(player);
+            int level = playerLevel.get(player.getUniqueId());
+            double exp = playerExp.get(player.getUniqueId());
             double maxExp = PlayerProgress.maxExp.get(level);
 
             int percent = (int) (exp/maxExp*100);
@@ -242,22 +343,161 @@ public class GUIManager implements Listener {
         List<String> itemLore = new ArrayList<>();
         PersistentDataContainer container = meta.getPersistentDataContainer();
 
-        if (name.equals("daily")){
-            item.setType(Material.WHITE_SHULKER_BOX);
-            meta.setDisplayName(sendText("&aDaily Rewards"));
+        if (name.equals("hourly") || name.equals("daily") || name.equals("weekly") || name.equals("monthly")){
+            String color = "&a";
+            if (name.equals("hourly")){
+                item.setType(Material.WHITE_SHULKER_BOX);
+            }
+            else if (name.equals("daily")){
+                color = "&2";
+                item.setType(Material.LIME_SHULKER_BOX);
+            }
+            else if (name.equals("weekly")){
+                color = "&6";
+                item.setType(Material.GREEN_SHULKER_BOX);
+            }
+            else {
+                color = "&4";
+                item.setType(Material.YELLOW_SHULKER_BOX);
+            }
+
+            RewardsManager.RewardType rewardType = RewardsManager.RewardType.parseReward(name);
+
+            meta.setDisplayName(sendText(color+formatItemName(name)+" Rewards"));
+            itemLore.add(sendText(" "));
+            int lvMin = RewardsManager.RewardType.getLevel(rewardType);
+            if (playerLevel.get(player.getUniqueId()) >= lvMin){
+                itemLore.add(sendText(" &7Level Minimum: &a"+lvMin+" &2"+checkSymbol));
+            }else{
+                itemLore.add(sendText(" &7Level Minimum: &c"+lvMin+" &4"+xSymbol));
+            }
+            List<ItemStack> rewardsList = RewardsManager.RewardType.getItems(rewardType);
             itemLore.add(sendText(" "));
             itemLore.add(sendText(" &8You will get:"));
-            itemLore.add(sendText(" &7- &9x2500&f"+icon));
-            itemLore.add(sendText(" &7- &925% &fExperience"));
-            itemLore.add(sendText(" "));
-            if (!hasCooldown(player, CooldownManager.CooldownType.Daily)){
-                itemLore.add(sendText(" &7Status: &aAvailable"));
-            }else{
-                itemLore.add(sendText(" &7Status: &cNot Available &6("+getFormattedRemainingTime(player, CooldownManager.CooldownType.Daily)+"&6)"));
+            itemLore.add(sendText(" &7- &ax"+RewardsManager.RewardType.getMoney(rewardType)+" &f"+icon));
+            itemLore.add(sendText(" &7- &ax"+RewardsManager.RewardType.getExp(rewardType)+" &fExp"));
+            if (!rewardsList.isEmpty()){
+                for (ItemStack rewardItem : rewardsList){
+                    itemLore.add(sendText(" &7- &ax"+rewardItem.getAmount()+" &f"+uncolouredText(rewardItem.getItemMeta().getDisplayName())));
+                }
             }
             itemLore.add(sendText(" "));
-            itemLore.add(sendText("&aClick to claim"));
+            if (!hasCooldown(player, CooldownManager.CooldownType.parseCooldown(rewardType.toString()))){
+                itemLore.add(sendText(" &7Status: &aAvailable &2"+checkSymbol));
+                itemLore.add(sendText(" "));
+                itemLore.add(sendText(color+"Click to claim "+checkSymbol));
+            }else{
+                item.setType(Material.RED_STAINED_GLASS_PANE);
+                itemLore.add(sendText(" &7Status: &cNot Available &4"+xSymbol+" &6("+getFormattedRemainingTime(player,
+                        CooldownManager.CooldownType.parseCooldown(rewardType.toString()))+"&6)"));
+                itemLore.add(sendText(" "));
+                itemLore.add(sendText(color+"You can't claim this rewards right now! "+xSymbol));
+            }
             container.set(GetNamespacedKey("rewards"), PersistentDataType.STRING, name);
+        }
+
+        else if (name.equals("ocd")){
+            item.setType(Material.BLUE_SHULKER_BOX);
+            meta.setDisplayName(sendText("&6Anti-Ocd UI"));
+        }
+
+        meta = SetAditMeta(meta);
+        container.set(GetNamespacedKey("gui-icon"), PersistentDataType.STRING, name);
+        meta.setLore(itemLore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack getQuestIcon(Player player, String name) {
+        ItemStack item = new ItemStack(Material.STICK);
+        ItemMeta meta = item.getItemMeta();
+        List<String> itemLore = new ArrayList<>();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        int questLevel = 1;
+        if (!numberInText(name).isEmpty()){
+            questLevel = Integer.parseInt(numberInText(name));
+        }
+
+
+        if (name.contains("miner") || name.contains("hunter") || name.contains("fisherman")){
+            item.setType(Material.BOOK);
+
+            Quest claimedQuest = Quest.parseQuest(name);
+            int levelMin = Quest.getLevel(claimedQuest);
+
+            meta.setDisplayName(sendText("&b"+formatItemName(uncolouredText(name))+" &3"+questLevel));
+            itemLore.add(sendText(" "));
+            if (playerLevel.get(player.getUniqueId()) >= Quest.getLevel(claimedQuest)){
+                itemLore.add(sendText(" &7Level Minimum: &a"+levelMin+" &2"+checkSymbol));
+            }else{
+                itemLore.add(sendText(" &7Level Minimum: &c"+levelMin+" &4"+xSymbol));
+            }
+
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Quest Type: &f"+ formatItemName(FactoryQuest.QuestType.parseType(name).toString())));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &8Tasks:"));
+            HashMap<String, Integer> tasks = initQuestRequirements(FactoryQuest.Quest.parseQuest(name));
+            for (String key : tasks.keySet()){
+                String countKey = player.getName()+key;
+                if (quest.get(player) != Quest.parseQuest(name)){
+                    itemLore.add(sendText("  &7- &e"+key+" &6x"+tasks.get(key)));
+                }else{
+                    item.setType(Material.WRITABLE_BOOK);
+                    itemLore.add(sendText("  &7- &e"+key+" &6"+questCount.get(countKey)+"/"+tasks.get(key)));
+
+                }
+            }
+            if (quest.get(player) == Quest.parseQuest(name)){
+                if (isQuestCompleted(player, quest.get(player))){
+                    item.setType(Material.ENCHANTED_BOOK);
+                    itemLore.add(sendText(" "));
+                    itemLore.add(sendText(" &2⚠ &a&lTasks Complete!"));
+                    itemLore.add(sendText(" &7finish your quest now to claim rewards!"));
+                }
+            }
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &8Rewards"));
+            itemLore.add(sendText(" &7- &ax"+Quest.getExpRewards(claimedQuest)));
+            itemLore.add(sendText(" &7- &ax"+Quest.getMoneyRewards(claimedQuest)+" &f"+icon));
+            List<ItemStack> itemRewards = Quest.getItemRewards(claimedQuest);
+            for (ItemStack itemReward : itemRewards){
+                itemLore.add(sendText(" &7- &ax"+itemReward.getAmount()+" &f"+uncolouredText(itemReward.getItemMeta().getDisplayName())));
+            }
+            itemLore.add(sendText(" "));
+            if (!hasCooldown(player, CooldownManager.CooldownType.parseCooldown(name))){
+                itemLore.add(sendText(" &7Status: &aAvailable &2"+checkSymbol));
+                itemLore.add(sendText(" "));
+                itemLore.add(sendText("&aClick to claim"));
+            }else{
+                item.setType(Material.RED_STAINED_GLASS_PANE);
+                itemLore.add(sendText(" &7Status: &cNot Available &4"+xSymbol+" &6("+getFormattedRemainingTime(player,
+                        CooldownManager.CooldownType.parseCooldown(name))+")"));
+                itemLore.add(sendText(" "));
+                itemLore.add(sendText("&cYou can't claim this quest right now! &4"+xSymbol));
+            }
+            container.set(GetNamespacedKey("quest"), PersistentDataType.STRING, name);
+        }
+
+        else if (name.equals("complete")){
+            item.setType(Material.PAPER);
+            meta.setDisplayName(sendText("&aFinish Quest"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7If you already completed all tasks"));
+            itemLore.add(sendText(" &7you can claim your rewards"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&aClick to finish"));
+        }
+
+        else if (name.equals("abandon")){
+            item.setType(Material.BUCKET);
+            meta.setDisplayName(sendText("&cAbandon Quest"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Abandon current quest will"));
+            itemLore.add(sendText(" &7reset all progress &f(no undo)"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&cClick to abandon"));
         }
 
         meta = SetAditMeta(meta);
@@ -298,6 +538,8 @@ public class GUIManager implements Listener {
             itemLore.add(sendText("&aClick to view"));
         }
 
+        // multiblock
+
         else if (name.equals("multiblock_acid_pipe")){
             item.setType(Material.MOSSY_COBBLESTONE_WALL);
             meta.setDisplayName(sendText("&bAcid Pipe"));
@@ -306,6 +548,10 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(" &7used for upgrading/evolving machines!"));
             itemLore.add(sendText(" "));
             itemLore.add(sendText("&bClick to view"));
+        }
+        else if (name.equals("multiblock_pipe")){
+            item.setType(Material.MOSSY_COBBLESTONE_WALL);
+            meta.setDisplayName(sendText("&fMossy Cobblestone Wall (all direction)"));
         }
 
         else if (name.equals("multiblock_acid_maker")){
@@ -327,6 +573,15 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(" "));
             itemLore.add(sendText("&aClick to craft"));
 
+        }
+        else if (name.equals("multiblock_carbon_forge")){
+            item.setType(Material.FURNACE);
+            meta.setDisplayName(sendText("&bCarbon Forge"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Craft carbon tech equipment"));
+            itemLore.add(sendText(" &7to increase your max steam!"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&bClick to view"));
         }
 
         // gameMenu
@@ -1101,14 +1356,17 @@ public class GUIManager implements Listener {
                     SetHeaderFooter(multiBlockMenu);
 
                     if (GetTag(item).equals("multiblock_acid_pipe")) {
-                        multiBlockMenu.setItem(13, new ItemStack(Material.MOSSY_COBBLESTONE_WALL));
+                        multiBlockMenu.setItem(13, getBasicUi("multiblock_pipe"));
                         multiBlockMenu.setItem(22, getBasicUi("multiblock_machine"));
                     }
                     else if (GetTag(item).equals("multiblock_acid_maker")) {
                         multiBlockMenu.setItem(13, new ItemStack(Material.MOSSY_COBBLESTONE_WALL));
                         multiBlockMenu.setItem(22, new ItemStack(Material.BREWING_STAND));
                     }
-
+                    else if (GetTag(item).equals("multiblock_carbon_forge")) {
+                        multiBlockMenu.setItem(13, new ItemStack(Material.ANVIL));
+                        multiBlockMenu.setItem(22, new ItemStack(Material.FURNACE));
+                    }
                     multiBlockMenu.setItem(31, getBasicUi("back"));
                     player.openInventory(multiBlockMenu);
                     player.updateInventory();
@@ -1178,8 +1436,14 @@ public class GUIManager implements Listener {
                 if (container.has(GetNamespacedKey("rewards"))){
                     String rewards = container.get(GetNamespacedKey("rewards"), PersistentDataType.STRING);
 
+                    assert rewards != null;
                     RewardsManager.RewardType rewardType = RewardsManager.RewardType.parseReward(rewards);
                     assert rewardType != RewardsManager.RewardType.None;
+
+                    if (playerLevel.get(player.getUniqueId()) < RewardsManager.RewardType.getLevel(rewardType)){
+                        player.sendMessage(Notification_NoLevel(player));
+                        return;
+                    }
 
                     if (hasCooldown(player, CooldownManager.CooldownType.parseCooldown(rewardType.toString()))){
                         return;
@@ -1187,12 +1451,26 @@ public class GUIManager implements Listener {
 
                     ClaimRewards(player, RewardsManager.RewardType.parseReward(rewards));
 
-                    player.sendMessage(sendText("&6Claimed &b"+rewardType+" Rewards!"));
-
                     PlaySoundAt(Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, player.getLocation(), 1, 1);
                     PlaySoundAt(Sound.ENTITY_FIREWORK_ROCKET_BLAST, player.getLocation(), 1, 2);
 
                     player.updateInventory();
+                }
+            }
+
+            else if (inventory.equals(MenuList.Quest)) {
+                if (container.has(GetNamespacedKey("quest"))) {
+                    String quest = container.get(GetNamespacedKey("quest"), PersistentDataType.STRING);
+                    assert quest != null;
+                    FactoryQuest.Quest claimedQuest = FactoryQuest.Quest.parseQuest(quest);
+                    assert claimedQuest != FactoryQuest.Quest.None;
+                    ClaimQuest(player, claimedQuest);
+                    player.closeInventory();
+                }else{
+                    if (GetTag(item).equals("complete")){
+                        CompleteQuest(player, quest.get(player));
+                        player.closeInventory();
+                    }
                 }
             }
 

@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.HashMap;
 import java.util.List;
@@ -28,8 +29,8 @@ public class QuestManager implements Listener {
         Block block = event.getBlock();
 
         if (quest.get(player) != null){
-            if (FactoryQuest.QuestType.parseType(quest.get(player).toString()) == FactoryQuest.QuestType.BreakBlock){
-                HashMap<Material, Integer> blockList = FactoryQuest.QuestRequirements.getBlocks(quest.get(player));
+            if (FactoryQuest.QuestType.parseType(quest.get(player).toString()) == FactoryQuest.QuestType.Break_Block){
+                HashMap<Material, Integer> blockList = FactoryQuest.Quest.getBlocks(quest.get(player));
                 for (Material material : blockList.keySet()){
                     String key = player.getName()+material;
                     if (block.getType() == material){
@@ -53,8 +54,8 @@ public class QuestManager implements Listener {
         Entity entity = event.getEntity();
         if (player != null){
             if (quest.get(player) != null){
-                if (FactoryQuest.QuestType.parseType(quest.get(player).toString()) == FactoryQuest.QuestType.KillMob){
-                    HashMap<EntityType, Integer> entityList = FactoryQuest.QuestRequirements.getEntities(quest.get(player));
+                if (FactoryQuest.QuestType.parseType(quest.get(player).toString()) == FactoryQuest.QuestType.Kill_Mob){
+                    HashMap<EntityType, Integer> entityList = FactoryQuest.Quest.getEntities(quest.get(player));
                     for (EntityType entityType : entityList.keySet()) {
                         String key = player.getName()+entityType.toString();
                         if (entity.getType() == entityType) {
@@ -66,6 +67,28 @@ public class QuestManager implements Listener {
                                 questCount.put(key, count);
                                 player.sendMessage(sendText("&aKill "+formatItemName(entityType.toString())+" &2"+count+"/"+value));
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    public static void TriggerFishingQuest(Player player, ItemStack fish){
+        if (quest.get(player) != null){
+            if (FactoryQuest.QuestType.parseType(quest.get(player).toString()) == FactoryQuest.QuestType.Catch_Fish){
+                HashMap<Material, Integer> fishList = FactoryQuest.Quest.getFishes(quest.get(player));
+                for (Material material : fishList.keySet()){
+                    String key = player.getName()+material;
+                    if (fish.getType() == material){
+                        questCount.putIfAbsent(key, 0);
+                        int value = fishList.get(material);
+                        int count = questCount.get(key);
+                        if (count < value){
+                            count++;
+                            questCount.put(key, count);
+                            player.sendMessage(sendText("&aCatch Fish "+formatItemName(material.toString())+" &2"+count+"/"+value));
                         }
                     }
                 }

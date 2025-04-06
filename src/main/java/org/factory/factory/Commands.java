@@ -26,6 +26,7 @@ import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
 import static org.factory.factory.Utils.CooldownManager.resetCooldown;
 import static org.factory.factory.Utils.CooldownManager.setCooldown;
+import static org.factory.factory.Utils.FactoryEvents.RollEvents;
 import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.FactoryMachine.*;
 import static org.factory.factory.Utils.FactoryQuest.*;
@@ -367,6 +368,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                 RemoveLevel(player, amount);
             }
 
+            // level
             else if (args[0].equalsIgnoreCase("setexp")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
@@ -381,6 +383,22 @@ public class Commands implements CommandExecutor, TabCompleter {
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
                 RemoveExp(player, amount);
+            }
+            // maxmachine
+            else if (args[0].equalsIgnoreCase("setmaxmachine")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                SetMaxMachine(player, amount);
+            }
+            else if (args[0].equalsIgnoreCase("addmaxmachine")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                AddMaxMachine(player, amount);
+            }
+            else if (args[0].equalsIgnoreCase("removemaxmachine")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                RemoveMaxMachine(player, amount);
             }
 
             else if (args[0].equalsIgnoreCase("deleteunderscorekey")){
@@ -470,6 +488,32 @@ public class Commands implements CommandExecutor, TabCompleter {
                 assert sender instanceof Player;
                 CompleteQuest((Player) sender, quest.get(sender));
             }
+            else if (args[0].equalsIgnoreCase("forcecompletequest")){
+                assert sender instanceof Player;
+                ForceCompleteQuest((Player) sender);
+            }
+            else if (args[0].equalsIgnoreCase("rollevents")){
+                RollEvents();
+            }
+            else if (args[0].equalsIgnoreCase("clearmobs")){
+                World world = null;
+                if (sender instanceof Player player){
+                    if (args.length == 1){
+                        world = player.getWorld();
+                    }
+                }else{
+                    if (args.length > 1){
+                        world = Bukkit.getWorld(args[1]);
+                    }
+                }
+
+                if (world == null){
+                    sender.sendMessage(sendText("&c"+args[1]+" &4is not a valid world!"));
+                    return false;
+                }
+
+                sender.sendMessage(sendText("Cleared &2"+ClearMobs(world)+" &aEntities!"));
+            }
         }
         else if (command.getName().equalsIgnoreCase("refundmachine")){
             events.RefundMachines(((Player) sender));
@@ -489,7 +533,8 @@ public class Commands implements CommandExecutor, TabCompleter {
             AbandonQuest((Player)sender);
         }
         else if (command.getName().equalsIgnoreCase("quest")){
-
+            assert sender instanceof Player;
+            OpenMenu((Player) sender, MenuList.Quest);
         }
 
 
@@ -600,11 +645,22 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("setlevel");
                 argsList.add("addlevel");
                 argsList.add("removelevel");
+
+                argsList.add("setmaxmachine");
+                argsList.add("addmaxmachine");
+                argsList.add("removemaxmachine");
+
                 argsList.add("resetcooldown");
 
                 argsList.add("setexp");
                 argsList.add("addexp");
                 argsList.add("removeexp");
+
+                argsList.add("testquest");
+                argsList.add("completequest");
+                argsList.add("forcecompletequest");
+
+                argsList.add("clearmobs");
 
                 String partialInput = args[0].toLowerCase();
                 for (String key : argsList) {
@@ -639,20 +695,25 @@ public class Commands implements CommandExecutor, TabCompleter {
                     }
                 }
 
-                else if (args[0].equalsIgnoreCase("setlevel")
+                else if (  args[0].equalsIgnoreCase("setlevel")
                         || args[0].equalsIgnoreCase("addlevel")
                         || args[0].equalsIgnoreCase("removelevel")
-                ||
-                        args[0].equalsIgnoreCase("setsteam")
+
+                        || args[0].equalsIgnoreCase("setsteam")
                         || args[0].equalsIgnoreCase("addsteam")
                         || args[0].equalsIgnoreCase("removesteam")
                         || args[0].equalsIgnoreCase("givereward")
 
-                || args[0].equalsIgnoreCase("setexp")
+                        || args[0].equalsIgnoreCase("setexp")
                         || args[0].equalsIgnoreCase("addexp")
                         || args[0].equalsIgnoreCase("removeexp")
 
+                        || args[0].equalsIgnoreCase("setmaxmachine")
+                        || args[0].equalsIgnoreCase("addmaxmachine")
+                        || args[0].equalsIgnoreCase("removemaxmachine")
+
                         || args[0].equalsIgnoreCase("resetcooldown")){
+
                     for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                         if (onlinePlayer.getName().toLowerCase().startsWith(partialInput)) {
                             suggestions.add(onlinePlayer.getName());

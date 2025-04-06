@@ -27,6 +27,7 @@ import static org.factory.factory.Database.*;
 import static org.factory.factory.Events.attributeList;
 import static org.factory.factory.Factory.getMainPlugin;
 import static org.factory.factory.Utils.FactoryMachine.*;
+import static org.factory.factory.Utils.FactoryQuest.getQuestPendant;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.UserInterface.*;
 import static org.factory.factory.Utils.VaultEconomy.icon;
@@ -180,10 +181,10 @@ public class FactoryItem {
                 { "woodensword", Material.WOODEN_SWORD, 4, 1.2d, 2, "Wooden Sword", Rarity.RarityType.Common, Type.Weapon, SubType.Sword, 100, 1 },
                 { "stonesword", Material.STONE_SWORD, 5, 1.1d, 3, "Stone Sword", Rarity.RarityType.Uncommon, Type.Weapon, SubType.Sword, 250, 2 },
                 { "ironsword", Material.IRON_SWORD, 6, 0.9d, 3, "Iron Sword", Rarity.RarityType.Rare, Type.Weapon, SubType.Sword, 500, 3 },
-                { "goldensword", Material.GOLDEN_SWORD, 7, 0.7d, 4, "Golden Sword", Rarity.RarityType.Epic, Type.Weapon, SubType.Sword, 850, 10 },
-                { "diamondsword", Material.DIAMOND_SWORD, 8, 0.5d, 5, "Diamond Sword", Rarity.RarityType.Legendary, Type.Weapon, SubType.Sword, 1200, 20 },
-                { "netheritesword", Material.NETHERITE_SWORD, 10, 0.3d, 6, "Netherite Sword", Rarity.RarityType.Immortal, Type.Weapon, SubType.Sword, 2500, 35 },
-                { "bow", Material.BOW, 8, 1.5d, 10, "Bow", Rarity.RarityType.Common, Type.Weapon, SubType.Bow, 100, 1 },
+                { "goldensword", Material.GOLDEN_SWORD, 7, 0.7d, 4, "Golden Sword", Rarity.RarityType.Epic, Type.Weapon, SubType.Sword, 850, 5 },
+                { "diamondsword", Material.DIAMOND_SWORD, 8, 0.5d, 5, "Diamond Sword", Rarity.RarityType.Legendary, Type.Weapon, SubType.Sword, 1200, 7 },
+                { "netheritesword", Material.NETHERITE_SWORD, 10, 0.3d, 6, "Netherite Sword", Rarity.RarityType.Immortal, Type.Weapon, SubType.Sword, 2500, 10 },
+                { "bow", Material.BOW, 4, 1.5d, 10, "Bow", Rarity.RarityType.Common, Type.Weapon, SubType.Bow, 100, 1 },
 
                 // Armor
                 { "leatherhelmet", Material.LEATHER_HELMET, 1, 1, 0, "Leather Helmet", Rarity.RarityType.Common, Type.Equipment, SubType.Helmet, 100, 1 },
@@ -201,20 +202,20 @@ public class FactoryItem {
                 { "ironleggings", Material.IRON_LEGGINGS, 6, 3, 0, "Iron Leggings", Rarity.RarityType.Rare, Type.Equipment, SubType.Leggings, 500, 3 },
                 { "ironboots", Material.IRON_BOOTS, 5, 3, 0, "Iron Boots", Rarity.RarityType.Rare, Type.Equipment, SubType.Boots, 500, 3 },
 
-                { "goldenhelmet", Material.GOLDEN_HELMET, 9, 4, 0, "Golden Helmet", Rarity.RarityType.Epic, Type.Equipment, SubType.Helmet, 850, 1 },
-                { "goldenchestplate", Material.GOLDEN_CHESTPLATE, 11, 4, 0, "Golden Chestplate", Rarity.RarityType.Epic, Type.Equipment, SubType.Chestplate, 850, 10 },
-                { "goldenleggings", Material.GOLDEN_LEGGINGS, 10, 4, 0, "Golden Leggings", Rarity.RarityType.Epic, Type.Equipment, SubType.Leggings, 850, 10 },
-                { "goldenboots", Material.GOLDEN_BOOTS, 9, 4, 0, "Golden Boots", Rarity.RarityType.Epic, Type.Equipment, SubType.Boots, 850, 10 },
+                { "goldenhelmet", Material.GOLDEN_HELMET, 9, 4, 0, "Golden Helmet", Rarity.RarityType.Epic, Type.Equipment, SubType.Helmet, 850, 5 },
+                { "goldenchestplate", Material.GOLDEN_CHESTPLATE, 11, 4, 0, "Golden Chestplate", Rarity.RarityType.Epic, Type.Equipment, SubType.Chestplate, 850, 5 },
+                { "goldenleggings", Material.GOLDEN_LEGGINGS, 10, 4, 0, "Golden Leggings", Rarity.RarityType.Epic, Type.Equipment, SubType.Leggings, 850, 5 },
+                { "goldenboots", Material.GOLDEN_BOOTS, 9, 4, 0, "Golden Boots", Rarity.RarityType.Epic, Type.Equipment, SubType.Boots, 850, 5 },
 
-                { "diamondhelmet", Material.DIAMOND_HELMET, 11, 5, 0, "Diamond Helmet", Rarity.RarityType.Legendary, Type.Equipment, SubType.Helmet, 1200, 20 },
-                { "diamondchestplate", Material.DIAMOND_CHESTPLATE, 15, 5, 0, "Diamond Chestplate", Rarity.RarityType.Legendary, Type.Equipment, SubType.Chestplate, 1200, 20 },
-                { "diamondleggings", Material.DIAMOND_LEGGINGS, 12, 5, 0, "Diamond Leggings", Rarity.RarityType.Legendary, Type.Equipment, SubType.Leggings, 1200, 20 },
-                { "diamondboots", Material.DIAMOND_BOOTS, 11, 5, 0, "Diamond Boots", Rarity.RarityType.Legendary, Type.Equipment, SubType.Boots, 1200, 20 },
+                { "diamondhelmet", Material.DIAMOND_HELMET, 11, 5, 0, "Diamond Helmet", Rarity.RarityType.Legendary, Type.Equipment, SubType.Helmet, 1200, 7 },
+                { "diamondchestplate", Material.DIAMOND_CHESTPLATE, 15, 5, 0, "Diamond Chestplate", Rarity.RarityType.Legendary, Type.Equipment, SubType.Chestplate, 1200, 7 },
+                { "diamondleggings", Material.DIAMOND_LEGGINGS, 12, 5, 0, "Diamond Leggings", Rarity.RarityType.Legendary, Type.Equipment, SubType.Leggings, 1200, 7 },
+                { "diamondboots", Material.DIAMOND_BOOTS, 11, 5, 0, "Diamond Boots", Rarity.RarityType.Legendary, Type.Equipment, SubType.Boots, 1200, 7 },
 
-                { "netheritehelmet", Material.NETHERITE_HELMET, 15, 8, 0, "Netherite Helmet", Rarity.RarityType.Immortal, Type.Equipment, SubType.Helmet, 2500, 35 },
-                { "netheritechestplate", Material.NETHERITE_CHESTPLATE, 20, 12, 0, "Netherite Chestplate", Rarity.RarityType.Immortal, Type.Equipment, SubType.Chestplate, 2500, 35 },
-                { "netheriteleggings", Material.NETHERITE_LEGGINGS, 18, 10, 0, "Netherite Leggings", Rarity.RarityType.Immortal, Type.Equipment, SubType.Leggings, 2500, 35 },
-                { "netheriteboots", Material.NETHERITE_BOOTS, 15, 7, 0, "Netherite Boots", Rarity.RarityType.Immortal, Type.Equipment, SubType.Boots, 2500, 35 },
+                { "netheritehelmet", Material.NETHERITE_HELMET, 15, 8, 0, "Netherite Helmet", Rarity.RarityType.Immortal, Type.Equipment, SubType.Helmet, 2500, 10 },
+                { "netheritechestplate", Material.NETHERITE_CHESTPLATE, 20, 12, 0, "Netherite Chestplate", Rarity.RarityType.Immortal, Type.Equipment, SubType.Chestplate, 2500, 10 },
+                { "netheriteleggings", Material.NETHERITE_LEGGINGS, 18, 10, 0, "Netherite Leggings", Rarity.RarityType.Immortal, Type.Equipment, SubType.Leggings, 2500, 10 },
+                { "netheriteboots", Material.NETHERITE_BOOTS, 15, 7, 0, "Netherite Boots", Rarity.RarityType.Immortal, Type.Equipment, SubType.Boots, 2500, 10 },
 
         };
 
@@ -365,6 +366,11 @@ public class FactoryItem {
         for (int i = 1; i < 7; i++) {
             ItemStack backpackItem = new ItemStack(CreateBackpack(i));
             itemList.put("backpack"+i, backpackItem);
+        }
+
+        for (int i = 1; i < 11; i++) {
+            ItemStack pendant = new ItemStack(getQuestPendant(i));
+            itemList.put("questpendanttier"+i, pendant);
         }
 
         InitMachineDrops();

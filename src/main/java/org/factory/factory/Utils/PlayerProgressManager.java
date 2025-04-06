@@ -5,12 +5,12 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -27,6 +27,7 @@ import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.PlayerProgress.AddExp;
 import static org.factory.factory.Utils.PlayerProgress.hasLevel;
+import static org.factory.factory.Utils.QuestManager.TriggerFishingQuest;
 import static org.factory.factory.Utils.UserInterface.*;
 
 public class PlayerProgressManager implements Listener {
@@ -126,6 +127,48 @@ public class PlayerProgressManager implements Listener {
         return 0;
     }
 
+    public static double GetMobValue(Entity entity){
+
+        if (entity instanceof Mob){
+            if (entity instanceof Zombie){
+                return 10;
+            }
+            else if (entity instanceof Skeleton){
+                return 15;
+            }
+            else if (entity instanceof Spider){
+                return 20;
+            }
+            else if (entity instanceof Creeper){
+                return 25;
+            }
+            else if (entity instanceof Enderman){
+                return 30;
+            }
+            else if (entity instanceof Blaze){
+                return 30;
+            }
+
+            else if (entity instanceof Pig){
+                return 5;
+            }
+            else if (entity instanceof Chicken){
+                return 7;
+            }
+            else if (entity instanceof Sheep){
+                return 8;
+            }
+            else if (entity instanceof Cow){
+                return 10;
+            }
+            else if (entity instanceof Rabbit){
+                return 15;
+            }
+        }
+
+        return 0;
+    }
+
     @EventHandler
     public void OnBlockBreak(BlockBreakEvent event){
         Block block = event.getBlock();
@@ -174,6 +217,19 @@ public class PlayerProgressManager implements Listener {
             }
         }
     }
+
+    @EventHandler
+    public void EntityDeathEvent(EntityDeathEvent event){
+        Entity entity = event.getEntity();
+        Player player = event.getEntity().getKiller();
+        assert player != null;
+        assert entity instanceof Mob;
+        if (GetMobValue(entity) > 0){
+            AddExp(player, GetMobValue(entity));
+            PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, entity.getLocation(), 1, 1);
+        }
+    }
+
 
     @EventHandler
     public void OnJoin(PlayerJoinEvent event){
@@ -292,6 +348,8 @@ public class PlayerProgressManager implements Listener {
                     player.sendMessage(sendText("&eYour inventory is full, the fish has been dropped..."));
                     PlaySoundAt(Sound.ENTITY_ITEM_PICKUP, player.getLocation(), 1, 1);
                 }
+
+                TriggerFishingQuest(player, fishingItem.get(player));
 
                 player.sendTitle(sendText("&aCaught!"), sendText("&2+&f"+fishingItem.get(player).getItemMeta().getDisplayName()));
                 PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, player.getLocation(), 1, 1);

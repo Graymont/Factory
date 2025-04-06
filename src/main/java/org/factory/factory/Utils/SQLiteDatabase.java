@@ -20,8 +20,7 @@ import java.util.UUID;
 import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
 import static org.factory.factory.Utils.CooldownManager.*;
-import static org.factory.factory.Utils.PlayerProgress.playerExp;
-import static org.factory.factory.Utils.PlayerProgress.playerLevel;
+import static org.factory.factory.Utils.PlayerProgress.*;
 import static org.factory.factory.Utils.UserInterface.*;
 
 public class SQLiteDatabase {
@@ -82,16 +81,20 @@ public class SQLiteDatabase {
             e.printStackTrace();
         }
 
-        String sql5 = "CREATE TABLE IF NOT EXISTS PlayerLeveling (uuid TEXT PRIMARY KEY, " +
-                "playerName TEXT, level INTEGER, exp INTEGER)";
+        String sql5 = "CREATE TABLE IF NOT EXISTS PlayerAttributes (uuid TEXT PRIMARY KEY, " +
+                "playerName TEXT, level INTEGER, exp INTEGER, maxMachine INTEGER, sellMultiplier REAL, expMultiplier REAL)";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sql5);
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        String sql6 = "CREATE TABLE IF NOT EXISTS PlayerCooldown (uuid TEXT PRIMARY KEY, " +
-                "playerName TEXT, cooldownName TEXT, cooldown INTEGER)";
+        String sql6 = "CREATE TABLE IF NOT EXISTS PlayerCooldown (" +
+                "uuid TEXT, " +
+                "playerName TEXT, " +
+                "cooldownName TEXT, " +
+                "cooldown INTEGER, " +
+                "PRIMARY KEY (uuid, cooldownName))";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sql6);
         } catch (SQLException e) {
@@ -100,16 +103,17 @@ public class SQLiteDatabase {
     }
 
     public static void SavePlayerProgress(Player player) {
-        String sql = "INSERT OR REPLACE INTO PlayerLeveling (uuid, playerName, level, exp) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT OR REPLACE INTO PlayerAttributes (uuid, playerName, level, exp, maxMachine, sellMultiplier, expMultiplier) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, player.getUniqueId().toString());
             pstmt.setString(2, player.getName());
-            pstmt.setInt(3, playerLevel.get(player));
-            pstmt.setDouble(4, playerExp.get(player));
+            pstmt.setInt(3, playerLevel.get(player.getUniqueId()));
+            pstmt.setDouble(4, playerExp.get(player.getUniqueId()));
+            pstmt.setDouble(5, maxMachines.get(player.getUniqueId()));
             pstmt.executeUpdate();
 
-            consoleLog(sendText("&aSaved Player Leveling of &2" + player.getName() + " &a(level: " + playerLevel.get(player) + " exp: " + playerExp.get(player) + ")"));
+            consoleLog(sendText("&aSaved Player Leveling of &2" + player.getName() + " &a(level: " + playerLevel.get(player.getUniqueId()) + " exp: " + playerExp.get(player.getUniqueId()) + ")"));
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -122,8 +126,8 @@ public class SQLiteDatabase {
                 pstmt.setString(2, player.getName());
                 pstmt.setString(3, cooldownType.toString());
                 pstmt.setLong(4, getRemainingTime(player, cooldownType));
-                pstmt.executeUpdate();
                 consoleLog(sendText("&aSaved Player Cooldown of &2" + player.getName() + " &a(cooldownType: " + cooldownType.toString() + " cooldown: " + getRemainingTime(player, cooldownType) + ")"));
+                pstmt.executeUpdate();
             }
 
         } catch (SQLException e) {
@@ -132,17 +136,20 @@ public class SQLiteDatabase {
     }
 
     public static void LoadPlayerProgress(Player player) {
-        String sql = "SELECT level, exp FROM PlayerLeveling WHERE uuid = ?"; // Fixed column names
+        String sql = "SELECT level, exp, maxMachine, sellMultiplier, expMultiplier FROM PlayerAttributes WHERE uuid = ?"; // Fixed column names
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, player.getUniqueId().toString());
             ResultSet rs = pstmt.executeQuery();
 
             if (rs.next()) {
-                playerLevel.put(player, rs.getInt("level"));
-                playerExp.put(player, rs.getDouble("exp"));
+                playerLevel.put(player.getUniqueId(), rs.getInt("level"));
+                playerExp.put(player.getUniqueId(), rs.getDouble("exp"));
+                maxMachines.put(player.getUniqueId(), rs.getInt("maxMachine"));
+                playerSellMultiplier.put(player.getUniqueId(), rs.getDouble("sellMultiplier"));
+                playerExpMultiplier.put(player.getUniqueId(), rs.getDouble("expMultiplier"));
 
-                consoleLog(sendText("&aLoaded Player Leveling of &2" + player.getName() + " &a(level: " + playerLevel.get(player) + " exp: " + playerExp.get(player) + ")"));
+                consoleLog(sendText("&aLoaded Player Leveling of &2" + player.getName() + " &a(level: " + playerLevel.get(player.getUniqueId()) + " exp: " + playerExp.get(player.getUniqueId()) + ")"));
             } else {
                 consoleLog(sendText("&cNo progress found for &4" + player.getName()));
             }
@@ -157,15 +164,19 @@ public class SQLiteDatabase {
             pstmt.setString(1, player.getUniqueId().toString());
             ResultSet rs = pstmt.executeQuery();
 
-            if (rs.next()) {
+            boolean hasCooldown = false;
+            while (rs.next()) {
                 String cooldownName = rs.getString("cooldownName");
                 long cooldown = rs.getLong("cooldown");
 
                 setCooldown(player, CooldownType.parseCooldown(cooldownName), (int) cooldown);
 
                 consoleLog(sendText("&aLoaded Player Cooldown of &2" + player.getName() + " &a(cooldownName: " + cooldownName + " cooldown: " + cooldown + ")"));
-            } else {
-                consoleLog(sendText("&cNo progress found for &4" + player.getName()));
+                hasCooldown = true;
+            }
+
+            if (!hasCooldown) {
+                consoleLog(sendText("&cNo cooldown progress found for &4" + player.getName()));
             }
 
         } catch (SQLException e) {
