@@ -14,7 +14,9 @@ public class CooldownManager {
         Daily,
         Weekly,
         Monthly,
+
         Hazmat,
+        Hook,
 
         Miner_1,
         Miner_2,
@@ -42,6 +44,7 @@ public class CooldownManager {
                 case "monthly" -> Monthly;
 
                 case "hazmat" -> Hazmat;
+                case "hook" -> Hook;
 
                 case "miner_1" -> Miner_1;
                 case "miner_2" -> Miner_2;
@@ -68,7 +71,7 @@ public class CooldownManager {
         }
     }
 
-    public static void setCooldown(Player player, CooldownType type, int seconds) {
+    public static void SetCooldown(Player player, CooldownType type, int seconds) {
         String key = player.getName() + "_" + type.toString();
         cooldowns.put(key, System.currentTimeMillis() + (seconds * 1000L));
     }
@@ -83,7 +86,7 @@ public class CooldownManager {
         return Math.max(0, (cooldowns.getOrDefault(key, 0L) - System.currentTimeMillis()) / 1000);
     }
 
-    public static void resetCooldown(Player player, CooldownType type) {
+    public static void ResetCooldown(Player player, CooldownType type) {
         String key = player.getName() + "_" + type.toString();
         cooldowns.remove(key);
     }
@@ -111,7 +114,7 @@ public class CooldownManager {
 
 
     // global
-    public static void setGlobalCooldown(CooldownType type, int seconds) {
+    public static void SetGlobalCooldown(CooldownType type, int seconds) {
         String key = type.toString();
         cooldowns.put(key, System.currentTimeMillis() + (seconds * 1000L));
     }
@@ -126,7 +129,7 @@ public class CooldownManager {
         return Math.max(0, (cooldowns.getOrDefault(key, 0L) - System.currentTimeMillis()) / 1000);
     }
 
-    public static void resetGlobalCooldown(CooldownType type) {
+    public static void ResetGlobalCooldown(CooldownType type) {
         String key = type.toString();
         cooldowns.remove(key);
     }

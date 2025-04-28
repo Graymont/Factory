@@ -5,6 +5,7 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.CreatureSpawner;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -25,7 +26,11 @@ import java.util.*;
 
 import static org.factory.factory.Database.*;
 import static org.factory.factory.Events.attributeList;
+import static org.factory.factory.Events.globalMaxMachine;
 import static org.factory.factory.Factory.getMainPlugin;
+import static org.factory.factory.Utils.Booster.GetBoosterPercent;
+import static org.factory.factory.Utils.Booster.getFormattedRemainingBooster;
+import static org.factory.factory.Utils.Dungeon.getDungeonPendant;
 import static org.factory.factory.Utils.FactoryMachine.*;
 import static org.factory.factory.Utils.FactoryQuest.getQuestPendant;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
@@ -55,8 +60,9 @@ public class FactoryItem {
     private double mutantDefense = 1;
     private double meleeDamage = 1;
     private double rangeDamage = 1;
-    private List<String> bonusStats = new ArrayList<>();
-    private double durability = 1000;
+    private double proficiency = 0;
+    private String bonusStats = "";
+    private double durability = 10000;
     private double maxDurability = 1000;
     private int levelMinimum = 1;
     private Sound attackSound = Sound.ENTITY_PLAYER_ATTACK_SWEEP;
@@ -64,6 +70,8 @@ public class FactoryItem {
 
     private double toolPower = 10;
     private double toolSpeed = 1;
+
+    private double wandMultiplier = 1.0;
 
     private Color color = Color.NAVY;
 
@@ -94,10 +102,14 @@ public class FactoryItem {
     public static String baseKey = "base";
     public static String bonusStatsKey = "bonusStats";
     public static String toolPowerKey = "toolPower";
-    public static String toolSpeedKey = "toolSpeedKey";
+    public static String toolSpeedKey = "toolSpeed";
     public static String attackSoundKey = "attackSound";
     public static String attackEffectKey = "attackEffect";
     public static String canUseKey = "canUse";
+    public static String multiplierKey = "multiplier";
+
+    public static Booster.BoosterType boosterType = Booster.BoosterType.None;
+    public static int boosterDuration = 0;
 
     public static String colorKey = "color";
 
@@ -106,6 +118,11 @@ public class FactoryItem {
     public static String levelMinimumKey = "levelMinimum";
 
     public static String backpackSizeKey = "backpackSize";
+
+    public static String proficiencyKey = "proficiency";
+
+    public static String boosterTypeKey = "boosterType";
+    public static String boosterDurationKey = "boosterDuration";
 
     public static Boolean canUse = true;
 
@@ -143,7 +160,7 @@ public class FactoryItem {
         // Tool Data (Material, Breaking Power, Display Name, Rarity)
         Object[][] toolData = {
                 // Fishing Rod
-                { "fishingrod", Material.FISHING_ROD, 1, 1, "Fishing Rod", Rarity.RarityType.Common, Type.Tool, SubType.FishingRod, 100, 1 },
+                { "fishingrod", Material.FISHING_ROD, 1, 1, "Fishing Rod", Rarity.RarityType.Common, Type.Tool, SubType.Fishing_Rod, 100, 1 },
 
                 // Pickaxes
                 { "woodenpickaxe", Material.WOODEN_PICKAXE, 1, 1, "Wooden Pickaxe", Rarity.RarityType.Common, Type.Tool, SubType.Pickaxe, 100, 1 },
@@ -217,6 +234,68 @@ public class FactoryItem {
                 { "netheriteleggings", Material.NETHERITE_LEGGINGS, 18, 10, 0, "Netherite Leggings", Rarity.RarityType.Immortal, Type.Equipment, SubType.Leggings, 2500, 10 },
                 { "netheriteboots", Material.NETHERITE_BOOTS, 15, 7, 0, "Netherite Boots", Rarity.RarityType.Immortal, Type.Equipment, SubType.Boots, 2500, 10 },
 
+
+                { "tungstenpickaxe", Material.IRON_PICKAXE, 15, 7, "Tungsten Pickaxe", Rarity.RarityType.Rare, Type.Tool, SubType.Pickaxe, 500, 50 },
+                { "tungstenaxe", Material.IRON_AXE, 15, 7, "Tungsten Axe", Rarity.RarityType.Rare, Type.Tool, SubType.Axe, 500, 50 },
+                { "tungstenshovel", Material.IRON_SHOVEL, 15, 7, "Tungsten Shovel", Rarity.RarityType.Rare, Type.Tool, SubType.Shovel, 500, 50 },
+                { "tungstenfishingrod", Material.FISHING_ROD, 15, 7, "Tungsten Fishing Rod", Rarity.RarityType.Rare, Type.Tool, SubType.Fishing_Rod, 500, 50 },
+
+                { "palladiumpickaxe", Material.IRON_PICKAXE, 20, 10, "Palladium Pickaxe", Rarity.RarityType.Rare, Type.Tool, SubType.Pickaxe, 500, 60 },
+                { "palladiumaxe", Material.IRON_AXE, 20, 10, "Palladium Axe", Rarity.RarityType.Rare, Type.Tool, SubType.Axe, 500, 60 },
+                { "palladiumshovel", Material.IRON_SHOVEL, 20, 10, "Palladium Shovel", Rarity.RarityType.Rare, Type.Tool, SubType.Shovel, 500, 60 },
+                { "palladiumfishingrod", Material.FISHING_ROD, 20, 10, "Palladium FishingRod", Rarity.RarityType.Rare, Type.Tool, SubType.Fishing_Rod, 500, 60 },
+
+                { "cobaltpickaxe", Material.IRON_PICKAXE, 30, 10, "Cobalt Pickaxe", Rarity.RarityType.Rare, Type.Tool, SubType.Pickaxe, 500, 70 },
+                { "cobaltaxe", Material.IRON_AXE, 30, 10, "Cobalt Axe", Rarity.RarityType.Rare, Type.Tool, SubType.Axe, 500, 70 },
+                { "cobaltshovel", Material.IRON_SHOVEL, 30, 10, "Cobalt Shovel", Rarity.RarityType.Rare, Type.Tool, SubType.Shovel, 500, 70 },
+                { "cobaltfishingrod", Material.FISHING_ROD, 30, 10, "Cobalt Fishing Rod", Rarity.RarityType.Rare, Type.Tool, SubType.Fishing_Rod, 500, 70 },
+
+
+
+
+                { "mithrilpickaxe", Material.GOLDEN_PICKAXE, 40, 15, "Mithril Pickaxe", Rarity.RarityType.Epic, Type.Tool, SubType.Pickaxe, 800, 80 },
+                { "mithrilaxe", Material.GOLDEN_AXE, 40, 15, "Mithril Axe", Rarity.RarityType.Epic, Type.Tool, SubType.Axe, 800, 80 },
+                { "mithrilshovel", Material.GOLDEN_SHOVEL, 40, 15, "Mithril Shovel", Rarity.RarityType.Epic, Type.Tool, SubType.Shovel, 800, 80 },
+                { "mithrilfishingrod", Material.FISHING_ROD, 40, 15, "Mithril Fishing Rod", Rarity.RarityType.Epic, Type.Tool, SubType.Fishing_Rod, 800, 80 },
+
+                { "orichalcumpickaxe", Material.GOLDEN_PICKAXE, 50, 15, "Orichalcum Pickaxe", Rarity.RarityType.Epic, Type.Tool, SubType.Pickaxe, 800, 90 },
+                { "orichalcumaxe", Material.GOLDEN_AXE, 50, 15, "Orichalcum Axe", Rarity.RarityType.Epic, Type.Tool, SubType.Axe, 800, 90 },
+                { "orichalcumshovel", Material.GOLDEN_SHOVEL, 50, 15, "Orichalcum Shovel", Rarity.RarityType.Epic, Type.Tool, SubType.Shovel, 800, 90 },
+                { "orichalcumfishingrod", Material.FISHING_ROD, 50, 15, "Orichalcum Fishing Rod", Rarity.RarityType.Epic, Type.Tool, SubType.Fishing_Rod, 800, 90 },
+
+                { "titaniumpickaxe", Material.GOLDEN_PICKAXE, 60, 20, "Titanium Pickaxe", Rarity.RarityType.Epic, Type.Tool, SubType.Pickaxe, 800, 100 },
+                { "titaniumaxe", Material.GOLDEN_AXE, 60, 20, "Titanium Axe", Rarity.RarityType.Epic, Type.Tool, SubType.Axe, 800, 100 },
+                { "titaniumshovel", Material.GOLDEN_SHOVEL, 60, 20, "Titanium Shovel", Rarity.RarityType.Epic, Type.Tool, SubType.Shovel, 800, 100 },
+                { "titaniumfishingrod", Material.FISHING_ROD, 60, 20, "Titanium Fishing Rod", Rarity.RarityType.Epic, Type.Tool, SubType.Fishing_Rod, 800, 100 },
+
+
+
+                { "adamantinepickaxe", Material.DIAMOND_PICKAXE, 70, 25, "Adamantine Pickaxe", Rarity.RarityType.Legendary, Type.Tool, SubType.Pickaxe, 1000, 120 },
+                { "adamantineaxe", Material.DIAMOND_AXE, 70, 25, "Adamantine Axe", Rarity.RarityType.Legendary, Type.Tool, SubType.Axe, 1000, 120 },
+                { "adamantineshovel", Material.DIAMOND_SHOVEL, 70, 25, "Adamantine Shovel", Rarity.RarityType.Legendary, Type.Tool, SubType.Shovel, 1000, 120 },
+                { "adamantinefishingrod", Material.FISHING_ROD, 70, 25, "Adamantine Fishing Rod", Rarity.RarityType.Legendary, Type.Tool, SubType.Fishing_Rod, 1000, 120 },
+
+                { "dragonitepickaxe", Material.DIAMOND_PICKAXE, 80, 30, "Dragonite Pickaxe", Rarity.RarityType.Legendary, Type.Tool, SubType.Pickaxe, 1000, 120 },
+                { "dragoniteaxe", Material.DIAMOND_AXE, 80, 30, "Dragonite Axe", Rarity.RarityType.Legendary, Type.Tool, SubType.Axe, 1000, 120 },
+                { "dragoniteshovel", Material.DIAMOND_SHOVEL, 80, 30, "Dragonite Shovel", Rarity.RarityType.Legendary, Type.Tool, SubType.Shovel, 1000, 120 },
+                { "dragonitefishingrod", Material.FISHING_ROD, 80, 30, "Dragonite Fishing Rod", Rarity.RarityType.Legendary, Type.Tool, SubType.Fishing_Rod, 1000, 120 },
+
+
+
+                { "voidsteelpickaxe", Material.NETHERITE_PICKAXE, 90, 40, "Voidsteel Pickaxe", Rarity.RarityType.Immortal, Type.Tool, SubType.Pickaxe, 2500, 130 },
+                { "voidsteelaxe", Material.NETHERITE_AXE, 90, 40, "Voidsteel Axe", Rarity.RarityType.Immortal, Type.Tool, SubType.Axe, 2500, 130 },
+                { "voidsteelshovel", Material.NETHERITE_SHOVEL, 90, 40, "Voidsteel Shovel", Rarity.RarityType.Immortal, Type.Tool, SubType.Shovel, 2500, 130 },
+                { "voidsteelfishingrod", Material.FISHING_ROD, 90, 40, "Voidsteel Fishing Rod", Rarity.RarityType.Immortal, Type.Tool, SubType.Fishing_Rod, 2500, 130 },
+
+                { "etheriumpickaxe", Material.NETHERITE_PICKAXE, 100, 45, "Etherium Pickaxe", Rarity.RarityType.Immortal, Type.Tool, SubType.Pickaxe, 2500, 150 },
+                { "etheriumaxe", Material.NETHERITE_AXE, 100, 45, "Etherium Axe", Rarity.RarityType.Immortal, Type.Tool, SubType.Axe, 2500, 150 },
+                { "etheriumshovel", Material.NETHERITE_SHOVEL, 100, 45, "Etherium Shovel", Rarity.RarityType.Immortal, Type.Tool, SubType.Shovel, 2500, 150 },
+                { "etheriumfishingrod", Material.FISHING_ROD, 100, 45, "Etherium Fishing Rod", Rarity.RarityType.Immortal, Type.Tool, SubType.Fishing_Rod, 2500, 150 },
+
+
+
+
+
         };
 
         // Iterate and create factory items
@@ -254,6 +333,17 @@ public class FactoryItem {
                 item.setArmor(0);
 
                 item.setLevelMinimum(levelMinimum);
+
+                if (key.contains("tungsten") || key.contains("palladium")
+                || key.contains("cobalt") ||
+
+                key.contains("mithril") || key.contains("orichalcum")
+                        || key.contains("titanium") ||
+
+                key.contains("adamantine") || key.contains("dragonite")
+                        || key.contains("voidsteel")|| key.contains("etherium")){
+                    item.setProficiency(100);
+                }
 
                 factoryItemList.put(key, item);
             }
@@ -338,10 +428,10 @@ public class FactoryItem {
         }
 
         for (String key : factoryItemList.keySet()) {
-            itemList.put(key, factoryItemList.get(key).build().clone());
+            SaveItem(key, factoryItemList.get(key).build().clone());
         }
 
-        List<Material> vanillaMaterial = Arrays.asList(
+        /*List<Material> vanillaMaterial = Arrays.asList(
 
                 Material.COPPER_INGOT,
                 Material.RAW_COPPER,
@@ -353,32 +443,240 @@ public class FactoryItem {
 
                 Material.GOLD_INGOT,
                 Material.RAW_GOLD,
-                Material.GOLD_ORE
+                Material.GOLD_ORE,
+
+                Material.DIAMOND,
+                Material.EMERALD,
+                Material.NETHERITE_SCRAP,
+                Material.NETHERITE_INGOT
 
         );
 
         for (Material mat : vanillaMaterial){
             ItemStack addedItem = new ItemStack(mat);
 
-            itemList.put(mat.toString().toLowerCase().replaceAll("_", "").trim(), ProcessItemMeta(addedItem));
-        }
+            SaveItem(mat.toString().toLowerCase().replaceAll("_", "").trim(), ProcessItemMeta(addedItem));
+        }*/
 
         for (int i = 1; i < 7; i++) {
             ItemStack backpackItem = new ItemStack(CreateBackpack(i));
-            itemList.put("backpack"+i, backpackItem);
+            SaveItem("backpack"+i, backpackItem);
         }
 
         for (int i = 1; i < 11; i++) {
             ItemStack pendant = new ItemStack(getQuestPendant(i));
-            itemList.put("questpendanttier"+i, pendant);
+            SaveItem("questpendanttier"+i, pendant);
+        }
+        for (int i = 1; i < 11; i++) {
+            ItemStack pendant = new ItemStack(getDungeonPendant(i));
+            SaveItem("dungeonpendanttier"+i, pendant);
+        }
+
+        List<Rarity.RarityType> rarityList = Arrays.asList(Rarity.RarityType.Common, Rarity.RarityType.Uncommon, Rarity.RarityType.Rare,
+                Rarity.RarityType.Epic, Rarity.RarityType.Legendary, Rarity.RarityType.Immortal);
+        int wandCount = 1;
+        double wandValue = 1;
+        double multiplierCount = 0.1;
+        for (Rarity.RarityType rt : rarityList){
+            ItemStack pendant = new ItemStack(GetSellWand(wandValue+multiplierCount, rt));
+            SaveItem("sellwand"+wandCount, pendant);
+            wandCount++;
+            multiplierCount += 0.2;
+        }
+
+        int sellBoosterCount = 1;
+
+        int expBoosterCount = 1;
+        for (Booster.BoosterType boosterType : Booster.BoosterType.values()){
+            if (uncolouredText(boosterType.toString()).toLowerCase().replaceAll("_", "").trim().contains("sell")){
+                String key = uncolouredText(boosterType.toString().toLowerCase()).replaceAll(" ", "").trim()
+                        .replaceAll("percent", "").trim().replaceAll("_", "").trim()+"booster"+sellBoosterCount;
+
+                SaveItem(key, GetBooster(GetBoosterPercent(boosterType), "Profit", boosterType, PotionType.HARMING));
+                sellBoosterCount++;
+            }
+            else if (uncolouredText(boosterType.toString()).toLowerCase().replaceAll("_", "").trim().contains("exp")){
+                String key = uncolouredText(boosterType.toString().toLowerCase()).replaceAll(" ", "").trim()
+                        .replaceAll("percent", "").trim().replaceAll("_", "").trim()+"booster"+expBoosterCount;
+                SaveItem(key, GetBooster(GetBoosterPercent(boosterType),"Focus", boosterType, PotionType.HARMING));
+                expBoosterCount++;
+            }
+        }
+
+        SaveItem("machinelicense1", GetMachineLicense(1));
+        SaveItem("machinelicense2", GetMachineLicense(2));
+        SaveItem("machinelicense3", GetMachineLicense(5));
+        SaveItem("machinelicense4", GetMachineLicense(10));
+
+        List<String> hookMaterial = Arrays.asList(
+                "Wooden_Hook", "Flint_Hook", "Iron_Hook", "Golden_Hook", "Diamond_Hook", "Netherite_Hook");
+
+        List<Rarity.RarityType> hookRarity = Arrays.asList( Rarity.RarityType.Common, Rarity.RarityType.Uncommon, Rarity.RarityType.Rare,
+                Rarity.RarityType.Epic, Rarity.RarityType.Legendary, Rarity.RarityType.Immortal
+        );
+
+        for (int i = 1; i < 7; i++) {
+            FactoryItem hook = new FactoryItem();
+            int index = i-1;
+            hook.setDisplayname(sendText(formatItemName(hookMaterial.get(index))));
+            hook.setRarity(hookRarity.get(index));
+            hook.setType(Type.Tool);
+            hook.setSubType(SubType.Hook);
+            hook.setSteamConsumption(i*3);
+            hook.setMaterial(Material.FISHING_ROD);
+            hook.setToolPower(i);
+            hook.setToolSpeed(i+2);
+            hook.setLevelMinimum(i*10);
+
+            SaveItem(hookMaterial.get(index).replaceAll("_", "").trim().toLowerCase(), hook.build());
+        }
+
+        List<String> hookMaterial2 = Arrays.asList(
+                "Tungsten_Hook", "Palladium_Hook", "Cobalt_Hook",
+                "Mithril_Hook", "Orichalcum_Hook", "Titanium_Hook"
+                , "Adamantine_Hook", "Dragonite_Hook"
+                , "Voidsteel_Hook", "Etherium_Hook");
+        int hPower = 7;
+        int hLevelMinimum = 50;
+        for (int i = 1; i < hookMaterial2.size()+1; i++) {
+            FactoryItem hook = new FactoryItem();
+            int index = i-1;
+            String hookName = hookMaterial2.get(index);
+            hook.setDisplayname(sendText(formatItemName(hookName)));
+            if (hookName.equals("Tungsten_Hook") || hookName.equals("Palladium_Hook") || hookName.equals("Cobalt_Hook")){
+                hook.setRarity(Rarity.RarityType.Rare);
+            }
+            else if (hookName.equals("Mithril_Hook") || hookName.equals("Orichalcum_Hook") || hookName.equals("Titanium_Hook")){
+                hook.setRarity(Rarity.RarityType.Epic);
+            }
+            else if (hookName.equals("Adamantine_Hook") || hookName.equals("Dragonite_Hook")){
+                hook.setRarity(Rarity.RarityType.Legendary);
+            }
+            else if (hookName.equals("Voidsteel_Hook") || hookName.equals("Etherium_Hook")){
+                hook.setRarity(Rarity.RarityType.Immortal);
+            }
+
+            hook.setType(Type.Tool);
+            hook.setSubType(SubType.Hook);
+            hook.setSteamConsumption(hPower*3);
+            hook.setMaterial(Material.FISHING_ROD);
+            hook.setToolPower(hPower);
+            hook.setToolSpeed(hPower+2);
+            hook.setLevelMinimum(hLevelMinimum);
+
+            hPower += 2;
+            hLevelMinimum += 10;
+
+            SaveItem(hookMaterial2.get(index).replaceAll("_", "").trim().toLowerCase(), hook.build());
+        }
+
+
+        List<Dungeon.LootType> lootTypeList = Arrays.asList(Dungeon.LootType.Weapon, Dungeon.LootType.Equipment);
+        List<Integer> lootLevelList = Arrays.asList(25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110);
+        for (Integer lootLevel : lootLevelList){
+            for (Dungeon.LootType lootType : lootTypeList){
+                SaveItem(lootType.toString().toLowerCase()+"dungeonlootbox"+lootLevel, new ItemStack(CreateDungeonLootBox(lootType, lootLevel)));
+            }
+        }
+
+
+        List<String> membraneList = Arrays.asList("alien", "mutant", "undead");
+
+        int maxTier = 10;
+        for (int i = 1; i < maxTier+1; i++) {
+            for (String m : membraneList){
+                SaveItem(m+"membrane"+i, GetMembrane(m, i));
+            }
         }
 
         InitMachineDrops();
         InitMachineItems();
         InitSpawners();
         InitEquipments();
+        InitMinerals();
 
         consoleLog(sendText("&aFactory items initialized successfully!"));
+    }
+
+    public static void InitMinerals(){
+        // shadowsteel, palladium, cobalt | mithril, orichalcum, titanium | adamantine, dragonite
+        // voidsteel, etherium
+
+        List<String> part1 = Arrays.asList("Tungsten", "Palladium", "Cobalt");
+        List<String> part2 = Arrays.asList("Mithril", "Orichalcum", "Titanium");
+        List<String> part3 = Arrays.asList("Adamantine", "Dragonite");
+        List<String> part4 = Arrays.asList("Voidsteel", "Etherium");
+
+        for (String key : part1){
+            ItemStack item = new ItemStack(Material.COPPER_INGOT);
+            ItemMeta meta = item.getItemMeta();
+
+            meta.addEnchant(Enchantment.UNBREAKING, 10, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+            meta.setDisplayName(sendText("&6"+key+" Ingot"));
+            List<String> itemLore = new ArrayList<>();
+            itemLore.add(sendText("&9Material"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&6Rare"));
+
+            meta.setLore(itemLore);
+            item.setItemMeta(meta);
+            SaveItem(key.toLowerCase()+"ingot", item.clone());
+        }
+
+        for (String key : part2){
+            ItemStack item = new ItemStack(Material.IRON_INGOT);
+            ItemMeta meta = item.getItemMeta();
+
+            meta.addEnchant(Enchantment.UNBREAKING, 10, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+            meta.setDisplayName(sendText("&4"+key+" Ingot"));
+            List<String> itemLore = new ArrayList<>();
+            itemLore.add(sendText("&9Material"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&4Epic"));
+
+            meta.setLore(itemLore);
+            item.setItemMeta(meta);
+            SaveItem(key.toLowerCase()+"ingot", item.clone());
+        }
+
+        for (String key : part3){
+            ItemStack item = new ItemStack(Material.GOLD_INGOT);
+            ItemMeta meta = item.getItemMeta();
+
+            meta.addEnchant(Enchantment.UNBREAKING, 10, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+            meta.setDisplayName(sendText("&b"+key+" Ingot"));
+            List<String> itemLore = new ArrayList<>();
+            itemLore.add(sendText("&9Material"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&bLegendary"));
+
+            meta.setLore(itemLore);
+            item.setItemMeta(meta);
+            SaveItem(key.toLowerCase()+"ingot", item.clone());
+        }
+        for (String key : part4){
+            ItemStack item = new ItemStack(Material.NETHERITE_INGOT);
+            ItemMeta meta = item.getItemMeta();
+
+            meta.addEnchant(Enchantment.UNBREAKING, 10, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+            meta.setDisplayName(sendText("&5"+key+" Ingot"));
+            List<String> itemLore = new ArrayList<>();
+            itemLore.add(sendText("&9Material"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&5Immortal"));
+
+            meta.setLore(itemLore);
+            item.setItemMeta(meta);
+            SaveItem(key.toLowerCase()+"ingot", item.clone());
+        }
     }
 
     public static void InitEquipments(){
@@ -504,24 +802,24 @@ public class FactoryItem {
 
                 resultItem.setItemMeta(meta);
 
-                itemList.put("carbon"+key+variant, resultItem.clone());
+                SaveItem("carbon"+key+variant, resultItem.clone());
             }
         }
 
     }
 
     public static void InitSpawners(){
-        itemList.put("pigspawner", CreateSpawner(EntityType.PIG));
-        itemList.put("chickenspawner", CreateSpawner(EntityType.CHICKEN));
-        itemList.put("sheepspawner", CreateSpawner(EntityType.SHEEP));
-        itemList.put("cowspawner", CreateSpawner(EntityType.COW));
-        itemList.put("rabbitspawner", CreateSpawner(EntityType.RABBIT));
+        SaveItem("pigspawner", CreateSpawner(EntityType.PIG));
+        SaveItem("chickenspawner", CreateSpawner(EntityType.CHICKEN));
+        SaveItem("sheepspawner", CreateSpawner(EntityType.SHEEP));
+        SaveItem("cowspawner", CreateSpawner(EntityType.COW));
+        SaveItem("rabbitspawner", CreateSpawner(EntityType.RABBIT));
 
-        itemList.put("zombiespawner", CreateSpawner(EntityType.ZOMBIE));
-        itemList.put("skeletonspawner", CreateSpawner(EntityType.SKELETON));
-        itemList.put("spiderspawner", CreateSpawner(EntityType.SPIDER));
-        itemList.put("creeperspawner", CreateSpawner(EntityType.CREEPER));
-        itemList.put("endermanspawner", CreateSpawner(EntityType.ENDERMAN));
+        SaveItem("zombiespawner", CreateSpawner(EntityType.ZOMBIE));
+        SaveItem("skeletonspawner", CreateSpawner(EntityType.SKELETON));
+        SaveItem("spiderspawner", CreateSpawner(EntityType.SPIDER));
+        SaveItem("creeperspawner", CreateSpawner(EntityType.CREEPER));
+        SaveItem("endermanspawner", CreateSpawner(EntityType.ENDERMAN));
     }
 
     public static HashMap<String, List<ItemStack>> itemDatabase = new HashMap<>();
@@ -553,7 +851,13 @@ public class FactoryItem {
                 "acacialog", "darkoaklog",
                 "oakleaves", "pinkleaves", "purpleleaves", "redleaves", "wisterialeaves", "fallleaves", "autumnleaves",
                 "azalealeaves", "acacialeaves", "spruceleaves", "sakuraleaves", "birchleaves", "cherryleaves", "jungleleaves",
-                "mangroveleaves"
+                "mangroveleaves",
+
+                "limestone", "marble", "basalt", "slate", "obsidian", "quartz", "granite",
+
+                "coal", "iron", "copper", "platinum", "tin", "lead", "aluminium", "silver", "gold",
+
+                "amethyst", "garnet", "topaz", "jade", "aquamarine", "sapphire", "ruby", "emerald", "diamond"
 
         );
 
@@ -582,7 +886,7 @@ public class FactoryItem {
             meta.setLore(lastLore);
             item.setItemMeta(meta);
 
-            itemList.put(drop.replaceAll("_", "").trim(), item.clone());
+            SaveItem(drop.replaceAll("_", "").trim(), item.clone());
             //itemList.remove(drop);
         }
 
@@ -673,6 +977,37 @@ public class FactoryItem {
         preparedMachines.put("jungleleaves", Material.JUNGLE_LEAVES);
         preparedMachines.put("mangroveleaves", Material.MANGROVE_LEAVES);
 
+        // Stones
+        preparedMachines.put("limestone", Material.SANDSTONE);
+        preparedMachines.put("marble", Material.QUARTZ_BLOCK);
+        preparedMachines.put("basalt", Material.BASALT);
+        preparedMachines.put("slate", Material.POLISHED_BLACKSTONE);
+        preparedMachines.put("obsidian", Material.OBSIDIAN);
+        preparedMachines.put("quartz", Material.QUARTZ_BLOCK);
+        preparedMachines.put("granite", Material.GRANITE);
+
+        // Ores
+        preparedMachines.put("coal", Material.COAL_BLOCK);
+        preparedMachines.put("iron", Material.IRON_BLOCK);
+        preparedMachines.put("copper", Material.COPPER_BLOCK);
+        preparedMachines.put("platinum", Material.IRON_BLOCK); // No platinum in vanilla, use iron or custom
+        preparedMachines.put("tin", Material.IRON_BLOCK);      // Same for tin
+        preparedMachines.put("lead", Material.IRON_BLOCK);
+        preparedMachines.put("aluminium", Material.IRON_BLOCK);
+        preparedMachines.put("silver", Material.IRON_BLOCK);
+        preparedMachines.put("gold", Material.GOLD_BLOCK);
+
+        // Gems
+        preparedMachines.put("amethyst", Material.AMETHYST_BLOCK);
+        preparedMachines.put("garnet", Material.REDSTONE_BLOCK); // Closest vanilla match
+        preparedMachines.put("topaz", Material.YELLOW_CONCRETE);
+        preparedMachines.put("jade", Material.GREEN_CONCRETE);
+        preparedMachines.put("aquamarine", Material.LIGHT_BLUE_CONCRETE);
+        preparedMachines.put("sapphire", Material.BLUE_CONCRETE);
+        preparedMachines.put("ruby", Material.RED_CONCRETE);
+        preparedMachines.put("emerald", Material.EMERALD_BLOCK);
+        preparedMachines.put("diamond", Material.DIAMOND_BLOCK);
+
         for (Map.Entry<String, Material> entry : preparedMachines.entrySet()) {
             name = entry.getKey();
 
@@ -680,7 +1015,7 @@ public class FactoryItem {
             name = name.replaceAll("(log|leaves|mushroom|stem)$", "_$1");
 
             m = GetMachine(name, entry.getValue(), MachineType.Item);
-            itemList.put(name.replaceAll("_", "").trim() + "machine", m.clone());
+            SaveItem(name.replaceAll("_", "").trim() + "machine", m.clone());
 
             String fixedName = name.replaceAll("_", "").trim();
 
@@ -698,7 +1033,7 @@ public class FactoryItem {
             itemLore.add(sendText("&fBasic"));
             ingredientMeta.setLore(itemLore);
             ingredient.setItemMeta(ingredientMeta);
-            itemList.put("carbon"+fixedName, ingredient.clone());
+            SaveItem("carbon"+fixedName, ingredient.clone());
 
 
 
@@ -709,7 +1044,7 @@ public class FactoryItem {
 
         itemDatabase.put("machine", storedItems);
 
-        itemList.put("steammachine", GetMachine("steam", Material.DECORATED_POT, MachineType.Steam));
+        SaveItem("steammachine", GetMachine("steam", Material.DECORATED_POT, MachineType.Steam));
     }
 
 
@@ -731,6 +1066,16 @@ public class FactoryItem {
 
     public FactoryItem setSubType(FactoryItem.SubType subType) {
         this.subType = subType;
+        return this;
+    }
+
+    public FactoryItem setBoosterType(Booster.BoosterType boosterType) {
+        this.boosterType = boosterType;
+        return this;
+    }
+
+    public FactoryItem setBoosterDuration(int boosterDuration) {
+        this.boosterDuration = boosterDuration;
         return this;
     }
 
@@ -819,7 +1164,7 @@ public class FactoryItem {
         return this;
     }
 
-    public FactoryItem setBonusStats(List<String> bonusStats) {
+    public FactoryItem setBonusStats(String bonusStats) {
         this.bonusStats = bonusStats;
         return this;
     }
@@ -864,6 +1209,7 @@ public class FactoryItem {
         this.levelMinimum = levelMinimum;
         return this;
     }
+
     public FactoryItem canUse(boolean canUse) {
         this.canUse = canUse;
         return this;
@@ -874,23 +1220,34 @@ public class FactoryItem {
         return this;
     }
 
+    public FactoryItem setMultiplier(double wandMultiplier) {
+        this.wandMultiplier = wandMultiplier;
+        return this;
+    }
+
+    public FactoryItem setProficiency(double proficiency) {
+        this.proficiency = proficiency;
+        return this;
+    }
+
 
     public ItemStack build() {
         return CreateItem(
                 type, subType, attackDamage, attackRange, attackSpeed, criticalChance, criticalDamage, steamConsumption,
                 health, steam, armor, undeadDamage, undeadDefense, mutantDamage, mutantDefense, meleeDamage, rangeDamage,
                 durability, maxDurability, toolPower, toolSpeed, bonusStats, rarity, displayname, material, attackEffect, levelMinimum,
-                canUse, color);
+                canUse, color, wandMultiplier, boosterType, boosterDuration, proficiency);
     }
 
     public ItemStack testItem(){
 
-        List<String> addedBonus = Arrays.asList("Attack Damage:100");
+        String addedBonus = "Attack Damage:10,Attack Damage:25,Undead Damage:35";
 
         return CreateItem(
                 Type.Weapon, SubType.Sword, attackDamage, attackRange, attackSpeed, criticalChance, criticalDamage, steamConsumption,
                 health, steam, armor, undeadDamage, undeadDefense, mutantDamage, mutantDefense, meleeDamage, rangeDamage,
-                durability, maxDurability, toolPower, toolSpeed, addedBonus, rarity, displayname, material, attackEffect, levelMinimum, canUse, color);
+                durability, maxDurability, toolPower, toolSpeed, addedBonus, rarity, displayname, material, attackEffect,
+                levelMinimum, canUse, color, wandMultiplier, boosterType, boosterDuration, proficiency);
     }
 
     public String getBonusKey(String key){
@@ -906,7 +1263,8 @@ public class FactoryItem {
         }
     }
 
-    private ItemStack CreateItem(
+    private ItemStack CreateItem
+    (
             Type type,
             SubType subType,
             double attackDamage,
@@ -928,14 +1286,21 @@ public class FactoryItem {
             double maxDurability,
             double toolPower,
             double toolSpeed,
-            List<String> bonusStats,
+            String bonusStats,
             Rarity.RarityType rarity,
             String displayname,
             Material material,
             AttackEffect attackEffect,
             int levelMinimum,
             boolean canUse,
-            Color color) {
+            Color color,
+            double wandMultiplier,
+            Booster.BoosterType boosterType,
+            int boosterDuration,
+            double proficiency
+    )
+
+    {
         ItemStack item = new ItemStack(material);
         if (material == Material.LEATHER_HELMET || material == Material.LEATHER_CHESTPLATE
                 || material == Material.LEATHER_LEGGINGS || material == Material.LEATHER_BOOTS){
@@ -948,11 +1313,23 @@ public class FactoryItem {
         meta.setDisplayName(displayname);
         PersistentDataContainer container = meta.getPersistentDataContainer();
 
+        Map<String, Double> combinedStats = new HashMap<>();
+        List<String> splittedStats = Arrays.asList(bonusStats.split(","));
         if (!bonusStats.isEmpty()){
-            for (String stats : bonusStats) {
+            for (String stats : splittedStats) {
                 String statsKey = getBonusKey(uncolouredText(stats).toLowerCase().replaceAll(" ", "").trim());
-                container.set(GetNamespacedKey(statsKey), PersistentDataType.DOUBLE, Double.parseDouble(numberInText(stats)));
+                double value = Double.parseDouble(numberInText(stats));
+
+                combinedStats.put(statsKey, combinedStats.getOrDefault(statsKey, 0.0) + value);
+                //container.set(GetNamespacedKey(statsKey), PersistentDataType.DOUBLE, Double.parseDouble(numberInText(stats)));
             }
+        }
+
+        for (Map.Entry<String, Double> entry : combinedStats.entrySet()) {
+            String key = entry.getKey();
+            double value = entry.getValue();
+            container.set(GetNamespacedKey(key), PersistentDataType.DOUBLE, value);
+            //consoleLog(key+": "+value);
         }
 
         for (String stats : attributeList) {
@@ -1050,8 +1427,39 @@ public class FactoryItem {
                 +getBonusStats(container, rangeDamageKey));
 
 
+
+
+        if (type != Type.Booster){
+            if (rarity == Rarity.RarityType.Common){
+                maxDurability = 100;
+            }
+            else if (rarity == Rarity.RarityType.Uncommon){
+                maxDurability = 250;
+            }
+            else if (rarity == Rarity.RarityType.Rare){
+                maxDurability = 500;
+            }
+            else if (rarity == Rarity.RarityType.Epic){
+                maxDurability = 800;
+            }
+            else if (rarity == Rarity.RarityType.Legendary){
+                maxDurability = 1000;
+            }
+            else if (rarity == Rarity.RarityType.Immortal){
+                maxDurability = 2500;
+            }
+        }
+
         container.set(GetNamespacedKey(durabilityKey), PersistentDataType.DOUBLE, durability);
         container.set(GetNamespacedKey(maxDurabilityKey), PersistentDataType.DOUBLE, maxDurability);
+
+        if (durability > maxDurability){
+            container.set(GetNamespacedKey(durabilityKey), PersistentDataType.DOUBLE, maxDurability);
+            container.set(GetNamespacedKey(maxDurabilityKey), PersistentDataType.DOUBLE, maxDurability);
+            durability = maxDurability;
+        }
+
+
         container.set(GetNamespacedKey(typeKey), PersistentDataType.STRING, type.toString().toLowerCase());
         container.set(GetNamespacedKey(subTypeKey), PersistentDataType.STRING, subType.toString().toLowerCase());
         container.set(GetNamespacedKey(rarityKey), PersistentDataType.STRING, rarity.toString().toLowerCase());
@@ -1068,25 +1476,39 @@ public class FactoryItem {
 
         container.set(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER, levelMinimum);
 
+        container.set(GetNamespacedKey(boosterTypeKey), PersistentDataType.STRING, boosterType.toString().toLowerCase());
+        container.set(GetNamespacedKey(boosterDurationKey), PersistentDataType.INTEGER, boosterDuration);
+
+        container.set(GetNamespacedKey(multiplierKey), PersistentDataType.DOUBLE, wandMultiplier);
+
+        if (proficiency > 1){
+            proficiency = levelMinimum*0.25;
+        }
+        container.set(GetNamespacedKey(proficiencyKey), PersistentDataType.DOUBLE, proficiency);
+
         if (!bonusStats.isEmpty()){
-            container.set(GetNamespacedKey(bonusStatsKey), PersistentDataType.STRING, String.join(",", bonusStats));
+            container.set(GetNamespacedKey(bonusStatsKey), PersistentDataType.STRING, bonusStats);
         }
 
         List<String> itemLore = new ArrayList<>();
         meta.setDisplayName(sendText(Rarity.getColor(rarity)+displayname));
 
         itemLore.add(sendText("&9" + type));
-        itemLore.add(sendText(sendRgbText("&o"+subType, "#4A5357")));
+        if (subType != SubType.Fishing_Rod){
+            itemLore.add(sendText(sendRgbText("&o"+formatItemName(subType.toString()), "#4A5357")));
+        }else{
+            itemLore.add(sendText(sendRgbText("&oFishing Rod", "#4A5357")));
+        }
         itemLore.add(sendText(" "));
         if (type.equals(Type.Weapon)){
             itemLore.add(sendText(" &c\uD83D\uDDE1 &7Attack Damage: &f" + (int) attackDamage));
-            itemLore.add(sendText(" "+sendRgbText("⚔", "#ED1415")+" &7Attack Speed: &f" + attackSpeed+"&8&l\uD835\uDDCC"));
+            itemLore.add(sendText(" "+sendRgbText("⚔", "#ED1415")+" &7Attack Speed: &f" + FormatDouble(attackSpeed)+"&8&l\uD835\uDDCC"));
             itemLore.add(sendText(" "+sendRgbText("༒", "#7C1D2C")+" &7Attack Range: &f" +(int)  attackRange+"&8&l\uD835\uDDBB"));
             itemLore.add(sendText(" "));
             itemLore.add(sendText(" "+sendRgbText("\uD83C\uDFF9", "#40BCC1")+" &7Critical Chance: &f" + (int)  criticalChance+"%"));
             if (steamConsumption > 0){
                 itemLore.add(sendText(" "));
-                itemLore.add(sendText(" &e\uD83C\uDF0A &7Steam Consumption: &f" + (int)  steamConsumption));
+                itemLore.add(sendText(" &e\uD83C\uDF0A &7Steam Consumption: &f" + FormatDouble(steamConsumption)));
             }
         }
         else if (type.equals(Type.Equipment)){
@@ -1102,39 +1524,86 @@ public class FactoryItem {
         }
         else if (type.equals(Type.Tool)){
             String toolLogo = "";
+            String jobName = "";
             if (subType.equals(SubType.Pickaxe)){
                 toolLogo = "⛏";
+                jobName = "Mining";
             } else if (subType.equals(SubType.Axe)) {
                 toolLogo = "🪓";
+                jobName = "Foraging";
             } else if (subType.equals(SubType.Shovel)) {
                 toolLogo = "🔨";
+                jobName = "Mining";
             } else if (subType.equals(SubType.Hoe)) {
                 toolLogo = "\uD83C\uDF3F";
-            } else if (subType.equals(SubType.FishingRod)) {
+                jobName = "Farming";
+            } else if (subType.equals(SubType.Fishing_Rod)) {
                 toolLogo = "🎣";
+                jobName = "Fishing";
+            }
+            else if (subType.equals(SubType.Hook)) {
+                toolLogo = "\uD83E\uDE9D";
+                jobName = "";
             }
             String toolName = subType.toString();
-            if (toolName.equals("FishingRod")){
+            if (toolName.equals("Fishing_Rod")){
                 toolName = "Fishing Rod";
             }
             itemLore.add(sendText(" "+sendRgbText(toolLogo, "#756A40")+" &7"+toolName+" Power: &f" + (int) toolPower));
             if (toolSpeed > 0){
-                itemLore.add(sendText(" "+sendRgbText("⚡", "#F2C206")+" &7"+toolName+" Speed: &f" + (int) toolPower));
+                itemLore.add(sendText(" "+sendRgbText("⚡", "#F2C206")+" &7"+toolName+" Speed: &f" + (int) toolSpeed));
+            }
+            if (proficiency > 0){
+                itemLore.add(sendText(" "));
+                itemLore.add(sendText(" &9+"+proficiency+" &f"+jobName+" Proficiency"));
+            }
+            if (steamConsumption > 0){
+                if (subType.equals(SubType.Hook)){
+                    itemLore.add(sendText(" "));
+                    itemLore.add(sendText(" &e\uD83C\uDF0A &7Steam Consumption: &f" + FormatDouble(steamConsumption)));
+                }
             }
         }
-        for (String stats : bonusStats){
-            itemLore.add(sendText(" &a+"+numberInText(stats)+" &7"+uncolouredText(stats)));
+        else if (type == Type.Booster){
+            if (subType == SubType.Sell_Wand){
+                itemLore.add(sendText(" &8\uD83D\uDFCC &7Multiplier: &9x"+FormatDouble(wandMultiplier)));
+            }
+
+            else if (subType == SubType.Potion){
+                itemLore.add(sendText(" &8\uD83D\uDFCC &7Booster: &9+"+numberInText(boosterType.toString())+"% &f"+uncolouredText(
+                        boosterType.toString().replaceAll("_", " ").trim())
+                        .replaceAll("Percent", "").trim()
+                ));
+                itemLore.add(sendText(" &e⌛ &7Duration: &6"+getFormattedTime(boosterDuration)));
+                itemLore.add(sendText(" "));
+                itemLore.add(sendText("&8"+usageArrowSymbol+" &7Right-Click to consume"));
+            }
         }
-        itemLore.add(sendText(" "));
-        if (canUse){
-            itemLore.add(sendText(" &8♦ &7Level Minimum: &a"+levelMinimum+" &2✔"));
-        }else{
-            itemLore.add(sendText(" &8♦ &7Level Minimum: &c"+levelMinimum+" &4✘"));
+        if (!type.equals(Type.Booster)){
+            if (!bonusStats.isEmpty()){
+                itemLore.add(sendText(" "));
+                for (String stats : splittedStats){
+                    itemLore.add(sendText(" &a+"+numberInText(stats)+" &7"+uncolouredText(stats)));
+                }
+            }
+            itemLore.add(sendText(" "));
+            if (canUse){
+                itemLore.add(sendText(" &8♦ &7Level Minimum: &a"+levelMinimum+" &2✔"));
+            }else{
+                itemLore.add(sendText(" &8♦ &7Level Minimum: &c"+levelMinimum+" &4✘"));
+            }
         }
-        itemLore.add(sendText(" "));
-        itemLore.add(sendText(" &7Durability: &f" + (int)  durability + "&8/&f" + (int)  maxDurability));
-        itemLore.add(sendText(" "));
-        itemLore.add(sendText(Rarity.setRarity(rarity)));
+
+        if (subType != SubType.Potion){
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &8♜ &7Durability: &f" + (int) durability + "&8/&f" + (int) maxDurability+GetDurabilityPercent(durability, maxDurability)));
+            itemLore.add(sendText(" "));
+            if (subType == SubType.Sell_Wand){
+                itemLore.add(sendText(" &8"+usageArrowSymbol+" &7Right-Click at &f&nChest&7 to use"));
+                itemLore.add(sendText(" "));
+            }
+            itemLore.add(sendText(Rarity.setRarity(rarity)));
+        }
 
         meta.setLore(itemLore);
 
@@ -1166,7 +1635,8 @@ public class FactoryItem {
         Weapon,
         Equipment,
         Accessories,
-        Tool;
+        Tool,
+        Booster;
 
         public static Type parseType(String type) {
             return switch (type.toLowerCase()) {
@@ -1174,6 +1644,7 @@ public class FactoryItem {
                 case "equipment" -> Type.Equipment;
                 case "accessories" -> Type.Accessories;
                 case "tool" -> Type.Tool;
+                case "booster" -> Type.Booster;
                 default -> null;
             };
         }
@@ -1224,7 +1695,12 @@ public class FactoryItem {
         Axe(Type.Tool),
         Shovel(Type.Tool),
         Hoe(Type.Tool),
-        FishingRod(Type.Tool);
+        Fishing_Rod(Type.Tool),
+        Hook(Type.Tool),
+
+        // Booster
+        Sell_Wand(Type.Booster),
+        Potion(Type.Booster);
 
         private final Type type;
 
@@ -1256,14 +1732,21 @@ public class FactoryItem {
                 case "axe" -> SubType.Axe;
                 case "shovel" -> SubType.Shovel;
                 case "hoe" -> SubType.Hoe;
-                case "fishingrod" -> SubType.FishingRod;
+                case "fishing_rod" -> SubType.Fishing_Rod;
+                case "sell_wand" -> SubType.Sell_Wand;
+                case "potion" -> SubType.Potion;
+                case "hook" -> SubType.Hook;
                 default -> null;
             };
         }
     }
 
     public static boolean isPickaxe(ItemStack item) {
+
         if (item != null) {
+            if (item.getType() == Material.AIR){
+                return false;
+            }
             Material type = item.getType();
             return
                     type == Material.WOODEN_PICKAXE || type == Material.STONE_PICKAXE ||
@@ -1275,6 +1758,9 @@ public class FactoryItem {
 
     public static boolean isSword(ItemStack item) {
         if (item != null) {
+            if (item.getType() == Material.AIR){
+                return false;
+            }
             Material type = item.getType();
             return
                     type == Material.WOODEN_SWORD || type == Material.STONE_SWORD ||
@@ -1304,6 +1790,9 @@ public class FactoryItem {
 
     public static boolean isAxe(ItemStack item) {
         if (item != null) {
+            if (item.getType() == Material.AIR){
+                return false;
+            }
             Material type = item.getType();
             return
                     type == Material.WOODEN_AXE || type == Material.STONE_AXE ||
@@ -1315,6 +1804,9 @@ public class FactoryItem {
 
     public static boolean isFishingRod(ItemStack item) {
         if (item != null) {
+            if (item.getType() == Material.AIR){
+                return false;
+            }
             Material type = item.getType();
             ItemMeta meta = item.getItemMeta();
             PersistentDataContainer container = meta.getPersistentDataContainer();
@@ -1322,7 +1814,7 @@ public class FactoryItem {
                 if (!container.has(GetNamespacedKey(subTypeKey), PersistentDataType.STRING)){
                     return false;
                 }
-                if (!container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.FishingRod.toString().toLowerCase())){
+                if (!container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.Fishing_Rod.toString().toLowerCase())){
                     return false;
                 }
             }
@@ -1332,8 +1824,112 @@ public class FactoryItem {
         return false;
     }
 
+    public static boolean isHook(ItemStack item) {
+        if (item != null) {
+            if (item.getType() == Material.AIR){
+                return false;
+            }
+            Material type = item.getType();
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(subTypeKey), PersistentDataType.STRING)){
+                    return false;
+                }
+                return container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.Hook.toString().toLowerCase());
+            }
+        }
+        return false;
+    }
+
+    public static boolean isSellWand(ItemStack item) {
+        if (item != null) {
+
+            if (item.getType() == Material.AIR){
+                return false;
+            }
+
+            Material type = item.getType();
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(subTypeKey), PersistentDataType.STRING)){
+                    return false;
+                }
+                if (container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.Sell_Wand.toString().toLowerCase())){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean isBackpack(ItemStack item) {
+        if (item != null) {
+
+            if (item.getType() == Material.AIR){
+                return false;
+            }
+
+            Material type = item.getType();
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            if (container.has(GetNamespacedKey("backpackSize"))){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isPotion(ItemStack item) {
+        if (item != null) {
+
+            if (item.getType() == Material.AIR){
+                return false;
+            }
+
+            Material type = item.getType();
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(subTypeKey), PersistentDataType.STRING)){
+                    return false;
+                }
+                if (container.get(GetNamespacedKey(subTypeKey), PersistentDataType.STRING).equals(SubType.Potion.toString().toLowerCase())){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean isJobTool(ItemStack item) {
+        if (item != null) {
+
+            if (item.getType() == Material.AIR){
+                return false;
+            }
+
+            Material type = item.getType();
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            if (container.has(GetNamespacedKey(itemKey))){
+                if (!container.has(GetNamespacedKey(typeKey), PersistentDataType.STRING)){
+                    return false;
+                }
+                if (container.get(GetNamespacedKey(typeKey), PersistentDataType.STRING).equals(Type.Tool.toString().toLowerCase())){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static boolean isShovel(ItemStack item) {
         if (item != null) {
+            if (item.getType() == Material.AIR){
+                return false;
+            }
             Material type = item.getType();
             return
                     type == Material.WOODEN_SHOVEL || type == Material.STONE_SHOVEL ||
@@ -2025,4 +2621,426 @@ public class FactoryItem {
 
         return item;
     }
+
+
+    public static ItemStack GetSellWand(double mult, Rarity.RarityType rarity){
+
+        FactoryItem wand = new FactoryItem();
+
+        wand.setMaterial(Material.BLAZE_ROD);
+
+        if (rarity == Rarity.RarityType.Common){
+            wand.setMaterial(Material.STICK);
+            wand.setMaxDurability(25);
+        }
+        else if (rarity == Rarity.RarityType.Uncommon){
+            wand.setMaterial(Material.STICK);
+            wand.setMaxDurability(50);
+        }
+        else if (rarity == Rarity.RarityType.Rare){
+            wand.setMaterial(Material.BLAZE_ROD);
+            wand.setMaxDurability(100);
+        }
+        else if (rarity == Rarity.RarityType.Epic){
+            wand.setMaterial(Material.BLAZE_ROD);
+            wand.setMaxDurability(150);
+        }
+        else if (rarity == Rarity.RarityType.Legendary){
+            wand.setMaterial(Material.BREEZE_ROD);
+            wand.setMaxDurability(250);
+        }
+        else if (rarity == Rarity.RarityType.Immortal){
+            wand.setMaterial(Material.BREEZE_ROD);
+            wand.setMaxDurability(500);
+        }
+
+
+        wand.setType(Type.Booster);
+        wand.setSubType(SubType.Sell_Wand);
+        wand.setRarity(rarity);
+
+        wand.setDisplayname(sendText("Sell Wand"));
+
+        wand.setMultiplier(mult);
+
+        return wand.build().clone();
+
+    }
+
+    public static ItemStack GetBooster(double mult, String potionName, Booster.BoosterType boosterType, PotionType potionType){
+
+        ItemStack potion = new ItemStack(Material.POTION);
+
+
+        FactoryItem wand = new FactoryItem();
+
+        wand.setType(Type.Booster);
+        wand.setSubType(SubType.Potion);
+        wand.setBoosterType(boosterType);
+        wand.setBoosterDuration(1800);
+        wand.setDisplayname(sendText("&f"+potionName+" Potion"));
+        wand.setMultiplier(mult);
+        potion.setItemMeta(wand.build().clone().getItemMeta());
+
+        PotionMeta potionMeta = (PotionMeta) potion.getItemMeta();
+        potionMeta.setBasePotionType(potionType);
+        //potionMeta.addEnchant(Enchantment.UNBREAKING, 10, true);
+        potionMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        potionMeta.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+        /*potionMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        potionMeta.addItemFlags(ItemFlag.HIDE_STORED_ENCHANTS);*/
+        potion.setItemMeta(potionMeta);
+        return potion;
+
+    }
+
+    public static ItemStack GenerateItem(Type type, SubType subType, Material material, int level, Rarity.RarityType rarity){
+        Random random = new Random();
+
+        FactoryItem item = new FactoryItem();
+
+        int bonusAmount = 1;
+
+        int meleeAttackRange = 1;
+        double meleeAttackSpeed = 1;
+
+        switch (rarity) {
+            case Rarity.RarityType.Common:
+                bonusAmount = 1;
+                meleeAttackRange = random.nextInt(3) + 2;
+                meleeAttackSpeed = 1.0 + (0.5 * random.nextDouble()); // 1.0 - 1.5
+                break;
+            case Rarity.RarityType.Uncommon:
+                bonusAmount = 2;
+                meleeAttackRange = random.nextInt(4) + 3;
+                meleeAttackSpeed = 0.9 + (0.4 * random.nextDouble()); // 0.9 - 1.3
+                break;
+            case Rarity.RarityType.Rare:
+                bonusAmount = 3;
+                meleeAttackRange = random.nextInt(4) + 3;
+                meleeAttackSpeed = 0.8 + (0.4 * random.nextDouble()); // 0.8 - 1.2
+                break;
+            case Rarity.RarityType.Epic:
+                bonusAmount = 4;
+                meleeAttackRange = random.nextInt(5) + 4;
+                meleeAttackSpeed = 0.7 + (0.3 * random.nextDouble()); // 0.7 - 1.0
+                break;
+            case Rarity.RarityType.Legendary:
+                bonusAmount = 5;
+                meleeAttackRange = random.nextInt(6) + 5;
+                meleeAttackSpeed = 0.6 + (0.2 * random.nextDouble()); // 0.6 - 0.8
+                break;
+            case Rarity.RarityType.Immortal:
+                bonusAmount = 6;
+                meleeAttackRange = random.nextInt(8) + 7;
+                meleeAttackSpeed = 0.5 + (0.2 * random.nextDouble()); // 0.5 - 0.7
+                break;
+        }
+
+
+        List<String> nameList = new ArrayList<>();
+
+        if (subType == SubType.Sword){
+            nameList = Arrays.asList(
+                    "Gearfang Sabre",
+                    "Cogblade",
+                    "Steamcutter",
+                    "Aetheredge",
+                    "The Clockwork Fang",
+                    "Rustlash Rapier",
+                    "Piston Saber",
+                    "Mechblade of Brass",
+                    "Voltsteel Sabre",
+                    "Chrono-Katana"
+            );
+        }
+        else if (subType == SubType.Hammer) {
+            nameList = Arrays.asList(
+                    "Steamcore Maul",
+                    "Brasspounder",
+                    "Boilforge Hammer",
+                    "The Mechasmash",
+                    "Geargrinder",
+                    "Pistoncrush Maul",
+                    "The Crankhammer",
+                    "Thunder Cog",
+                    "Steam Titan's Mallet",
+                    "Iron Howl Maul"
+            );
+        }
+
+        else if (subType == SubType.Bow) {
+            nameList = Arrays.asList(
+                    "Brassstring Repeater",
+                    "Steampiercer",
+                    "The Gilded Draw",
+                    "Cogwheel Longbow",
+                    "Voltstring Arc",
+                    "Mechanarch Bow",
+                    "The Gyrobow",
+                    "Ironwhistle Bow",
+                    "Pneuma Boltcaster",
+                    "Windgear Bow"
+            );
+        }
+
+        else if (subType == SubType.Gun){
+            nameList = Arrays.asList(
+                    "Clockwork Reaver",
+                    "Rustshot Revolver",
+                    "Cogfire Pistol",
+                    "Gearflare Carbine",
+                    "Steambolt Rifle",
+                    "The Valvegun",
+                    "Brassbane Blaster",
+                    "Aethercoil Gun",
+                    "The Pistonic Repeater",
+                    "Voltic Howler"
+            );
+        }
+
+        else if (subType == SubType.Blast){
+            nameList = Arrays.asList(
+                    "Tesla Howler",
+                    "Boilburst Cannon",
+                    "Steam Lance",
+                    "The Copper Roar",
+                    "Voltflare Blaster",
+                    "Shockcoil Emitter",
+                    "Aether Pulsegun",
+                    "Thunderburst Device",
+                    "The Boiler Blaster",
+                    "Gearfire Ejector"
+            );
+        }
+
+        else if (subType == SubType.Helmet) {
+            nameList = Arrays.asList(
+                    "Cogwheel Visor",
+                    "Steamforged Helm",
+                    "Goggleguard",
+                    "Voltsteel Helmet",
+                    "Boilplate Crown",
+                    "Aether Lenscap",
+                    "Brass Dome",
+                    "Ironfuse Helm",
+                    "Chrono Visage",
+                    "Tesla Guard"
+            );
+        }
+
+        else if (subType == SubType.Chestplate) {
+            nameList = Arrays.asList(
+                    "Gearplate Harness",
+                    "Steamcore Chest",
+                    "Boilsteel Shell",
+                    "Voltguard Plate",
+                    "Brassheart Armor",
+                    "Clockwork Cuirass",
+                    "Ironcoil Breastplate",
+                    "Aether Coreplate",
+                    "Crankmail Vest",
+                    "Tesla Torso"
+            );
+        }
+
+        else if (subType == SubType.Leggings) {
+            nameList = Arrays.asList(
+                    "Piston Greaves",
+                    "Steamline Legplates",
+                    "Ironpipe Leggings",
+                    "Voltframe Trousers",
+                    "Boilforge Pants",
+                    "Brasslink Legguards",
+                    "Gearbind Greaves",
+                    "Cogsteel Plating",
+                    "Crankshaft Leggings",
+                    "Mechstride Plates"
+            );
+        }
+
+        else if (subType == SubType.Boots) {
+            nameList = Arrays.asList(
+                    "Steamstep Boots",
+                    "Ironmarch Walkers",
+                    "Voltgrip Treads",
+                    "Brassheel Boots",
+                    "Piston Stompers",
+                    "Gearwalker Greaves",
+                    "Shockcoil Boots",
+                    "Boilplate Boots",
+                    "Crankstep Striders",
+                    "Aetherbound Soles"
+            );
+        }
+
+
+        item.setType(type);
+        item.setSubType(subType);
+        int randomName = random.nextInt(nameList.size());
+        String displayname = nameList.get(randomName);
+
+
+        List<String> availableBonus = Arrays.asList(
+                "Steam", "Movement Speed", "Attack Damage",
+                "Critical Damage", "Accuracy", "Armor",
+                "Undead Damage", "Undead Defense", "Mutant Damage", "Mutant Defense",
+                "Melee Damage", "Range Damage"
+        );
+
+        List<String> bonusStrings = new ArrayList<>();
+
+        for (int i = 0; i < bonusAmount; i++) {
+            int randomAttributeBonus = random.nextInt(availableBonus.size());
+            int randomAttributeValue = random.nextInt(level*2)+1;
+
+            String attribute = availableBonus.get(randomAttributeBonus);
+            bonusStrings.add(attribute + ":" + randomAttributeValue);
+        }
+
+        String combinedBonus = String.join(",", bonusStrings);
+        //consoleLog("Combined Bonus: "+combinedBonus);
+
+        item.setDisplayname(displayname);
+        item.setMaterial(material);
+        item.setLevelMinimum(level);
+        item.setRarity(rarity);
+        item.setBonusStats(combinedBonus);
+
+        int randomAttackDamage = random.nextInt(level*2)+level;
+        int randomHealth = random.nextInt(level*2)+level;
+        int randomArmor = random.nextInt(level*2)+level;
+        double randomSteam = 0.2 + ((level*0.5) * random.nextDouble());
+        double randomAttackSpeed = 0.2 + (1 * random.nextDouble());
+
+        if (isWeapon(item.build())){
+            item.setAttackDamage(randomAttackDamage);
+            item.setAttackSpeed(randomAttackSpeed);
+
+            item.setAttackSpeed(meleeAttackSpeed);
+            item.setAttackRange(meleeAttackRange);
+
+            item.setHealth(0);
+            item.setArmor(0);
+            item.setSteam(0);
+            item.setSteamConsumption(0);
+            if (isBow(item.build()) || isGun(item.build()) || isBlast(item.build())){
+                item.setSteamConsumption(level*0.025);
+
+                if (isBow(item.build())){
+                    item.setAttackEffect(AttackEffect.Arrow);
+                }
+                else if (isGun(item.build())){
+                    item.setAttackEffect(AttackEffect.Bullet);
+                }
+                else if (isBlast(item.build())){
+                    item.setAttackEffect(AttackEffect.Steam);
+                }
+            }
+        }else{
+            item.setHealth(randomHealth);
+            item.setArmor(randomArmor);
+            item.setSteam(randomSteam);
+
+            item.setSteamConsumption(0);
+        }
+
+        return item.build().clone();
+    }
+
+    public static ItemStack GetMachineLicense(int amount){
+        ItemStack item = new ItemStack(Material.PAPER);
+
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        container.set(GetNamespacedKey("maxMachineAmount"), PersistentDataType.INTEGER, amount);
+
+        List<String> itemLore = new ArrayList<>();
+        meta.setDisplayName(sendText("&fMachine License"));
+        itemLore.add(sendText("&9Miscellaneous"));
+        itemLore.add(sendText(" "));
+        itemLore.add(sendText(" &7Max Machine: &b+"+amount));
+        itemLore.add(sendText(" "));
+        itemLore.add(sendText(" &7Increase your &f&nMax Machines"));
+        itemLore.add(sendText(" &7Global Max Machine is &e"+globalMaxMachine));
+        itemLore.add(sendText(" "));
+        itemLore.add(sendText("&8"+usageArrowSymbol+" &7Right-Click to use"));
+
+
+        meta.setLore(itemLore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static String dungeonLootBoxKey = "dungeonLootBox";
+    public static String dungeonLootBoxLevelKey = "dungeonLootBoxLevel";
+    public static String lootTypeKey = "lootType";
+
+    public static ItemStack CreateDungeonLootBox(Dungeon.LootType type, int level){
+        ItemStack item = new ItemStack(Material.ENDER_CHEST);
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        container.set(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN, true);
+        container.set(GetNamespacedKey(dungeonLootBoxKey), PersistentDataType.BOOLEAN, true);
+        container.set(GetNamespacedKey(dungeonLootBoxLevelKey), PersistentDataType.INTEGER, level);
+        container.set(GetNamespacedKey(lootTypeKey), PersistentDataType.STRING, type.toString().toLowerCase());
+
+        List<String> itemLore = new ArrayList<>();
+
+        meta.setDisplayName(sendText("&fDungeon Loot Box"));
+        itemLore.add(sendText("&9Miscellaneous"));
+        itemLore.add(sendText(" "));
+        itemLore.add(sendText(" &7Level: &f"+level));
+        itemLore.add(sendText(" &7Loot Type: &f"+type.toString()));
+        itemLore.add(sendText(" "));
+        itemLore.add(sendText("&8"+usageArrowSymbol+" &7Right-Click to open"));
+
+        meta.setLore(itemLore);
+
+        meta.addEnchant(Enchantment.UNBREAKING, 10, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack GetMembrane(String name, int tier){
+        ItemStack item = new ItemStack(Material.ENDER_CHEST);
+        if (name.equals("alien")){
+            item = new ItemStack(Material.BEETROOT);
+        }
+        else if (name.equals("mutant")){
+            item = new ItemStack(Material.SWEET_BERRIES);
+        }
+        else if (name.equals("undead")){
+            item = new ItemStack(Material.DRIED_KELP);
+        }
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        container.set(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN, true);
+
+        List<String> itemLore = new ArrayList<>();
+
+        String display;
+        display = formatItemName(name);
+        meta.setDisplayName(sendText("&f"+display+" Membrane"));
+        itemLore.add(sendText("&9Miscellaneous"));
+        itemLore.add(sendText(" "));
+        itemLore.add(sendText(" &7Tier: &f"+intToRoman(tier)));
+        itemLore.add(sendText(" "));
+        itemLore.add(sendText(" &7Obtained from dungeon"));
+        itemLore.add(sendText(" &7Trade this item at &f&nTraders"));
+
+        meta.setLore(itemLore);
+
+        meta.addEnchant(Enchantment.UNBREAKING, 10, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+        item.setItemMeta(meta);
+        return item;
+    }
+
 }

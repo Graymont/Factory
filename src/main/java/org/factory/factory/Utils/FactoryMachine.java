@@ -17,6 +17,7 @@ import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
 import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
+import static org.factory.factory.Utils.PlayerProgress.GetPrestigeRequirement;
 import static org.factory.factory.Utils.UserInterface.*;
 
 public class FactoryMachine {
@@ -47,7 +48,7 @@ public class FactoryMachine {
             sConsumption = 0.0;
         }
 
-        int steamConsumptionCalculation = (int) (sConsumption*0.01);
+        int steamConsumptionCalculation = (int) (sConsumption*0.01)+1;
         if (steamConsumptionCalculation < 1){
             steamConsumptionCalculation = 1;
         }
@@ -162,6 +163,11 @@ public class FactoryMachine {
             productValue = 0.0;
         }
 
+        int prestigeMinimum = 0;
+        if (levelMinimum >= 50){
+            prestigeMinimum = GetPrestigeRequirement(levelMinimum);
+        }
+
         // Set item display name and lore
         meta.setDisplayName(sendText(Rarity.getColor(rarity)+name));
         itemLore.add(sendText("&9Machine"));
@@ -172,10 +178,16 @@ public class FactoryMachine {
         itemLore.add(sendText(" &8♦ &7Machine Status: "+status));
         itemLore.add(sendText(" &8♦ &7Total Production: "+totalProduction));
         itemLore.add(sendText(" &8♦ &7Product Value: "+FormatDouble(productValue)));
+        itemLore.add(sendText(" "));
+        itemLore.add(sendText(rarityColor+"&9Requirements"));
+        itemLore.add(sendText(" &8♦ &7Level Minimum to Place: &7"+levelMinimum));
+        if (prestigeMinimum > 0){
+            itemLore.add(sendText(" &8♦ &7Prestige Minimum to Place: &7"+prestigeMinimum));
+        }
         if (canUse){
-            itemLore.add(sendText(" &8♦ &7Level Minimum to Place: &a"+levelMinimum+" &2✔"));
+            itemLore.add(sendText(" &8♦ &7Can Use: &aTrue &2"+checkSymbol));
         }else{
-            itemLore.add(sendText(" &8♦ &7Level Minimum to Place: &c"+levelMinimum+" &4✘"));
+            itemLore.add(sendText(" &8♦ &7Can Use: &cFalse &4"+xSymbol));
         }
         itemLore.add(sendText(" "));
         itemLore.add(sendText(rarityColor+"&9Attributes"));
@@ -208,7 +220,7 @@ public class FactoryMachine {
         }
         itemLore.add(sendText(" &7Durability: &f"+durability+"&8/&f"+maxDurability+GetDurabilityPercent(durability, maxDurability)));
         itemLore.add(sendText(" "));
-        itemLore.add(sendText(" &7Place anywhere to generate"));
+        itemLore.add(sendText(" &8"+usageArrowSymbol+" &7Place anywhere to generate"));
         itemLore.add(sendText(" &7"+machineType.toString().toLowerCase()+" from this machine &8✎"));
         itemLore.add(sendText(" "));
         itemLore.add(sendText(Rarity.setRarity(rarity)));
@@ -280,7 +292,16 @@ public class FactoryMachine {
         Long speed = (long) (machineBaseSpeed-(currentLevel));
         placedMachines.put(location+__speedKey, ""+speed);
 
-        Integer steamConsumption = machineBaseSteamConsumption+currentLevel+2;
+
+        Double sConsumption = GetPrice(uncolouredText(previousItemMeta.getDisplayName().replaceAll(" ", "").trim()).toLowerCase()+"_custom");
+        if (sConsumption == null){
+            sConsumption = 0.0;
+        }
+        int steamConsumptionCalculation = (int) (sConsumption*0.01);
+        if (steamConsumptionCalculation < 1){
+            steamConsumptionCalculation = 1;
+        }
+        Integer steamConsumption = steamConsumptionCalculation+machineBaseSteamConsumption+currentLevel;
         placedMachines.put(location+__steamConsumptionKey, ""+steamConsumption);
 
         Integer durability = (machineBaseDurability+currentLevel*100);
@@ -299,7 +320,7 @@ public class FactoryMachine {
         String machineName = uncolouredText(previousItemMeta.getDisplayName());
         placedMachines.put(location+__machineNameKey, Rarity.getColor(rarity)+machineName);
 
-        consoleLog(sendText("Machine Name: "+placedMachines.get(location+__machineNameKey)));
+        //consoleLog(sendText("Machine Name: "+placedMachines.get(location+__machineNameKey)));
 
         switch (rarity){
             case Rarity.RarityType.Common ->

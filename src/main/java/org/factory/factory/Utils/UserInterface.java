@@ -6,10 +6,10 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Sound;
+import org.bukkit.*;
+import org.bukkit.Color;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -32,6 +32,7 @@ public class UserInterface {
     public static String checkSymbol = "✔";
     public static String xSymbol = "✘";
 
+    public static String usageArrowSymbol = "➤";
 
     // color
 
@@ -247,6 +248,77 @@ public class UserInterface {
         for (Player player : Bukkit.getOnlinePlayers()){
             player.sendMessage(sendText(text));
         }
+    }
+
+    public static String getFormattedTime(long seconds) {
+        if (seconds <= 0) {
+            return "0s";
+        }
+
+        long days = seconds / 86400;
+        long hours = (seconds % 86400) / 3600;
+        long minutes = (seconds % 3600) / 60;
+        long secs = seconds % 60;
+
+        StringBuilder formattedTime = new StringBuilder();
+
+        if (days > 0) {
+            formattedTime.append(days).append(" ").append(days == 1 ? "day " : "days ");
+        }
+        if (hours > 0) {
+            formattedTime.append(hours).append(" ").append(hours == 1 ? "hour " : "hours ");
+        }
+        if (minutes > 0) {
+            formattedTime.append(minutes).append(" ").append(minutes == 1 ? "minute " : "minutes ");
+        }
+        if (secs > 0 || formattedTime.length() == 0) {
+            formattedTime.append(secs).append(" ").append(secs == 1 ? "second" : "seconds");
+        }
+
+        return formattedTime.toString().trim();
+    }
+
+    public static void AnnouncePayment(Player player, String text, String price){
+
+        Broadcast("&8[&6!&8] &e"+player.getName()+" &fhas bought &6x1 "+text+" &ffrom &6&lCredit Shop &ffor &e"+price+" credits!");
+
+    }
+
+    public static void PlayParticleAtBlock(Block block, Particle particle) {
+        Location loc = block.getLocation().add(0, 0.5, 0);
+        block.getWorld().spawnParticle(particle, loc, 10);
+    }
+
+    public static void SpawnBlockCrackParticle(Block block) {
+        Location loc = block.getLocation().add(0.5, 1.0, 0.5); // top surface
+
+        BlockData data = block.getBlockData(); // block appearance
+        block.getWorld().spawnParticle(
+                Particle.BLOCK,
+                loc,
+                20,       // count
+                0.3, 0, 0.3, // offset x/y/z
+                data      // material to simulate breaking
+        );
+    }
+
+
+    public static void SpawnBlockRedstoneParticle(Block block, Color color) {
+        Location loc = block.getLocation().add(0.5, 1.0, 0.5); // top surface
+
+        Particle.DustOptions dust = new Particle.DustOptions(color, 1.0F); // Color and size
+        block.getWorld().spawnParticle(
+                Particle.DUST,
+                loc,
+                20,       // count
+                0.3, 0, 0.3, // offset x/y/z
+                0,
+                dust
+        );
+    }
+
+    public static void SendTitle(Player player, String title, String subtitle, int fadeIn, int stay, int fadeOut){
+        player.sendTitle(sendText(title), sendText(subtitle), fadeIn*20, stay*20, fadeOut*20);
     }
 
 }

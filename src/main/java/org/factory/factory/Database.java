@@ -36,6 +36,8 @@ public class Database {
 
     public static HashMap<String, Location> locationList = new HashMap<>();
 
+    public static HashMap<String, Location> spawnerList = new HashMap<>();
+
     public static HashMap<String, List<ItemStack>> shopItemList = new HashMap<>();
     public static HashMap<String, String> categoryList = new HashMap<>();
 
@@ -48,13 +50,13 @@ public class Database {
 
     public static ItemStack GetItem(String name){
         ItemStack addedItem = new ItemStack(itemList.get(name).clone());
-        ItemMeta meta = addedItem.getItemMeta();
+        /*ItemMeta meta = addedItem.getItemMeta();
         PersistentDataContainer container = meta.getPersistentDataContainer();
         if (!container.has(GetNamespacedKey(machineKey), PersistentDataType.BOOLEAN) &&
                 !container.has(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN)){
             container.set(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN, true);
         }
-        addedItem.setItemMeta(meta);
+        addedItem.setItemMeta(meta);*/
         return addedItem;
     }
 
@@ -68,6 +70,10 @@ public class Database {
 
     public static Location GetLocation(String name){
         return locationList.get(name);
+    }
+
+    public static Location GetSpawner(String name){
+        return spawnerList.get(name);
     }
 
     public static Integer GetLevelMinimum(String name){
@@ -107,6 +113,11 @@ public class Database {
         consoleLog(sendText("&bSaved Location with name: &6"+name));
     }
 
+    public static void SaveSpawner(String name, Location location){
+        spawnerList.put(name, location);
+        consoleLog(sendText("&bSaved Spawner with name: &6"+name));
+    }
+
 
     public static void RemovePrice(String name){
         priceList.remove(name);
@@ -128,12 +139,31 @@ public class Database {
         consoleLog(sendText("&bRemoved Location with name: &6"+name));
     }
 
+    public static void RemoveSpawner(String name){
+        spawnerList.remove(name);
+        consoleLog(sendText("&bRemoved Spawner with name: &6"+name));
+    }
+
     public static void SaveLocations(){
         File file = new File(developmentPath, developmentItemFile);
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
         String parent = "locations.";
         for (String key : locationList.keySet()){
             config.set(parent+key, locationList.get(key));
+        }
+        try{
+            config.save(file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void SaveSpawners(){
+        File file = new File(developmentPath, developmentItemFile);
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        String parent = "spawners.";
+        for (String key : spawnerList.keySet()){
+            config.set(parent+key, spawnerList.get(key));
         }
         try{
             config.save(file);
@@ -162,6 +192,29 @@ public class Database {
             consoleLog(sendText("&3[Factory Config] &aLocations loaded successfully!"));
         } else {
             consoleLog(sendText("&3[Factory Config] &cNo locations section found in file."));
+        }
+    }
+
+    public static void LoadSpawners() {
+        File file = new File(developmentPath, developmentItemFile);
+
+        if (!file.exists()) {
+            consoleLog(sendText("&3[Factory Config] &eSpawners file does not exist. No data loaded."));
+            return;
+        }
+
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        String parent = "spawners";
+        String section = parent+".";
+
+        if (config.isConfigurationSection(parent)) {
+            Set<String> keys = config.getConfigurationSection(parent).getKeys(false);
+            for (String key : keys) {
+                spawnerList.put(key, config.getLocation(section + key));
+            }
+            consoleLog(sendText("&3[Factory Config] &eSpawners loaded successfully!"));
+        } else {
+            consoleLog(sendText("&3[Factory Config] &cNo spawners section found in file."));
         }
     }
 
@@ -433,6 +486,7 @@ public class Database {
         LoadItems();
         LoadShopItems();
         LoadLocations();
+        LoadSpawners();
         consoleLog(sendText("&3[Factory Config] &aLoading all configuration data..."));
     }
 
@@ -442,6 +496,7 @@ public class Database {
         SaveLevelMinimums();
         SaveItems();
         SaveLocations();
+        SaveSpawners();
         consoleLog(sendText("&3[Factory Config] &aSaving all configuration data..."));
     }
 

@@ -51,5 +51,10 @@
       <option name="name" value="sk89q-repo" />
       <option name="url" value="https://maven.enginehub.org/repo/" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="md_5-public" />
+      <option name="name" value="md_5-public" />
+      <option name="url" value="https://repo.md-5.net/content/groups/public/" />
+    </remote-repository>
   </component>
 </project>

@@ -7,10 +7,12 @@ import org.jetbrains.annotations.NotNull;
 import static org.factory.factory.Events.machineCount;
 import static org.factory.factory.Events.maxMachines;
 import static org.factory.factory.Factory.getMainPlugin;
+import static org.factory.factory.Utils.Booster.*;
 import static org.factory.factory.Utils.CooldownManager.getGlobalFormattedRemainingTime;
 import static org.factory.factory.Utils.CooldownManager.getGlobalRemainingTime;
 import static org.factory.factory.Utils.FactoryEvents.currentEvent;
 import static org.factory.factory.Utils.PlayerProgress.*;
+import static org.factory.factory.Utils.UserInterface.FormatDouble;
 import static org.factory.factory.Utils.UserInterface.formatItemName;
 
 public class PlaceholderManager extends PlaceholderExpansion {
@@ -38,11 +40,11 @@ public class PlaceholderManager extends PlaceholderExpansion {
         }
 
         if (identifier.equalsIgnoreCase("exp")) {
-            return String.valueOf(playerExp.get(player.getUniqueId()));
+            return String.valueOf(FormatDouble(playerExp.get(player.getUniqueId())));
         }
 
         if (identifier.equalsIgnoreCase("maxexp")) {
-            return String.valueOf(maxExp.get(playerLevel.get(player.getUniqueId())));
+            return String.valueOf(FormatDouble(maxExp.get(playerLevel.get(player.getUniqueId()))));
         }
 
         if (identifier.equalsIgnoreCase("totalmachine")) {
@@ -59,6 +61,26 @@ public class PlaceholderManager extends PlaceholderExpansion {
 
         if (identifier.equalsIgnoreCase("eventstimer")) {
             return String.valueOf(getGlobalFormattedRemainingTime(CooldownManager.CooldownType.FactoryEvents));
+        }
+
+        if (identifier.equalsIgnoreCase("sellmultiplier")) {
+            return String.valueOf(FormatDouble(playerSellMultiplier.get(player.getUniqueId())));
+        }
+
+        if (identifier.equalsIgnoreCase("expmultiplier")) {
+            return String.valueOf(FormatDouble(playerExpMultiplier.get(player.getUniqueId())));
+        }
+
+        if (identifier.equalsIgnoreCase("activebooster")) {
+            return String.valueOf(getFormattedBoosterName(boosters.get(player.getUniqueId())));
+        }
+
+        if (identifier.equalsIgnoreCase("boosterduration")) {
+            return String.valueOf(getFormattedRemainingBooster(player));
+        }
+
+        if (identifier.equalsIgnoreCase("remainingbooster")) {
+            return String.valueOf(getPercentRemainingBooster(player));
         }
 
         return null;

@@ -10,6 +10,7 @@ import org.bukkit.inventory.ShapedRecipe;
 
 import static org.factory.factory.Database.GetItem;
 import static org.factory.factory.Factory.getMainPlugin;
+import static org.factory.factory.Utils.FactoryItem.ProcessItemMeta;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 
 public class CraftingManager implements Listener {
@@ -249,27 +250,27 @@ public class CraftingManager implements Listener {
     }
 
     public static void InitSmeltings(){
-        ItemStack copperingot = new ItemStack(GetItem("copperingot"));
+        ItemStack copperingot = new ItemStack(ProcessItemMeta(new ItemStack(Material.COPPER_INGOT)));
         FurnaceRecipe copperingotrecipe = new FurnaceRecipe(GetNamespacedKey("copperingotkey"), copperingot, Material.RAW_COPPER, 0f, 60);
         Bukkit.addRecipe(copperingotrecipe);
 
-        ItemStack ironingot = new ItemStack(GetItem("ironingot"));
+        ItemStack ironingot = new ItemStack(ProcessItemMeta(new ItemStack(Material.IRON_INGOT)));
         FurnaceRecipe ironingotrecipe = new FurnaceRecipe(GetNamespacedKey("ironingotkey"), ironingot, Material.RAW_IRON, 0f, 100);
         Bukkit.addRecipe(ironingotrecipe);
 
-        ItemStack goldingot = new ItemStack(GetItem("goldingot"));
+        ItemStack goldingot = new ItemStack(ProcessItemMeta(new ItemStack(Material.GOLD_INGOT)));
         FurnaceRecipe goldingotrecipe = new FurnaceRecipe(GetNamespacedKey("goldingotkey"), goldingot, Material.RAW_GOLD, 0f, 200);
         Bukkit.addRecipe(goldingotrecipe);
 
-        ItemStack copperingot2 = new ItemStack(GetItem("copperingot"));
+        ItemStack copperingot2 = new ItemStack(ProcessItemMeta(new ItemStack(Material.COPPER_INGOT)));
         FurnaceRecipe copperingotrecipe2 = new FurnaceRecipe(GetNamespacedKey("copperingotkey2"), copperingot2, Material.COPPER_ORE, 0f, 60);
         Bukkit.addRecipe(copperingotrecipe2);
 
-        ItemStack ironingot2 = new ItemStack(GetItem("ironingot"));
+        ItemStack ironingot2 = new ItemStack(ProcessItemMeta(new ItemStack(Material.IRON_INGOT)));
         FurnaceRecipe ironingotrecipe2 = new FurnaceRecipe(GetNamespacedKey("ironingotkey2"), ironingot2, Material.IRON_ORE, 0f, 100);
         Bukkit.addRecipe(ironingotrecipe2);
 
-        ItemStack goldingot2 = new ItemStack(GetItem("goldingot"));
+        ItemStack goldingot2 = new ItemStack(ProcessItemMeta(new ItemStack(Material.GOLD_INGOT)));
         FurnaceRecipe goldingotrecipe2 = new FurnaceRecipe(GetNamespacedKey("goldingotkey2"), goldingot2, Material.GOLD_ORE, 0f, 200);
         Bukkit.addRecipe(goldingotrecipe2);
     }
@@ -284,9 +285,15 @@ public class CraftingManager implements Listener {
             return false;
         }
 
-        return item.getType().toString().toLowerCase().contains("helmet")
+        if( item.getType().toString().toLowerCase().contains("helmet")
                 || item.getType().toString().toLowerCase().contains("chestplate")
                 || item.getType().toString().toLowerCase().contains("leggings")
-                || item.getType().toString().toLowerCase().contains("boots");
+                || item.getType().toString().toLowerCase().contains("boots")
+        ){
+            return true;
+        }
+
+
+        else return item.getType() == Material.END_CRYSTAL || item.getType() == Material.RESPAWN_ANCHOR;
     }
 }

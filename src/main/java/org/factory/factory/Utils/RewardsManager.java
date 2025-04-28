@@ -15,10 +15,12 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.factory.factory.Database.GetItem;
+import static org.factory.factory.Events.DropItem;
 import static org.factory.factory.Utils.CooldownManager.hasCooldown;
-import static org.factory.factory.Utils.CooldownManager.setCooldown;
+import static org.factory.factory.Utils.CooldownManager.SetCooldown;
 import static org.factory.factory.Utils.FactoryItem.CreateSpawner;
 import static org.factory.factory.Utils.FactoryItem.ProcessItemMeta;
 import static org.factory.factory.Utils.FactoryMachine.serialCodeKey;
@@ -113,16 +115,20 @@ public class RewardsManager implements Listener {
             List<ItemStack> rewardsList = new ArrayList<>();
 
             if (type == RewardType.Hourly) {
+                rewardsList.add(new ItemStack(ProcessItemMeta(new ItemStack(Material.IRON_INGOT, 10))));
                 rewardsList.add(new ItemStack(ProcessItemMeta(new ItemStack(Material.COOKED_BEEF, 24))));
             }
             else if (type == RewardType.Daily) {
                 rewardsList.add(new ItemStack(ProcessItemMeta(new ItemStack(Material.DIAMOND, 8))));
+                rewardsList.add(new ItemStack(GetItem("sellwand1")));
             }
             else if (type == RewardType.Weekly) {
                 rewardsList.add(CreateSpawner(EntityType.ZOMBIE));
+                rewardsList.add(new ItemStack(GetItem("sellwand2")));
             }
             else if (type == RewardType.Monthly) {
                 rewardsList.add(CreateSpawner(EntityType.BLAZE));
+                rewardsList.add(new ItemStack(GetItem("sellwand3")));
             }
 
             return rewardsList;
@@ -155,11 +161,28 @@ public class RewardsManager implements Listener {
             double money = RewardType.getMoney(type);
             AddPlayerBalance(player, money);
             double exp = RewardType.getExp(type);
-            AddExp(player, exp);
+            AddExp(player, exp, 0);
+
+            List<ItemStack> rewardsList = RewardType.getItems(type);
+
+            for (ItemStack itemStack : rewardsList) {
+                Map<Integer, ItemStack> addedItem = player.getInventory().addItem(itemStack);
+                if (!addedItem.isEmpty()) {
+                    DropItem(player.getLocation(), itemStack, 1);
+                    player.sendTitle(sendText(" "), sendText("&cInventory full! items dropped..."));
+                }
+            }
+
             player.sendMessage(sendText(" "));
             player.sendMessage(sendText("&a["+type+" Rewards]"));
             player.sendMessage(sendText(" &7- &f"+money+icon));
             player.sendMessage(sendText(" &7- &f"+exp+" EXP"));
+            if (!rewardsList.isEmpty()){
+                for (ItemStack rewardItem : rewardsList){
+                    player.sendMessage(sendText(" &7- &f"+rewardItem.getAmount()+" &f"+uncolouredText(rewardItem.getItemMeta().getDisplayName())));
+                }
+            }
+
         }
 
 
@@ -183,7 +206,7 @@ public class RewardsManager implements Listener {
 
             GiveReward(player, type);
             int cooldownAmount = RewardType.getCooldown(type);
-            setCooldown(player, CooldownManager.CooldownType.parseCooldown(type.toString()), cooldownAmount);
+            SetCooldown(player, CooldownManager.CooldownType.parseCooldown(type.toString()), cooldownAmount);
 
             player.sendMessage(sendText("&6Claimed &b"+type+" Rewards!"));
         }else{

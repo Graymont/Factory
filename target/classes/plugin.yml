@@ -7,6 +7,7 @@ softdepend: [ProtocolLib, PlaceholderAPI]
 
 commands:
   factoryutils:
+    aliases: [futils, fu]
   refundmachine:
   shop:
     aliases: [buy, market]
@@ -15,12 +16,19 @@ commands:
   sellgui:
     aliases: [sellitem]
   catalog:
+    aliases: [catalogs]
   multiblock:
   warp:
     aliases: [warps, warplist]
   profile:
+    aliases: [profiles]
   hazmat:
   rewards:
+    aliases: [reward]
   abandonquest:
   quest:
+    aliases: [quests]
   sell:
+  trash:
+  prestige:
+    aliases: [prestiges]

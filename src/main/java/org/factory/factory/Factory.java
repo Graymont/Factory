@@ -20,11 +20,14 @@ import java.util.UUID;
 
 import static org.factory.factory.Database.SaveAllData;
 import static org.factory.factory.Events.*;
+import static org.factory.factory.Utils.Booster.ManageBooster;
 import static org.factory.factory.Utils.CraftingManager.InitRecipes;
 import static org.factory.factory.Utils.CraftingManager.InitSmeltings;
-import static org.factory.factory.Utils.FactoryEvents.ScheduleRollEvents;
+import static org.factory.factory.Utils.FactoryEvents.*;
 import static org.factory.factory.Utils.FactoryItem.InitFactoryItems;
 import static org.factory.factory.Utils.FactoryMachine.*;
+import static org.factory.factory.Utils.FactoryMob.Every1SecondsSpawnerParticle;
+import static org.factory.factory.Utils.FactoryMob.Every30SecondsDungeonMobSpawn;
 import static org.factory.factory.Utils.GUIManager.GameMenu;
 import static org.factory.factory.Utils.PlayerProgress.ManageProgress;
 import static org.factory.factory.Utils.PlayerProgressManager.TriggerFishing;
@@ -44,7 +47,11 @@ public final class Factory extends JavaPlugin {
 
     public QuestManager questManager = new QuestManager();
 
+    public BoosterManager boosterManager = new BoosterManager();
+
     public PlayerProgressManager playerProgressManager = new PlayerProgressManager();
+
+    public Dungeon dungeon = new Dungeon();
 
     public static Factory getMainPlugin() {
         return Factory.getPlugin(Factory.class);
@@ -69,9 +76,9 @@ public final class Factory extends JavaPlugin {
         InitRecipes();
         InitSmeltings();
 
-        placedMachines = SQLiteDatabase.LoadMachineData(connection);
-        machineItems = SQLiteDatabase.LoadMachineItems(connection);
-        storedMachines = SQLiteDatabase.LoadStoredMachines(connection);
+        placedMachines = LoadMachineData(connection);
+        machineItems = LoadMachineItems(connection);
+        storedMachines = LoadStoredMachines(connection);
 
 
 
@@ -79,6 +86,7 @@ public final class Factory extends JavaPlugin {
         EverySeconds();
         EveryMinutes();
         Every5Minutes();
+        Every30Minutes();
         //GenerateMachineTags();
 
 
@@ -90,12 +98,18 @@ public final class Factory extends JavaPlugin {
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new PlaceholderManager().register();
         }
+
+        MachineBehaviour();
+
+        Every30SecondsDungeonMobSpawn();
+        Every1SecondsSpawnerParticle();
     }
 
 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+        //StopMachineBehaviour();
 
         SaveAllData();
         /*SQLiteDatabase.SaveMachineData(placedMachines);
@@ -124,6 +138,8 @@ public final class Factory extends JavaPlugin {
         Objects.requireNonNull(getCommand("abandonquest")).setExecutor(commands);
         Objects.requireNonNull(getCommand("quest")).setExecutor(commands);
         Objects.requireNonNull(getCommand("sell")).setExecutor(commands);
+        Objects.requireNonNull(getCommand("trash")).setExecutor(commands);
+        Objects.requireNonNull(getCommand("prestige")).setExecutor(commands);
 
         // Tab Completer
         Objects.requireNonNull(getCommand("factoryutils")).setTabCompleter(commands);
@@ -135,6 +151,8 @@ public final class Factory extends JavaPlugin {
         getServer().getPluginManager().registerEvents(playerProgressManager, this);
         getServer().getPluginManager().registerEvents(rewardsManager, this);
         getServer().getPluginManager().registerEvents(questManager, this);
+        getServer().getPluginManager().registerEvents(boosterManager, this);
+        getServer().getPluginManager().registerEvents(dungeon, this);
     }
 
     static void EverySeconds(){
@@ -152,6 +170,12 @@ public final class Factory extends JavaPlugin {
                     GameMenu(player);
 
                     ScheduleRollEvents();
+
+                    ManageBooster(player);
+
+                    PreventPlayer(player);
+
+                    ManageEventBenefits();
                 }
             }
         }.runTaskTimer(getMainPlugin(), 0L, 20L);
@@ -172,9 +196,20 @@ public final class Factory extends JavaPlugin {
         new BukkitRunnable() {
             @Override
             public void run() {
-                SaveAllProgress();
+                //SaveAllProgress();
+                //StartMachineBehaviour();
             }
         }.runTaskTimer(getMainPlugin(), 0L, 6000L);
+    }
+
+    static void Every30Minutes(){
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                SaveAllProgress();
+                StartMachineBehaviour();
+            }
+        }.runTaskTimer(getMainPlugin(), 0L, 36000L);
     }
 
     static void EveryMinutes(){
@@ -183,6 +218,7 @@ public final class Factory extends JavaPlugin {
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()){
                     DelayedRefreshMachineTag(player);
+                    RefreshAllMachines(player);
                 }
             }
         }.runTaskTimer(getMainPlugin(), 0L, 1200L);
@@ -270,7 +306,7 @@ public final class Factory extends JavaPlugin {
         double maxSteam = playerMaxSteam.get(player);
 
         if (steam < maxSteam){
-            steam ++;
+            steam += 1*events_steamRegenMultiplier;
             playerSteam.put(player, steam);
         }
 

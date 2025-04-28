@@ -15,9 +15,10 @@ import org.enginehub.linbus.stream.token.LinToken;
 
 import java.util.*;
 
+import static org.factory.factory.Database.GetItem;
 import static org.factory.factory.Events.DropItem;
 import static org.factory.factory.Utils.CooldownManager.hasCooldown;
-import static org.factory.factory.Utils.CooldownManager.setCooldown;
+import static org.factory.factory.Utils.CooldownManager.SetCooldown;
 import static org.factory.factory.Utils.FactoryItem.ProcessItemMeta;
 import static org.factory.factory.Utils.FactoryItem.itemKey;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
@@ -29,7 +30,7 @@ import static org.factory.factory.Utils.VaultEconomy.icon;
 
 public class FactoryQuest {
 
-    public static HashMap<Player, Quest> quest = new HashMap<>();
+    public static HashMap<UUID, Quest> quest = new HashMap<>();
 
     public enum Quest {
         None,
@@ -116,13 +117,13 @@ public class FactoryQuest {
             int questLevel = Integer.parseInt(numberInText(quest.toString()));
 
             if (questLevel == 1) {
-                material.put(Material.COBBLESTONE, questLevel*32);
+                material.put(Material.STONE, questLevel*32);
                 material.put(Material.COAL_ORE, questLevel*10);
                 material.put(Material.COPPER_ORE, questLevel*7);
                 material.put(Material.IRON_ORE, questLevel*5);
             }
             else if (questLevel == 2) {
-                material.put(Material.COBBLESTONE, questLevel*32);
+                material.put(Material.STONE, questLevel*32);
                 material.put(Material.REDSTONE_ORE, questLevel*10);
                 material.put(Material.LAPIS_ORE, questLevel*10);
                 material.put(Material.COAL_ORE, questLevel*10);
@@ -131,7 +132,7 @@ public class FactoryQuest {
                 material.put(Material.GOLD_ORE, questLevel*2);
             }
             else if (questLevel == 3) {
-                material.put(Material.COBBLESTONE, questLevel*64);
+                material.put(Material.STONE, questLevel*64);
                 material.put(Material.REDSTONE_ORE, questLevel*15);
                 material.put(Material.LAPIS_ORE, questLevel*20);
                 material.put(Material.COAL_ORE, questLevel*20);
@@ -141,7 +142,7 @@ public class FactoryQuest {
                 material.put(Material.DIAMOND_ORE, questLevel*2);
             }
             else if (questLevel > 3) {
-                material.put(Material.COBBLESTONE, questLevel*64);
+                material.put(Material.STONE, questLevel*64);
                 material.put(Material.REDSTONE_ORE, questLevel*15);
                 material.put(Material.LAPIS_ORE, questLevel*20);
                 material.put(Material.COAL_ORE, questLevel*20);
@@ -235,17 +236,19 @@ public class FactoryQuest {
             int questLevel = Integer.parseInt(numberInText(quest.toString()));
 
             rewards.add(getQuestPendant(questLevel));
+            rewards.add(new ItemStack(GetItem("expbonusbooster"+questLevel)));
+            rewards.add(new ItemStack(GetItem("sellbonusbooster"+questLevel)));
             if (QuestType.parseType(quest.toString()) == QuestType.Break_Block){
                 rewards.add(ProcessItemMeta(new ItemStack(Material.COPPER_INGOT, 10+questLevel*5)));
                 rewards.add(ProcessItemMeta(new ItemStack(Material.IRON_INGOT, 10+questLevel*3)));
                 rewards.add(ProcessItemMeta(new ItemStack(Material.GOLD_INGOT, 10+questLevel)));
             }
-            else if (QuestType.parseType(quest.toString()) == QuestType.Break_Block){
+            else if (QuestType.parseType(quest.toString()) == QuestType.Kill_Mob){
                 rewards.add(ProcessItemMeta(new ItemStack(Material.ROTTEN_FLESH, 10+questLevel*5)));
                 rewards.add(ProcessItemMeta(new ItemStack(Material.BONE, 10+questLevel*3)));
                 rewards.add(ProcessItemMeta(new ItemStack(Material.STRING, 10+questLevel)));
             }
-            else if (QuestType.parseType(quest.toString()) == QuestType.Break_Block){
+            else if (QuestType.parseType(quest.toString()) == QuestType.Catch_Fish){
                 rewards.add(ProcessItemMeta(new ItemStack(Material.COOKED_COD, 10+questLevel*5)));
                 rewards.add(ProcessItemMeta(new ItemStack(Material.COOKED_SALMON, 10+questLevel*3)));
             }
@@ -292,13 +295,18 @@ public class FactoryQuest {
 
 
     public static String getFormattedQuestName(Quest q) {
-        return q.toString().replaceAll("_", " ").trim();
+
+        String plain = q.toString().replaceAll("_", " ").trim();
+        String name = uncolouredText(plain).replaceAll(" ", "").trim();
+        String roman = intToRoman(Integer.parseInt(numberInText(plain)));
+
+        return name+" "+roman;
     }
 
     public static void ClaimQuest(Player player, Quest q) {
-        if (quest.containsKey(player)) {
+        if (quest.get(player.getUniqueId()) != null) {
             player.sendMessage(sendText("&6You already claimed another quest! &b(you're currently doing a &3"
-                    + getFormattedQuestName(quest.get(player)) + " &bquest) &e/abandonquest &6to exit current quest!"));
+                    + getFormattedQuestName(quest.get(player.getUniqueId())) + " &bquest) &e/abandonquest &6to exit current quest!"));
             return;
         }
 
@@ -311,30 +319,33 @@ public class FactoryQuest {
             return;
         }
 
-        quest.put(player, q);
+        quest.put(player.getUniqueId(), q);
 
-        Quest takenQuest = quest.get(player);
+        Quest takenQuest = quest.get(player.getUniqueId());
 
         HashMap<String, Integer> countRequirements = initQuestRequirements(takenQuest);
         for (String key : countRequirements.keySet()){
-            String countKey = player.getName() + key;
+            String countKey = player.getUniqueId() + ":" + key;
             questCount.put(countKey, 0);
         }
 
         player.sendMessage(sendText("&6Claimed Quest &b" + getFormattedQuestName(q)));
+
+        player.sendTitle(sendText("&6Claimed Quest"), sendText("&b"+getFormattedQuestName(q)));
+
         PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, player.getLocation(), 1, 0);
     }
 
     public static void AbandonQuest(Player player) {
-        if (!quest.containsKey(player)) {
+        if (quest.get(player.getUniqueId()) == null) {
             player.sendMessage(sendText("&4You're not claiming any quest!"));
             return;
         }
-        Quest q = quest.remove(player);
+        Quest q = quest.remove(player.getUniqueId());
 
         List<String> countList = new ArrayList<>(questCount.keySet());
         for (String key : countList){
-            if (key.contains(player.getName())){
+            if (key.contains(player.getUniqueId().toString())){
                 questCount.remove(key);
                 //player.sendMessage("removed: "+key);
             }
@@ -346,17 +357,17 @@ public class FactoryQuest {
     }
 
     public static void CompleteQuest(Player player, Quest q) {
-        if (quest.get(player) != null){
+        if (quest.get(player.getUniqueId()) != null){
             boolean canComplete = true;
 
-            Quest takenQuest = quest.get(player);
+            Quest takenQuest = quest.get(player.getUniqueId());
 
 
             List<String> uncompletedNote = new ArrayList<>();
 
             HashMap<String, Integer> countRequirements = initQuestRequirements(takenQuest);
             for (String key : countRequirements.keySet()){
-                String countKey = player.getName() + key;
+                String countKey = player.getUniqueId() + ":" + key;
                 if (questCount.get(countKey) < countRequirements.get(key)){
                     canComplete = false;
                     uncompletedNote.add(sendText("&aUncompleted: &2"+formatItemName(key)+" ("+questCount.get(countKey)+"/"+countRequirements.get(key)+")"));
@@ -373,7 +384,7 @@ public class FactoryQuest {
 
             // give rewards
 
-            setCooldown(player, CooldownManager.CooldownType.parseCooldown(q.toString()),
+            SetCooldown(player, CooldownManager.CooldownType.parseCooldown(q.toString()),
                     Quest.getCooldown(q));
 
 
@@ -389,7 +400,7 @@ public class FactoryQuest {
                 rewardsNote.add(sendText(" &2+"+rewardList.get(i).getAmount()+" "+rewardList.get(i).getItemMeta().getDisplayName()));
             }
             AddPlayerBalance(player, Quest.getMoneyRewards(q));
-            AddExp(player, Quest.getExpRewards(q));
+            AddExp(player, Quest.getExpRewards(q), 0);
 
             rewardsNote.add(sendText(" &2+"+Quest.getMoneyRewards(q)+" "+icon));
             rewardsNote.add(sendText(" &2+"+Quest.getExpRewards(q)+" Exp"));
@@ -398,7 +409,7 @@ public class FactoryQuest {
                 player.sendMessage(sendText(text));
             }
 
-            quest.remove(player);
+            quest.remove(player.getUniqueId());
             ClearQuestProgress(player);
 
             player.sendMessage(sendText("&6Quest Completed &b"+getFormattedQuestName(takenQuest)));
@@ -440,7 +451,7 @@ public class FactoryQuest {
     public static boolean isQuestCompleted(Player player, Quest q){
         HashMap<String, Integer> countRequirements = initQuestRequirements(q);
         for (String key : countRequirements.keySet()){
-            String countKey = player.getName() + key;
+            String countKey = player.getUniqueId() + ":" + key;
             if (questCount.get(countKey) < countRequirements.get(key)){
                 return false;
             }
@@ -451,24 +462,24 @@ public class FactoryQuest {
 
 
     public static void ForceCompleteQuest(Player player){
-        if (quest.get(player) != null){
-            Quest takenQuest = quest.get(player);
+        if (quest.get(player.getUniqueId()) != null){
+            Quest takenQuest = quest.get(player.getUniqueId());
 
             HashMap<String, Integer> countRequirements = initQuestRequirements(takenQuest);
             for (String key : countRequirements.keySet()){
-                String countKey = player.getName() + key;
+                String countKey = player.getUniqueId() + ":" + key;
                 questCount.put(countKey, 1000000);
             }
         }
     }
 
     public static void ClearQuestProgress(Player player){
-        if (quest.get(player) != null){
-            Quest takenQuest = quest.get(player);
+        if (quest.get(player.getUniqueId()) != null){
+            Quest takenQuest = quest.get(player.getUniqueId());
 
             HashMap<String, Integer> countRequirements = initQuestRequirements(takenQuest);
             for (String key : countRequirements.keySet()){
-                String countKey = player.getName() + key;
+                String countKey = player.getUniqueId() + ":" + key;
                 questCount.remove(countKey);
             }
         }

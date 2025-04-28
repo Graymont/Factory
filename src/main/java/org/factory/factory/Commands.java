@@ -7,6 +7,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -17,26 +18,30 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.naming.Name;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.lang.reflect.Array;
+import java.util.*;
 
 import static org.factory.factory.Database.*;
 import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
-import static org.factory.factory.Utils.CooldownManager.resetCooldown;
-import static org.factory.factory.Utils.CooldownManager.setCooldown;
+import static org.factory.factory.Utils.Booster.*;
+import static org.factory.factory.Utils.CooldownManager.ResetCooldown;
+import static org.factory.factory.Utils.CooldownManager.SetCooldown;
+import static org.factory.factory.Utils.Dungeon.GetDungeonLoot;
+import static org.factory.factory.Utils.Dungeon.TeleportDungeon;
 import static org.factory.factory.Utils.FactoryEvents.RollEvents;
+import static org.factory.factory.Utils.FactoryEvents.SetEvent;
 import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.FactoryMachine.*;
+import static org.factory.factory.Utils.FactoryMob.SpawnMob;
 import static org.factory.factory.Utils.FactoryQuest.*;
 import static org.factory.factory.Utils.GUIManager.*;
-import static org.factory.factory.Utils.MultiBlock.ObtainMultiBlockGuide;
-import static org.factory.factory.Utils.MultiBlock.OpenCarbonForge;
+import static org.factory.factory.Utils.MultiBlock.*;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.PlayerProgress.*;
 import static org.factory.factory.Utils.RewardsManager.*;
 import static org.factory.factory.Utils.SQLiteDatabase.SaveAllProgress;
+import static org.factory.factory.Utils.TraderManager.OpenTrader;
 import static org.factory.factory.Utils.UserInterface.*;
 
 
@@ -154,12 +159,12 @@ public class Commands implements CommandExecutor, TabCompleter {
 
             }
             else if (args[0].equalsIgnoreCase("setitemstats")){
+                assert sender instanceof Player;
                 Player player = (Player) sender;
                 ItemStack item = player.getInventory().getItemInMainHand();
                 assert item.getType() != Material.AIR;
-                String statsKey = args[2];
-                String value = args[3];
-
+                String statsKey = args[1];
+                String keyValue = args[2];
                 ItemMeta meta = item.getItemMeta();
                 PersistentDataContainer container = meta.getPersistentDataContainer();
 
@@ -168,24 +173,49 @@ public class Commands implements CommandExecutor, TabCompleter {
                     return false;
                 }
 
-                String baseText = baseKey;
-                if (!args[1].equals("base")){
-                    baseText = "";
+                if (container.has(GetNamespacedKey(statsKey), PersistentDataType.INTEGER)) {
+                    container.set(GetNamespacedKey(statsKey), PersistentDataType.INTEGER, Integer.parseInt(keyValue));
+                } else if (container.has(GetNamespacedKey(statsKey), PersistentDataType.STRING)) {
+                    container.set(GetNamespacedKey(statsKey), PersistentDataType.STRING, keyValue);
+                } else if (container.has(GetNamespacedKey(statsKey), PersistentDataType.DOUBLE)) {
+                    container.set(GetNamespacedKey(statsKey), PersistentDataType.DOUBLE, Double.parseDouble(keyValue));
+                } else if (container.has(GetNamespacedKey(statsKey), PersistentDataType.BYTE)) {
+                    container.set(GetNamespacedKey(statsKey), PersistentDataType.BYTE, Byte.parseByte(keyValue));
                 }
-
-                if (container.get(GetNamespacedKey(baseText+statsKey), PersistentDataType.DOUBLE) != null){
-                    container.set(GetNamespacedKey(baseText+statsKey), PersistentDataType.DOUBLE, Double.parseDouble(value));
+                else if (container.has(GetNamespacedKey(statsKey), PersistentDataType.LONG)) {
+                    container.set(GetNamespacedKey(statsKey), PersistentDataType.LONG, Long.parseLong(keyValue));
+                }else {
+                    player.sendMessage(sendText("&4Invalid data type!"));
+                    return false;
                 }
-                else if (container.get(GetNamespacedKey(statsKey), PersistentDataType.STRING) != null){
-                    container.set(GetNamespacedKey(statsKey), PersistentDataType.STRING, value);
-                }
-                player.sendMessage(sendText("&aSet &2"+statsKey+" &ato &6"+value));
                 item.setItemMeta(meta);
+
+                //player.getInventory().getItemInMainHand().setItemMeta(UpdateMachineItem(item).getItemMeta());
+
                 UpdateItem(player, "hand", item);
+                player.sendMessage(sendText("&aSet &2"+statsKey+" &ato &6"+keyValue));
             }
             else if (args[0].equalsIgnoreCase("testitem")){
                 FactoryItem item = new FactoryItem();
-                ((Player)sender).getInventory().addItem(item.testItem());
+                List<ItemStack> testItemList = Arrays.asList(
+
+                            GetDungeonLoot(Dungeon.LootType.Weapon, 1),
+                            GetDungeonLoot(Dungeon.LootType.Equipment, 1)
+
+                        );
+
+                for (ItemStack addedItem : testItemList){
+                    ((Player) sender).getInventory().addItem(addedItem);
+                }
+
+                FactoryItem hook = new FactoryItem();
+                hook.setType(Type.Tool);
+                hook.setSubType(SubType.Hook);
+                hook.setToolPower(1);
+                hook.setToolSpeed(1);
+                hook.setDisplayname(sendText("&aHook"));
+                hook.setMaterial(Material.FISHING_ROD);
+                ((Player) sender).getInventory().addItem(hook.build());
             }
             else if (args[0].equalsIgnoreCase("viewattributes")){
                 Player player = (Player) sender;
@@ -222,6 +252,30 @@ public class Commands implements CommandExecutor, TabCompleter {
                 SaveLocation(name, location);
                 sender.sendMessage(sendText("&aSaved location with name: &2"+name+" &aat: &6"+location.toString()));
             }
+            else if (args[0].equalsIgnoreCase("savespawner")){
+                assert sender instanceof Player;
+                Player player = (Player) sender;
+                String name = args[1];
+                Location location = player.getLocation();
+
+                SaveSpawner(name, location);
+                sender.sendMessage(sendText("&aSaved spawner with name: &2"+name+" &aat: &6"+location.toString()));
+            }
+
+            else if (args[0].equalsIgnoreCase("removelocation")){
+                assert sender instanceof Player;
+                Player player = (Player) sender;
+                String name = args[1];
+                RemoveLocation(name);
+                sender.sendMessage(sendText("&aRemoved location with name: &2"+name));
+            }
+            else if (args[0].equalsIgnoreCase("removespawner")){
+                assert sender instanceof Player;
+                Player player = (Player) sender;
+                String name = args[1];
+                RemoveSpawner(name);
+                sender.sendMessage(sendText("&aRemoved spawner with name: &2"+name));
+            }
 
             else if (args[0].equalsIgnoreCase("loaditem")){
                 assert sender instanceof Player;
@@ -237,6 +291,15 @@ public class Commands implements CommandExecutor, TabCompleter {
                 Player player = (Player) sender;
                 String name = args[1];
                 Location location = GetLocation(name);
+                assert location != null;
+                player.teleport(location);
+                sender.sendMessage(sendText("&aTeleported to: &2"+name));
+            }
+            else if (args[0].equalsIgnoreCase("tpspawner")){
+                assert sender instanceof Player;
+                Player player = (Player) sender;
+                String name = args[1];
+                Location location = GetSpawner(name);
                 assert location != null;
                 player.teleport(location);
                 sender.sendMessage(sendText("&aTeleported to: &2"+name));
@@ -263,9 +326,10 @@ public class Commands implements CommandExecutor, TabCompleter {
                 //SaveAllData();
 
                 SaveAllProgress();
+                StartMachineBehaviour();
                 sender.sendMessage(sendText("&aSaved all data to &6database.db"));
             }
-            /*else if (args[0].equalsIgnoreCase("load-data")){
+            /*else if (args[0].equalsIgnoreCase("load-data")){+
                 LoadData();
                 sender.sendMessage(sendText("&aLoaded all data from &6database.db"));
             }*/
@@ -338,6 +402,15 @@ public class Commands implements CommandExecutor, TabCompleter {
                 }
             }
 
+            else if (args[0].equalsIgnoreCase("setevent")){
+                SetEvent(FactoryEvents.EventType.parseEvent(args[1]));
+            }
+
+            else if (args[0].equalsIgnoreCase("inspect")){
+                assert sender instanceof Player;
+                InspectMachine((Player) sender);
+            }
+
             else if (args[0].equalsIgnoreCase("setsteam")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
@@ -357,6 +430,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                 int amount = Integer.parseInt(args[2]);
                 SetLevel(player, amount);
             }
+
             else if (args[0].equalsIgnoreCase("addlevel")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
@@ -368,20 +442,29 @@ public class Commands implements CommandExecutor, TabCompleter {
                 RemoveLevel(player, amount);
             }
 
+            else if (args[0].equalsIgnoreCase("setprestige")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                SetPrestige(player, amount);
+            }
+
             // level
             else if (args[0].equalsIgnoreCase("setexp")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
+                assert player != null;
                 SetExp(player, amount);
             }
             else if (args[0].equalsIgnoreCase("addexp")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
-                AddExp(player, amount);
+                assert player != null;
+                AddExp(player, amount, 0);
             }
             else if (args[0].equalsIgnoreCase("removeexp")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
+                assert player != null;
                 RemoveExp(player, amount);
             }
             // maxmachine
@@ -393,12 +476,44 @@ public class Commands implements CommandExecutor, TabCompleter {
             else if (args[0].equalsIgnoreCase("addmaxmachine")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
+                assert player != null;
                 AddMaxMachine(player, amount);
             }
             else if (args[0].equalsIgnoreCase("removemaxmachine")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
+                assert player != null;
                 RemoveMaxMachine(player, amount);
+            }
+
+            else if (args[0].equalsIgnoreCase("testbooster")){
+                assert sender instanceof Player;
+                ApplyBooster((Player) sender, Booster.BoosterType._5_Percent_Sell_Bonus, 3);
+            }
+
+            else if (args[0].equalsIgnoreCase("resetbooster")){
+                Player target = Bukkit.getPlayer(args[1]);
+
+                assert target != null;
+                ResetBooster(target);
+            }
+
+            else if (args[0].equalsIgnoreCase("viewbooster")){
+                assert sender instanceof Player;
+                sender.sendMessage(getFormattedRemainingBooster((Player) sender));
+                sender.sendMessage(" Booster: "+boosters.get((((Player) sender).getUniqueId())));
+            }
+
+            // multiplier
+            else if (args[0].equalsIgnoreCase("setsellmultiplier")){
+                Player player = Bukkit.getPlayer(args[1]);
+                double amount = Double.parseDouble(args[2]);
+                SetPlayerSellMultiplier(player, amount);
+            }
+            else if (args[0].equalsIgnoreCase("setexpmultiplier")){
+                Player player = Bukkit.getPlayer(args[1]);
+                double amount = Double.parseDouble(args[2]);
+                SetPlayerExpMultiplier(player, amount);
             }
 
             else if (args[0].equalsIgnoreCase("deleteunderscorekey")){
@@ -461,9 +576,15 @@ public class Commands implements CommandExecutor, TabCompleter {
                 player.sendMessage(sendText("&aObtained backpack with size: &2"+Integer.parseInt(args[1])));
             }
 
-            else if (args[0].equalsIgnoreCase("openarmormaker")){
+            else if (args[0].equalsIgnoreCase("testtrader")){
                 assert sender instanceof Player;
-                OpenCarbonForge((Player) sender);
+                //OpenCarbonForge((Player) sender);
+                OpenTrader((Player) sender, TraderManager.TraderType.Dungeon_Loot_Box);
+            }
+            else if (args[0].equalsIgnoreCase("testtrader2")){
+                assert sender instanceof Player;
+                //OpenCarbonForge((Player) sender);
+                OpenTrader((Player) sender, TraderManager.TraderType.Dungeon_Junk_Collector);
             }
 
             else if (args[0].equalsIgnoreCase("resetcooldown")){
@@ -476,13 +597,17 @@ public class Commands implements CommandExecutor, TabCompleter {
                     return false;
                 }
 
-                resetCooldown(target, CooldownManager.CooldownType.parseCooldown(key));
+                ResetCooldown(target, CooldownManager.CooldownType.parseCooldown(key));
                 sender.sendMessage(sendText("&aCooldowns of &2"+target.getName()+" &a(&b"+key+"&a) &ahas been reset!"));
             }
 
-            else if (args[0].equalsIgnoreCase("testquest")){
+            else if (args[0].equalsIgnoreCase("testmob")){
                 assert sender instanceof Player;
-                ClaimQuest((Player) sender, FactoryQuest.Quest.Hunter_1);
+                SpawnMob(((Player) sender).getLocation());
+            }
+            else if (args[0].equalsIgnoreCase("testregion")){
+                assert sender instanceof Player;
+                GetPlayerRegion(((Player) sender));
             }
             else if (args[0].equalsIgnoreCase("completequest")){
                 assert sender instanceof Player;
@@ -492,8 +617,35 @@ public class Commands implements CommandExecutor, TabCompleter {
                 assert sender instanceof Player;
                 ForceCompleteQuest((Player) sender);
             }
+            else if (args[0].equalsIgnoreCase("announcepayment")){
+                String paymentName = String.join(" ", Arrays.copyOfRange(args, 2, args.length-1));
+                String price = args[args.length-1];
+                AnnouncePayment(Objects.requireNonNull(Bukkit.getPlayer(args[1])), paymentName, price);
+            }
+            else if (args[0].equalsIgnoreCase("giveitem")){
+                Player target = Bukkit.getPlayer(args[1]);
+                ItemStack key = GetItem(args[2]);
+                assert target != null;
+                Map<Integer, ItemStack> addedItem = target.getInventory().addItem(key);
+                if (!addedItem.isEmpty()){
+                    Inventory backupChest = OpenChest(target, 6, "Unclaimed Item");
+                    backupChest.setItem(0, key);
+
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        target.closeInventory();
+                        target.openInventory(backupChest);
+                    }, 5L);
+
+                    //DropItem(target.getLocation(), key, 1);
+                    target.sendMessage(sendText("&4Your inventory is full, purchased item stored in backup chest! &6(don't close it before take the item or the items you've purchased will be lost!)"));
+                }
+            }
             else if (args[0].equalsIgnoreCase("rollevents")){
                 RollEvents();
+            }
+            else if (args[0].equalsIgnoreCase("performprestige")){
+                assert sender instanceof Player;
+                PerformPrestige((Player) sender);
             }
             else if (args[0].equalsIgnoreCase("clearmobs")){
                 World world = null;
@@ -513,6 +665,16 @@ public class Commands implements CommandExecutor, TabCompleter {
                 }
 
                 sender.sendMessage(sendText("Cleared &2"+ClearMobs(world)+" &aEntities!"));
+            }
+            else if (args[0].equalsIgnoreCase("openmenu")){
+                String menuName = args[2];
+                Player target = Bukkit.getPlayer(args[1]);
+                assert target != null;
+                OpenMenu(target, MenuList.parseMenu(menuName));
+            }
+            else if (args[0].equalsIgnoreCase("testmenu")){
+                assert sender instanceof Player;
+                OpenNetherSmelter((Player) sender);
             }
         }
         else if (command.getName().equalsIgnoreCase("refundmachine")){
@@ -535,6 +697,10 @@ public class Commands implements CommandExecutor, TabCompleter {
         else if (command.getName().equalsIgnoreCase("quest")){
             assert sender instanceof Player;
             OpenMenu((Player) sender, MenuList.Quest);
+        }
+        else if (command.getName().equalsIgnoreCase("trash")){
+            assert sender instanceof Player;
+            OpenMenu((Player) sender, MenuList.Trash);
         }
 
 
@@ -578,6 +744,14 @@ public class Commands implements CommandExecutor, TabCompleter {
 
         else if (command.getName().equalsIgnoreCase("rewards")){
             OpenMenu((Player) sender, MenuList.Rewards);
+        }
+
+        else if (command.getName().equalsIgnoreCase("sell")){
+            OpenMenu((Player) sender, MenuList.Sell);
+        }
+
+        else if (command.getName().equalsIgnoreCase("prestige")){
+            OpenMenu((Player) sender, MenuList.Prestige);
         }
 
         else if (command.getName().equalsIgnoreCase("catalog")){
@@ -626,7 +800,9 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("loaditem");
                 argsList.add("checkitem");
                 argsList.add("savelocation");
+                argsList.add("savespawner");
                 argsList.add("tplocation");
+                argsList.add("tpspawner");
                 argsList.add("removeitem");
                 argsList.add("init");
                 argsList.add("reload");
@@ -641,16 +817,27 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("setsteam");
                 argsList.add("removesteam");
                 argsList.add("addsteam");
+                argsList.add("openmenu");
+
+                argsList.add("setprestige");
 
                 argsList.add("setlevel");
                 argsList.add("addlevel");
                 argsList.add("removelevel");
 
+                argsList.add("removelocation");
+                argsList.add("removespawner");
+
                 argsList.add("setmaxmachine");
                 argsList.add("addmaxmachine");
                 argsList.add("removemaxmachine");
 
+                argsList.add("setsellmultiplier");
+                argsList.add("setexpmultiplier");
+                argsList.add("setevent");
+
                 argsList.add("resetcooldown");
+                argsList.add("resetbooster");
 
                 argsList.add("setexp");
                 argsList.add("addexp");
@@ -704,6 +891,8 @@ public class Commands implements CommandExecutor, TabCompleter {
                         || args[0].equalsIgnoreCase("removesteam")
                         || args[0].equalsIgnoreCase("givereward")
 
+                        || args[0].equalsIgnoreCase("setprestige")
+
                         || args[0].equalsIgnoreCase("setexp")
                         || args[0].equalsIgnoreCase("addexp")
                         || args[0].equalsIgnoreCase("removeexp")
@@ -712,7 +901,11 @@ public class Commands implements CommandExecutor, TabCompleter {
                         || args[0].equalsIgnoreCase("addmaxmachine")
                         || args[0].equalsIgnoreCase("removemaxmachine")
 
-                        || args[0].equalsIgnoreCase("resetcooldown")){
+                        || args[0].equalsIgnoreCase("resetcooldown")
+
+                        || args[0].equalsIgnoreCase("openmenu")
+
+                        || args[0].equalsIgnoreCase("resetbooster")){
 
                     for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                         if (onlinePlayer.getName().toLowerCase().startsWith(partialInput)) {
@@ -720,6 +913,22 @@ public class Commands implements CommandExecutor, TabCompleter {
                         }
                     }
                 }
+
+                else if (args[0].equalsIgnoreCase("tplocation") || args[0].equalsIgnoreCase("removelocation")){
+                    for (String key : locationList.keySet()) {
+                        if (key.toLowerCase().startsWith(partialInput)) {
+                            suggestions.add(key);
+                        }
+                    }
+                }
+                else if (args[0].equalsIgnoreCase("tpspawner") || args[0].equalsIgnoreCase("removespawner")){
+                    for (String key : spawnerList.keySet()) {
+                        if (key.toLowerCase().startsWith(partialInput)) {
+                            suggestions.add(key);
+                        }
+                    }
+                }
+
             }
             else if (args.length == 3){
                 if (args[0].equalsIgnoreCase("givereward")){

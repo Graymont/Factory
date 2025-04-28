@@ -13,14 +13,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import org.bukkit.inventory.meta.PotionMeta;
@@ -36,13 +34,17 @@ import static org.factory.factory.Database.*;
 
 import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
+import static org.factory.factory.Utils.Booster.getFormattedBoosterName;
 import static org.factory.factory.Utils.CooldownManager.getFormattedRemainingTime;
 import static org.factory.factory.Utils.CooldownManager.hasCooldown;
+import static org.factory.factory.Utils.Dungeon.TeleportDungeon;
 import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.FactoryMachine.*;
 import static org.factory.factory.Utils.FactoryQuest.*;
 import static org.factory.factory.Utils.ItemSerializer.ItemStackFromBase64;
 import static org.factory.factory.Utils.ItemSerializer.loadSerializedItem;
+import static org.factory.factory.Utils.MultiBlock.OpenCarbonForge;
+import static org.factory.factory.Utils.MultiBlock.carbonMaterials;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.PlayerProgress.*;
 import static org.factory.factory.Utils.QuestManager.questCount;
@@ -67,7 +69,13 @@ public class GUIManager implements Listener {
         Profile,
         AcidMaker,
         Rewards,
-        Quest;
+        Quest,
+        Sell,
+        Blacksmith,
+        Carbon_Forge,
+        Trash,
+        Prestige,
+        Dungeon;
 
         public static MenuList parseMenu(String m){
             return switch (m.toLowerCase()) {
@@ -84,6 +92,12 @@ public class GUIManager implements Listener {
                 case "acidmaker" -> MenuList.AcidMaker;
                 case "rewards" -> MenuList.Rewards;
                 case "quest" -> MenuList.Quest;
+                case "sell" -> MenuList.Sell;
+                case "blacksmith" -> MenuList.Blacksmith;
+                case "carbon_forge" -> MenuList.Carbon_Forge;
+                case "trash" -> MenuList.Trash;
+                case "prestige" -> MenuList.Prestige;
+                case "dungeon" -> MenuList.Dungeon;
 
                 default -> MenuList.None;
             };
@@ -119,12 +133,16 @@ public class GUIManager implements Listener {
                 item.setItemMeta(meta);
 
                 inventory.setItem(slot, item);
-
+                buyAmount.put(player, 1);
             }
             SetHeaderFooter(inventory);
             inventory.setItem(49, getBasicUi("catalog"));
             player.openInventory(inventory);
-            PlaySound(Sound.BLOCK_ENDER_CHEST_OPEN, player, 1, 1);
+
+            SetBackground(inventory, Material.BLACK_STAINED_GLASS_PANE);
+
+            //PlaySound(Sound.BLOCK_ENDER_CHEST_OPEN, player, 1, 1);
+
         }
 
         else if (menu.equals(MenuList.Anvil)){
@@ -137,6 +155,22 @@ public class GUIManager implements Listener {
             player.openInventory(inventory);
             PlaySoundAt(Sound.BLOCK_ANVIL_PLACE, player.getLocation(), 1, 1);
         }
+
+        else if (menu.equals(MenuList.Dungeon)){
+            Inventory inventory = OpenGUI(player, 6, "Dungeon");
+
+            SetHeaderFooter(inventory);
+
+            int index = 9;
+            for (int i = 1; i < 11; i++) {
+                inventory.setItem(index, getDungeonIcon(player, i));
+                index++;
+            }
+
+            SetBackground(inventory, Material.GRAY_STAINED_GLASS_PANE);
+
+            player.openInventory(inventory);
+        }
         else if (menu.equals(MenuList.MultiBlock)){
             Inventory inventory = OpenGUI(player, 6, "Multi Block Guide");
             SetHeaderFooter(inventory);
@@ -144,7 +178,10 @@ public class GUIManager implements Listener {
             inventory.setItem(9, getBasicUi("multiblock_acid_pipe"));
             inventory.setItem(10, getBasicUi("multiblock_acid_maker"));
             inventory.setItem(11, getBasicUi("multiblock_carbon_forge"));
+            inventory.setItem(12, getBasicUi("multiblock_armor_crafter"));
+            inventory.setItem(13, getBasicUi("multiblock_nether_smelter"));
 
+            SetBackground(inventory, Material.GRAY_STAINED_GLASS_PANE);
             player.openInventory(inventory);
         }
         else if (menu.equals(MenuList.GameMenu)){
@@ -154,14 +191,20 @@ public class GUIManager implements Listener {
 
             inventory.setItem(49, getBasicUi("gamemenu_spawn"));
             inventory.setItem(20, getBasicUi("gamemenu_shop"));
+            inventory.setItem(21, getBasicUi("gamemenu_quest"));
             inventory.setItem(22, getBasicUi("gamemenu_catalog"));
+            inventory.setItem(23, getBasicUi("gamemenu_rewards"));
             inventory.setItem(24, getBasicUi("gamemenu_creditshop"));
 
             inventory.setItem(30, getBasicUi("gamemenu_crafting"));
             inventory.setItem(32, getBasicUi("gamemenu_multiblock"));
             inventory.setItem(53, getBasicUi("gamemenu_profile"));
+            inventory.setItem(52, getBasicUi("gamemenu_prestige"));
             inventory.setItem(4, getBasicUi("gamemenu_island"));
             inventory.setItem(45, getBasicUi("gamemenu_bank"));
+            inventory.setItem(46, getBasicUi("gamemenu_trash"));
+            inventory.setItem(0, getBasicUi("gamemenu_sellitem"));
+            inventory.setItem(8, getBasicUi("gamemenu_auctionhouse"));
 
             inventory.setItem(31, getBasicUi("gamemenu_warp"));
 
@@ -170,13 +213,41 @@ public class GUIManager implements Listener {
             player.openInventory(inventory);
         }
 
+        else if (menu.equals(MenuList.Prestige)){
+            Inventory inventory = OpenGUI(player, 5, "Prestige");
+            SetHeaderFooter(inventory);
+
+            int index = 9;
+            for (int i = 0; i < 10; i++) {
+                inventory.setItem(index, getPrestigeIcon(player, i));
+                index++;
+            }
+
+            if (playerPrestige.get(player.getUniqueId()) < maxPrestige){
+                inventory.setItem(40, getBasicUi("prestige"));
+            }
+
+            SetBackground(inventory, Material.GRAY_STAINED_GLASS_PANE);
+
+            player.openInventory(inventory);
+        }
+
         else if (menu.equals(MenuList.WarpMenu)){
             Inventory inventory = OpenGUI(player, 4, "Warp Menu");
+
             SetHeaderFooter(inventory);
-            inventory.setItem(10, getBasicUi("warp_crates"));
-            inventory.setItem(11, getBasicUi("warp_mine"));
+
             inventory.setItem(12, getBasicUi("warp_lake"));
             inventory.setItem(13, getBasicUi("warp_blacksmith"));
+            inventory.setItem(14, getBasicUi("warp_garden"));
+
+            inventory.setItem(20, getBasicUi("warp_crates"));
+            inventory.setItem(21, getBasicUi("warp_mine"));
+            inventory.setItem(22, getBasicUi("warp_graveyard"));
+            inventory.setItem(23, getBasicUi("warp_dungeon"));
+            inventory.setItem(24, getBasicUi("warp_communitycenter"));
+
+            SetBackground(inventory, Material.BLACK_STAINED_GLASS_PANE);
 
             player.openInventory(inventory);
         }
@@ -187,6 +258,17 @@ public class GUIManager implements Listener {
             inventory.setItem(13, getProfileIcon(player, "progress"));
             player.openInventory(inventory);
         }
+
+        else if (menu.equals(MenuList.Sell)){
+            Inventory inventory = OpenGUI(player, 3, "Sell");
+            SetHeaderFooter(inventory);
+
+            inventory.setItem(12, getBasicUi("sellgui"));
+            inventory.setItem(14, getBasicUi("sellall"));
+
+            player.openInventory(inventory);
+        }
+
         else if (menu.equals(MenuList.Rewards)){
             Inventory inventory = OpenGUI(player, 3, "Rewards");
             SetHeaderFooter(inventory);
@@ -219,6 +301,27 @@ public class GUIManager implements Listener {
             }.runTaskTimer(getMainPlugin(), 0L, 20L).getTaskId();
 
             openedMachine.put(player, taskId);
+        }
+
+        else if (menu.equals(MenuList.Blacksmith)){
+            OpenBlacksmith(player);
+        }
+
+        else if (menu.equals(MenuList.Trash)){
+            Inventory inventory = OpenChest(player, 6, "Trash");
+            player.openInventory(inventory);
+        }
+
+        else if (menu.equals(MenuList.Carbon_Forge)){
+            Inventory inventory = OpenGUI(player, 3, "Carbon Forge ["+(playerSelector.get(player)+1)+"/"+carbonMaterials.length+"]");
+            SetHeaderFooter(inventory);
+
+            inventory.setItem(13, getCarbonEquipmentIcon(player, "carbon"));
+            inventory.setItem(21, getCarbonEquipmentIcon(player, "previous_page"));
+            inventory.setItem(23, getCarbonEquipmentIcon(player, "next_page"));
+            inventory.setItem(4, getCarbonEquipmentIcon(player, "view"));
+
+            player.openInventory(inventory);
         }
 
         else if (menu.equals(MenuList.Quest)){
@@ -258,45 +361,42 @@ public class GUIManager implements Listener {
             }
 
             inventory.setItem(49, getQuestIcon(player, "complete"));
+            inventory.setItem(4, getQuestIcon(player, "abandon"));
             player.openInventory(inventory);
 
             int taskId = new BukkitRunnable() {
                 @Override
                 public void run() {
-                    Inventory topInventory = player.getOpenInventory().getTopInventory();
-                    for (ItemStack item : topInventory.getContents()){
-                        if (item != null){
-                            for (String questKey : questKeyList){
-                                int start = 9;
-                                int end = start+5;
-                                int index = 1;
-                                if (questKey.equals("miner")){
-                                    start = 9;
-                                    end = start+5;
-                                    for (int i = start; i < end; i++) {
-                                        inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
-                                        index++;
-                                    }
-                                }
-                                else if (questKey.equals("hunter")){
-                                    start = 18;
-                                    end = start+5;
-                                    for (int i = start; i < end; i++) {
-                                        inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
-                                        index++;
-                                    }
-                                }
-                                else if (questKey.equals("fisherman")){
-                                    start = 27;
-                                    end = start+5;
-                                    for (int i = start; i < end; i++) {
-                                        inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
-                                        index++;
-                                    }
-                                }
-                                inventory.setItem(49, getQuestIcon(player, "complete"));
+                    for (String questKey : questKeyList){
+                        int start = 9;
+                        int end = start+5;
+                        int index = 1;
+                        if (questKey.equals("miner")){
+                            start = 9;
+                            end = start+5;
+                            for (int i = start; i < end; i++) {
+                                inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
+                                index++;
                             }
                         }
+                        else if (questKey.equals("hunter")){
+                            start = 18;
+                            end = start+5;
+                            for (int i = start; i < end; i++) {
+                                inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
+                                index++;
+                            }
+                        }
+                        else if (questKey.equals("fisherman")){
+                            start = 27;
+                            end = start+5;
+                            for (int i = start; i < end; i++) {
+                                inventory.setItem(i, getQuestIcon(player, questKey+"_"+index));
+                                index++;
+                            }
+                        }
+                        inventory.setItem(49, getQuestIcon(player, "complete"));
+                        inventory.setItem(4, getQuestIcon(player, "abandon"));
                     }
                     player.updateInventory();
                 }
@@ -308,6 +408,44 @@ public class GUIManager implements Listener {
         player.updateInventory();
     }
 
+    public static HashMap<Player, Integer> playerSelector = new HashMap<>();
+
+    public static ItemStack getCarbonEquipmentIcon(Player player, String name) {
+        ItemStack item = new ItemStack(Material.STICK);
+        ItemMeta meta = item.getItemMeta();
+        meta = SetAditMeta(meta);
+        List<String> itemLore = new ArrayList<>();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        if (name.equals("carbon")){
+            item.setType(Material.LEATHER_CHESTPLATE);
+            meta.setDisplayName(sendText("&a"+formatItemName(carbonMaterials[playerSelector.get(player)])+" &aEquipments"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7These equipments can increase"));
+            itemLore.add(sendText(" &7your max steam"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&aClick to view"));
+        }
+        else if (name.equals("next_page")){
+            item.setType(Material.ARROW);
+            meta.setDisplayName(sendText("&aNext Page &6&l→"));
+        }
+        else if (name.equals("previous_page")){
+            item.setType(Material.SPECTRAL_ARROW);
+            meta.setDisplayName(sendText("&6&l← &2Previous Page"));
+        }
+        else if (name.equals("view")){
+            item.setType(Material.PAPER);
+            meta.setDisplayName(sendText("&bView all Equipments"));
+        }
+
+        container.set(GetNamespacedKey("gui-icon"), PersistentDataType.STRING, name);
+        meta.setLore(itemLore);
+        item.setItemMeta(meta);
+        return item;
+
+    }
+
     public static ItemStack getProfileIcon(Player player, String name){
         ItemStack item = new ItemStack(Material.STICK);
         ItemMeta meta = item.getItemMeta();
@@ -315,6 +453,7 @@ public class GUIManager implements Listener {
         PersistentDataContainer container = meta.getPersistentDataContainer();
         if (name.equals("progress")){
             int level = playerLevel.get(player.getUniqueId());
+            int prestige = playerPrestige.get(player.getUniqueId());
             double exp = playerExp.get(player.getUniqueId());
             double maxExp = PlayerProgress.maxExp.get(level);
 
@@ -325,6 +464,7 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(""));
             itemLore.add(sendText(" &7Level: &e"+level));
             itemLore.add(sendText(" &7Experience: &d&o"+exp));
+            itemLore.add(sendText(" &7Prestige: &b"+prestige));
             itemLore.add(sendText(""));
             itemLore.add(sendText(" &8--------------------"));
             itemLore.add(sendText(" &7[Progress]"));
@@ -426,7 +566,7 @@ public class GUIManager implements Listener {
             Quest claimedQuest = Quest.parseQuest(name);
             int levelMin = Quest.getLevel(claimedQuest);
 
-            meta.setDisplayName(sendText("&b"+formatItemName(uncolouredText(name))+" &3"+questLevel));
+            meta.setDisplayName(sendText("&b"+formatItemName(uncolouredText(name))+" &3"+intToRoman(questLevel)));
             itemLore.add(sendText(" "));
             if (playerLevel.get(player.getUniqueId()) >= Quest.getLevel(claimedQuest)){
                 itemLore.add(sendText(" &7Level Minimum: &a"+levelMin+" &2"+checkSymbol));
@@ -440,8 +580,8 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(" &8Tasks:"));
             HashMap<String, Integer> tasks = initQuestRequirements(FactoryQuest.Quest.parseQuest(name));
             for (String key : tasks.keySet()){
-                String countKey = player.getName()+key;
-                if (quest.get(player) != Quest.parseQuest(name)){
+                String countKey = player.getUniqueId()+ ":" +key;
+                if (quest.get(player.getUniqueId()) != Quest.parseQuest(name)){
                     itemLore.add(sendText("  &7- &e"+key+" &6x"+tasks.get(key)));
                 }else{
                     item.setType(Material.WRITABLE_BOOK);
@@ -449,8 +589,8 @@ public class GUIManager implements Listener {
 
                 }
             }
-            if (quest.get(player) == Quest.parseQuest(name)){
-                if (isQuestCompleted(player, quest.get(player))){
+            if (quest.get(player.getUniqueId()) == Quest.parseQuest(name)){
+                if (isQuestCompleted(player, quest.get(player.getUniqueId()))){
                     item.setType(Material.ENCHANTED_BOOK);
                     itemLore.add(sendText(" "));
                     itemLore.add(sendText(" &2⚠ &a&lTasks Complete!"));
@@ -507,12 +647,96 @@ public class GUIManager implements Listener {
         return item;
     }
 
+    public static ItemStack getPrestigeIcon(Player player, int index) {
+        ItemStack item = new ItemStack(Material.EMERALD_ORE);
+        ItemMeta meta = item.getItemMeta();
+        List<String> itemLore = new ArrayList<>();
+
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        int level = playerLevel.get(player.getUniqueId());
+        int current = playerPrestige.get(player.getUniqueId());
+        int req = prestigeRequirement.get(index);
+
+        double moneyReq = req*5000;
+
+        meta.setDisplayName(sendText("&3&l[ &bPrestige &8➛ &3"+(index+1)+" &3&l]"));
+
+        itemLore.add(sendText(" "));
+        if (level < req){
+            item.setType(Material.REDSTONE_BLOCK);
+            itemLore.add(sendText(" &7Level Minimum: &c"+req+" &4"+xSymbol));
+        }else{
+            itemLore.add(sendText(" &7Level Minimum: &a"+req+" &2"+checkSymbol));
+            //itemLore.add(sendText(" &7Money Cost: &f"+moneyReq+icon));
+        }
+        if (GetPlayerBalance(player) < moneyReq){
+            itemLore.add(sendText(" &7Money Cost: &c"+moneyReq+icon+" &4"+xSymbol));
+        }else{
+            itemLore.add(sendText(" &7Money Cost: &a"+moneyReq+icon+" &2"+checkSymbol));
+        }
+
+        if (current > index){
+            item.setType(Material.EMERALD_BLOCK);
+        }
+
+        itemLore.add(sendText(" "));
+
+        meta = SetAditMeta(meta);
+        meta.setLore(itemLore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack getDungeonIcon(Player player, int tier) {
+        ItemStack item = new ItemStack(Material.MOSSY_STONE_BRICKS);
+        ItemMeta meta = item.getItemMeta();
+        List<String> itemLore = new ArrayList<>();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        int currentLevel = playerLevel.get(player.getUniqueId());
+        int currentPrestige = playerPrestige.get(player.getUniqueId());
+
+        int levelReq = Dungeon.DungeonList.getLevel("dungeon_"+tier);
+
+        meta.setDisplayName(sendText("&cTier &4&l"+intToRoman(tier)));
+
+        itemLore.add(sendText(" "));
+
+        if (currentLevel < levelReq){
+            itemLore.add(sendText(" &7level Minimum: &a"+ levelReq +" &2"+checkSymbol));
+        }else{
+            itemLore.add(sendText(" &7level Minimum: &c"+ levelReq +" &4"+xSymbol));
+        }
+
+        if (currentPrestige < 20){
+            itemLore.add(sendText(" &7Prestige Minimum: &a1 &2"+checkSymbol));
+        }else{
+            itemLore.add(sendText(" &7Prestige Minimum: &c1 &4"+xSymbol));
+        }
+
+        itemLore.add(sendText(" "));
+
+        itemLore.add(sendText("&cClick to teleport"));
+
+
+        container.set(GetNamespacedKey("gui-icon"), PersistentDataType.STRING, "dungeon");
+        container.set(GetNamespacedKey("dungeon"), PersistentDataType.STRING, "dungeon_"+tier);
+
+        meta = SetAditMeta(meta);
+        meta.setLore(itemLore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+
     public static ItemStack getBasicUi(String name){
         ItemStack item = new ItemStack(Material.STICK);
         ItemMeta meta = item.getItemMeta();
         List<String> itemLore = new ArrayList<>();
         PersistentDataContainer container = meta.getPersistentDataContainer();
         if (name.equals("anvil")){
+            item.setType(Material.ANVIL);
             meta.setDisplayName(sendText("&bAnvil"));
 
             itemLore.add(sendText(" "));
@@ -523,13 +747,32 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(" &7Repair will cost &a8% from durability"+icon));
             itemLore.add(sendText(" "));
         }
+        else if (name.equals("prestige")){
+            item.setType(Material.PAPER);
+            meta.setDisplayName(sendText("&bConfirm"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &c&lWarnings!"));
+            itemLore.add(sendText("  &7Once you confirm, your required levels"));
+            itemLore.add(sendText("  &7will be consumed"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&bClick to confirm"));
+        }
+
+        else if (name.equals("sellall")){
+            item.setType(Material.EMERALD);
+            meta.setDisplayName(sendText("&a&lSell All"));
+        }
+        else if (name.equals("sellgui")){
+            item.setType(Material.DIAMOND);
+            meta.setDisplayName(sendText("&a&lSell Gui"));
+        }
 
         else if (name.equals("back")){
             item.setType(Material.BOOK);
             meta.setDisplayName(sendText("&cReturn to Main Page"));
         }
         else if (name.equals("catalog")){
-            item.setType(Material.WRITABLE_BOOK);
+            item.setType(Material.KNOWLEDGE_BOOK);
             meta.setDisplayName(sendText("&a&lCatalog"));
             itemLore.add(sendText(" "));
             itemLore.add(sendText(" &7View all available items that can"));
@@ -549,9 +792,18 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(" "));
             itemLore.add(sendText("&bClick to view"));
         }
+        else if (name.equals("multiblock_nether_smelter")){
+            item.setType(Material.BLAST_FURNACE);
+            meta.setDisplayName(sendText("&bNether Smelter"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Smelt Powerful ingots to craft"));
+            itemLore.add(sendText(" &7powerful tools at blacksmith!"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&bClick to view"));
+        }
         else if (name.equals("multiblock_pipe")){
             item.setType(Material.MOSSY_COBBLESTONE_WALL);
-            meta.setDisplayName(sendText("&fMossy Cobblestone Wall (all direction)"));
+            meta.setDisplayName(sendText("&fMossy Cobblestone Wall &3(all direction)"));
         }
 
         else if (name.equals("multiblock_acid_maker")){
@@ -583,6 +835,15 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(" "));
             itemLore.add(sendText("&bClick to view"));
         }
+        else if (name.equals("multiblock_armor_crafter")){
+            item.setType(Material.DISPENSER);
+            meta.setDisplayName(sendText("&bArmor Crafter"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Craft armor for extra defense"));
+            itemLore.add(sendText(" &7againts enemy!"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&bClick to view"));
+        }
 
         // gameMenu
         else if (name.equals("gamemenu_spawn")) {
@@ -593,6 +854,17 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(" "));
             itemLore.add(sendText("&bClick to teleport"));
             container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "spawn");
+        }
+
+        else if (name.equals("gamemenu_prestige")) {
+            item.setType(Material.DIAMOND);
+            meta.setDisplayName(sendText("&bPrestige"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Sacrifice levels to get more"));
+            itemLore.add(sendText(" &7experiences!"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&bClick to view"));
+            container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "prestige");
         }
         else if (name.equals("gamemenu_sellitem")) {
             item.setType(Material.EMERALD);
@@ -614,7 +886,7 @@ public class GUIManager implements Listener {
             container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "shop");
         }
         else if (name.equals("gamemenu_catalog")) {
-            item.setType(Material.BOOK);
+            item.setType(Material.KNOWLEDGE_BOOK);
             meta.setDisplayName(sendText("&aCatalog"));
             itemLore.add(sendText(" "));
             itemLore.add(sendText(" &7View all available items that can"));
@@ -634,6 +906,17 @@ public class GUIManager implements Listener {
             itemLore.add(sendText("&dClick to view"));
             container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "multiblock");
         }
+        else if (name.equals("gamemenu_auctionhouse")) {
+            item.setType(Material.SPRUCE_SIGN);
+            meta.setDisplayName(sendText("&aAuction House"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Open Auction House to"));
+            itemLore.add(sendText(" &7buy/sell items from other"));
+            itemLore.add(sendText(" &7players"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&aClick to view"));
+            container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "ah");
+        }
         else if (name.equals("gamemenu_creditshop")) {
             item.setType(Material.CHEST);
             meta.setDisplayName(sendText("&aCredit Shop"));
@@ -643,7 +926,7 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(" &e   &estore.minegens.id"));
             itemLore.add(sendText(" "));
             itemLore.add(sendText("&aClick to view"));
-            container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "creditshop");
+            container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "credit shop");
         }
         else if (name.equals("gamemenu_crafting")) {
             item.setType(Material.CRAFTING_TABLE);
@@ -674,6 +957,27 @@ public class GUIManager implements Listener {
             itemLore.add(sendText("&dClick to use"));
             container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "bank");
         }
+        else if (name.equals("gamemenu_trash")) {
+            item.setType(Material.COBWEB);
+            meta.setDisplayName(sendText("&6Trash"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Delete your unused items"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &c&lWarnings!"));
+            itemLore.add(sendText(" &7(Once the items are deleted, they cannot be retrieved)"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&6Click to use"));
+            container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "trash");
+        }
+        else if (name.equals("gamemenu_sell")) {
+            item.setType(Material.PAPER);
+            meta.setDisplayName(sendText("&dSell Item"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Open Sell Item section"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&dClick to view"));
+            container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "sell");
+        }
         else if (name.equals("gamemenu_warp")) {
             item.setType(Material.ENDER_PEARL);
             meta.setDisplayName(sendText("&dWarp"));
@@ -693,6 +997,25 @@ public class GUIManager implements Listener {
             itemLore.add(sendText("&dClick to view"));
             container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "profile");
         }
+        else if (name.equals("gamemenu_quest")) {
+            item.setType(Material.WRITABLE_BOOK);
+            meta.setDisplayName(sendText("&aQuest"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Finish quest to get rewards"));
+            itemLore.add(sendText(" &7and quest pendant"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&aClick to view"));
+            container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "quest");
+        }
+        else if (name.equals("gamemenu_rewards")) {
+            item.setType(Material.WHITE_SHULKER_BOX);
+            meta.setDisplayName(sendText("&aRewards"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Claim free items from rewards"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&aClick to view"));
+            container.set(GetNamespacedKey("command"), PersistentDataType.STRING, "rewards");
+        }
 
         else if (name.equals("warp_crates")) {
             item.setType(Material.ENDER_CHEST);
@@ -708,9 +1031,27 @@ public class GUIManager implements Listener {
             itemLore.add(sendText("&bClick to teleport"));
             container.set(GetNamespacedKey("warpName"), PersistentDataType.STRING, "mine");
         }
+
+        else if (name.equals("warp_dungeon")) {
+            item.setType(Material.IRON_BARS);
+            meta.setDisplayName(sendText("&3Warp: &b&lDungeon"));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("warpName"), PersistentDataType.STRING, "dungeon");
+        }
+
+        else if (name.equals("warp_communitycenter")) {
+            item.setType(Material.BEACON);
+            meta.setDisplayName(sendText("&3Warp: &b&lCommunity Center"));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("warpName"), PersistentDataType.STRING, "community_center");
+        }
+
+
         else if (name.equals("warp_blacksmith")) {
             item.setType(Material.ANVIL);
-            meta.setDisplayName(sendText("&3Warp: &b&lAnvil"));
+            meta.setDisplayName(sendText("&3Warp: &b&lBlacksmith"));
             itemLore.add(sendText(""));
             itemLore.add(sendText("&bClick to teleport"));
             container.set(GetNamespacedKey("warpName"), PersistentDataType.STRING, "blacksmith");
@@ -722,10 +1063,33 @@ public class GUIManager implements Listener {
             itemLore.add(sendText("&bClick to teleport"));
             container.set(GetNamespacedKey("warpName"), PersistentDataType.STRING, "lake");
         }
+        else if (name.equals("warp_garden")) {
+            item.setType(Material.LEATHER);
+            meta.setDisplayName(sendText("&3Warp: &b&lGarden"));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("warpName"), PersistentDataType.STRING, "garden");
+        }
+        else if (name.equals("warp_graveyard")) {
+            item.setType(Material.ZOMBIE_HEAD);
+            meta.setDisplayName(sendText("&3Warp: &b&lGraveyard"));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("warpName"), PersistentDataType.STRING, "graveyard");
+        }
 
         else if (name.equals("multiblock_machine")){
             item.setType(Material.HAY_BLOCK);
             meta.setDisplayName(sendText("&fMachine &3(any type)"));
+        }
+
+        else if (name.equals("multiblock_fire")){
+            item.setType(Material.NETHERRACK);
+            meta.setDisplayName(sendText("&fFire"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText(" &7Ignite fire using flint and steel"));
+            itemLore.add(sendText(" &7and netherrack"));
+            itemLore.add(sendText(" "));
         }
 
         meta = SetAditMeta(meta);
@@ -1027,7 +1391,7 @@ public class GUIManager implements Listener {
                     getMainPlugin().events.EnableMachine(player, machineLocation);
 
                     player.sendMessage(sendText("&aSuccessfully upgrade your machine! to level &2"
-                            +placedMachines.get(machineLocation+".machineLevel")));
+                            +placedMachines.get(machineLocation+__machineLevelKey)));
 
                     OpenMachineEngines(player, machineLocation);
 
@@ -1123,7 +1487,7 @@ public class GUIManager implements Listener {
 
                     OpenMachineEngines(player, machineLocation);
 
-                    UpdateMachineTag(player, machineLocation, placedMachines.get(machineLocation+__machineNameKey), 0);
+                    UpdateMachineTag(player.getName(), machineLocation, placedMachines.get(machineLocation+__machineNameKey), 0);
                     consoleLog(sendText(placedMachines.get(machineLocation+__machineNameKey)));
 
                     player.sendMessage(sendText("&aMachine has been evolved to "+Rarity.getColor(Rarity.RarityType.parseRarity(nextRarity))+Rarity.RarityType.parseRarity(nextRarity)));
@@ -1149,7 +1513,7 @@ public class GUIManager implements Listener {
                         }
                     }
 
-                    getMainPlugin().events.UpdateMachineTag(player, machineLocation, sendText(getMainPlugin().events.machineItems.get(machineLocation)
+                    getMainPlugin().events.UpdateMachineTag(player.getName(), machineLocation, sendText(getMainPlugin().events.machineItems.get(machineLocation)
                             .getItemMeta().getDisplayName()), 0);
 
                     OpenMachineEngines(player, machineLocation);
@@ -1167,6 +1531,30 @@ public class GUIManager implements Listener {
                     OpenCatalog(player, 1);
                 }
             }
+
+            else if (inventory.equals(MenuList.Prestige)) {
+                if (GetTag(item).equals("prestige")) {
+                    player.closeInventory();
+                    PerformPrestige(player);
+                }
+            }
+
+            else if (inventory.equals(MenuList.Dungeon)){
+                if (GetTag(item).equals("dungeon")){
+                    String dungeonTarget = container.get(GetNamespacedKey("dungeon"), PersistentDataType.STRING);
+
+                    player.closeInventory();
+
+                    assert dungeonTarget != null;
+                    Dungeon.DungeonList dungeon = Dungeon.DungeonList.parseDungeon(dungeonTarget);
+
+                    assert dungeon != Dungeon.DungeonList.None;
+
+                    TeleportDungeon(player, dungeon);
+                }
+            }
+
+
             else if (inventory.equals(MenuList.ShopPage)){
                 if (container.has(GetNamespacedKey("price"))){
                     double playerBalance = GetPlayerBalance(player);
@@ -1275,6 +1663,12 @@ public class GUIManager implements Listener {
             else if (inventory.equals(MenuList.Anvil)){
                 if (container.has(GetNamespacedKey(itemKey)) || container.has(GetNamespacedKey(machineKey))){
                     ItemStack currentItem = event.getCurrentItem();
+
+                    if (isSellWand(currentItem)){
+                        player.sendMessage(sendText("&4You can't repair this item!"));
+                        return;
+                    }
+
                     ItemMeta currentItemMeta = currentItem.getItemMeta();
                     PersistentDataContainer currentItemContainer = currentItemMeta.getPersistentDataContainer();
 
@@ -1307,22 +1701,34 @@ public class GUIManager implements Listener {
                     if (durability < maxDurability){
                         durability = maxDurability;
                     }else{
+                        if (isMachine(item)){
+                            currentItemContainer.set(GetNamespacedKey(machineStatusKey), PersistentDataType.STRING, "Active");
+                            currentItem.setItemMeta(currentItemMeta);
+                            item.setItemMeta(UpdateMachineItem(item).getItemMeta());
+                        }
+
                         player.sendMessage(sendText("&aThis item is already fixed!"));
                         PlaySoundAt(Sound.BLOCK_LANTERN_PLACE, player.getLocation(), 1, 1);
+
                         return;
                     }
                     RemovePlayerBalance(player, fixPrice);
 
                     if (isFactoryItem(item)){
                         currentItemContainer.set(GetNamespacedKey(durabilityKey), PersistentDataType.DOUBLE, durability);
-                    }else{
+                    }
+
+                    else if (isMachine(item)){
                         currentItemContainer.set(GetNamespacedKey(durabilityKey), PersistentDataType.INTEGER, (int) durability);
                         currentItemContainer.set(GetNamespacedKey(machineStatusKey), PersistentDataType.STRING, "Active");
                     }
+
                     currentItem.setItemMeta(currentItemMeta);
                     if (isFactoryItem(item)){
                         UpdateItem(player, ""+event.getSlot(), item);
-                    }else{
+                    }
+
+                    else if (isMachine(item)){
                         item.setItemMeta(UpdateMachineItem(item).getItemMeta());
                     }
                     PlaySoundAt(Sound.BLOCK_ANVIL_USE, player.getLocation(), 1, 1);
@@ -1367,6 +1773,14 @@ public class GUIManager implements Listener {
                         multiBlockMenu.setItem(13, new ItemStack(Material.ANVIL));
                         multiBlockMenu.setItem(22, new ItemStack(Material.FURNACE));
                     }
+                    else if (GetTag(item).equals("multiblock_armor_crafter")) {
+                        multiBlockMenu.setItem(13, new ItemStack(Material.ANVIL));
+                        multiBlockMenu.setItem(22, new ItemStack(Material.DISPENSER));
+                    }
+                    else if (GetTag(item).equals("multiblock_nether_smelter")) {
+                        multiBlockMenu.setItem(13, new ItemStack(Material.BLAST_FURNACE));
+                        multiBlockMenu.setItem(22, getBasicUi("multiblock_fire"));
+                    }
                     multiBlockMenu.setItem(31, getBasicUi("back"));
                     player.openInventory(multiBlockMenu);
                     player.updateInventory();
@@ -1392,7 +1806,8 @@ public class GUIManager implements Listener {
                 if (container.has(GetNamespacedKey("warpName"))){
                     String warpName = container.get(GetNamespacedKey("warpName"), PersistentDataType.STRING);
 
-                    Location warpLocation = GetLocation(warpName);
+                    assert warpName != null;
+                    Location warpLocation = GetLocation(warpName.replaceAll("_", "").trim());
                     if (warpLocation == null){
                         player.sendMessage(sendText("&4That warp is not exist!"));
                         return;
@@ -1400,7 +1815,6 @@ public class GUIManager implements Listener {
 
                     player.teleport(warpLocation);
                     PlaySoundAt(Sound.ENTITY_ENDERMAN_TELEPORT, player.getLocation(), 1, 1);
-                    assert warpName != null;
                     player.sendMessage(sendText("&bTeleported to &3"+formatItemName(warpName)));
                 }
             }
@@ -1466,10 +1880,58 @@ public class GUIManager implements Listener {
                     assert claimedQuest != FactoryQuest.Quest.None;
                     ClaimQuest(player, claimedQuest);
                     player.closeInventory();
-                }else{
-                    if (GetTag(item).equals("complete")){
-                        CompleteQuest(player, quest.get(player));
-                        player.closeInventory();
+                }
+
+                else if (GetTag(item).equals("complete")){
+                    CompleteQuest(player, quest.get(player.getUniqueId()));
+                    player.closeInventory();
+                }
+                else if (GetTag(item).equals("abandon")){
+                    AbandonQuest(player);
+                    player.closeInventory();
+                }
+            }
+
+            else if (inventory.equals(MenuList.Sell)){
+                if (GetTag(item).equals("sellall")){
+                    SellAll(player);
+                }
+                else if (GetTag(item).equals("sellgui")){
+                    player.closeInventory();
+                    OpenSellGui(player);
+                }
+            }
+
+            else if (inventory.equals(MenuList.Carbon_Forge)) {
+                if (GetTag(item).equals("carbon")) {
+                    OpenCarbonForge(player, carbonMaterials[playerSelector.get(player)]);
+                }
+
+                else if (GetTag(item).equals("next_page")){
+                    int currentPage = playerSelector.get(player);
+                    if (currentPage < carbonMaterials.length){
+                        currentPage++;
+                        playerSelector.put(player, currentPage);
+                        OpenMenu(player, MenuList.Carbon_Forge);
+                    }
+                }
+                else if (GetTag(item).equals("previous_page")){
+                    int currentPage = playerSelector.get(player);
+                    if (currentPage > 0){
+                        currentPage--;
+                        playerSelector.put(player, currentPage);
+                        OpenMenu(player, MenuList.Carbon_Forge);
+                    }
+                }
+
+                else if (GetTag(item).equals("view")){
+                    player.closeInventory();
+                    int index = 1;
+                    player.sendMessage(" ");
+                    player.sendMessage(sendText(" &b&lCarbon Equipments"));
+                    for (String eq : carbonMaterials){
+                        player.sendMessage(sendText("  &7["+index+"] &f"+formatItemName(eq)+" Equipments"));
+                        index++;
                     }
                 }
             }
@@ -1477,7 +1939,14 @@ public class GUIManager implements Listener {
 
             if (container.has(GetNamespacedKey(gameMenuKey))){
                 event.setCancelled(true);
-                OpenMenu(player, MenuList.GameMenu);
+                if (player.getOpenInventory().getTopInventory().getType() == InventoryType.CHEST){
+                    String openedTitle = uncolouredText(player.getOpenInventory().getTitle());
+
+                    if (!openedTitle.equals("Chest") && !openedTitle.equals("Dispenser") &&
+                    !openedTitle.equals("Dropper") && !openedTitle.equals("Barrel")){
+                        OpenMenu(player, MenuList.GameMenu);
+                    }
+                }
             }
         }
     }
@@ -1486,10 +1955,16 @@ public class GUIManager implements Listener {
         openedMenu.put(player, MenuList.ShopPage);
         openedCategory.put(player, category);
 
-        Inventory openedCategory = OpenGUI(player, 6, "Shop"+" - "+menuPage.get(player)+"/"+maxCategoryPage);
+        Inventory openedCategory = OpenGUI(player, 6, "Shop"+" ["+menuPage.get(player)+"/"+maxCategoryPage+"]");
 
         List<ItemStack> contentList = shopItemList.get(category+menuPage.get(player));
 
+        SetFooter(openedCategory);
+        if (!category.contains("machine") && !category.contains("steam")){
+            openedCategory.setItem(48, getShopIcons(player, "buyamount_minus"));
+            openedCategory.setItem(50, getShopIcons(player, "buyamount_plus"));
+            buyAmount.put(player, 1);
+        }
         for (int i = 0; i < contentList.size(); i++) {
             ItemStack addedItem = contentList.get(i);
             ItemMeta addedItemMeta = addedItem.getItemMeta();
@@ -1500,12 +1975,8 @@ public class GUIManager implements Listener {
                 openedCategory.setItem(i, getShopContent(player, contentList.get(i).clone(), true));
             }
         }
-        SetFooter(openedCategory);
 
         openedCategory.setItem(49, getShopIcons(player, "back"));
-        openedCategory.setItem(48, getShopIcons(player, "buyamount_minus"));
-        //openedCategory.setItem(49, getShopIcons(player, "buyamount_status"));
-        openedCategory.setItem(50, getShopIcons(player, "buyamount_plus"));
 
         openedCategory.setItem(53, getShopIcons(player, "next_page"));
         openedCategory.setItem(45, getShopIcons(player, "previous_page"));
@@ -1522,40 +1993,39 @@ public class GUIManager implements Listener {
             if (shopContent != null){
                 ItemMeta contentMeta = shopContent.getItemMeta();
                 if (contentMeta.getPersistentDataContainer().has(GetNamespacedKey("price"))){
+                    int itemAmount = 1;
                     if (!contentMeta.getPersistentDataContainer().has(GetNamespacedKey(machineKey)) &&
                             !contentMeta.getPersistentDataContainer().has(GetNamespacedKey(backpackSizeKey))){
-                        PersistentDataContainer container = contentMeta.getPersistentDataContainer();
-                        Double contentPrice = container.get(GetNamespacedKey("price"), PersistentDataType.DOUBLE);
-                        if (contentPrice == null){
-                            contentPrice = 1000000000.0;
-                        }
-                        int itemAmount = buyAmount.get(player);
-                        if (shopContent.getMaxStackSize() == 1){
-                            itemAmount = 1;
-                        }
-                        shopContent.setAmount(itemAmount);
-                        List<String> displayName = Arrays.asList(contentMeta.getDisplayName().split(" "));
+                        itemAmount = buyAmount.get(player);
+                    }
+                    PersistentDataContainer container = contentMeta.getPersistentDataContainer();
+                    Double contentPrice = container.get(GetNamespacedKey("price"), PersistentDataType.DOUBLE);
+                    if (contentPrice == null){
+                        contentPrice = 1000000000.0;
+                    }
+                    if (shopContent.getMaxStackSize() == 1){
+                        itemAmount = 1;
+                    }
+                    shopContent.setAmount(itemAmount);
+                    List<String> displayName = Arrays.asList(contentMeta.getDisplayName().split(" "));
 
-                        String fixedDisplayName = contentMeta.getDisplayName().replace(displayName.getFirst()+" ", "").trim();
-                        contentMeta.setDisplayName(sendText("&bx"+itemAmount+" "+fixedDisplayName));
+                    String fixedDisplayName = contentMeta.getDisplayName().replace(displayName.getFirst()+" ", "").trim();
+                    contentMeta.setDisplayName(sendText("&bx"+itemAmount+" "+fixedDisplayName));
 
-                        List<String> storedLore = new ArrayList<>();
+                    List<String> storedLore = new ArrayList<>();
 
-                        for (String lore : contentMeta.getLore()){
-                            if (lore != null){
-                                if (uncolouredText(lore).contains("Price")){
-                                    storedLore.add(sendText(" &7Price: &f"+(FormatDouble(contentPrice*itemAmount))+icon));
-                                }else{
-                                    storedLore.add(sendText(lore));
-                                }
+                    for (String lore : contentMeta.getLore()){
+                        if (lore != null){
+                            if (uncolouredText(lore).contains("Price")){
+                                storedLore.add(sendText(" &7Price: &f"+(FormatDouble(contentPrice*itemAmount))+icon));
+                            }else{
+                                storedLore.add(sendText(lore));
                             }
                         }
-
-                        contentMeta.setLore(storedLore);
-                        shopContent.setItemMeta(contentMeta);
-                    }else{
-                        buyAmount.put(player, 1);
                     }
+
+                    contentMeta.setLore(storedLore);
+                    shopContent.setItemMeta(contentMeta);
                 }
             }
         }
@@ -1567,7 +2037,8 @@ public class GUIManager implements Listener {
     public static void OpenMachineEngines(Player player, Location location){
         int level = Integer.parseInt(placedMachines.get(location+__machineLevelKey));
         String machineName = placedMachines.get(location+__machineNameKey);
-        Inventory inventory = OpenGUI(player, 4, uncolouredText(machineName)+" Engine - Lv. "+level);
+        String owner = placedMachines.get(location+__ownerKey);
+        Inventory inventory = OpenGUI(player, 4, owner+"'s Machine Engine - Lv. "+level);
         openedMenu.put(player, MenuList.MachineEngine);
         SetHeaderFooter(inventory);
         SetBackground(inventory, Material.GRAY_STAINED_GLASS_PANE);
@@ -1581,16 +2052,14 @@ public class GUIManager implements Listener {
         int taskId = new BukkitRunnable() {
             @Override
             public void run() {
-                Inventory topInventory = player.getOpenInventory().getTopInventory();
-                for (ItemStack item : topInventory.getContents()){
-                    if (item != null){
-                        topInventory.setItem(22, getMachineEnginesItem(player,"timer", location));
-                        topInventory.setItem(13, getMachineEnginesItem(player,"upgrade", location));
-                        topInventory.setItem(8, getMachineEnginesItem(player,"switch", location));
-                        topInventory.setItem(31, getMachineEnginesItem(player,"evolve", location));
-                        topInventory.setItem(0, getMachineEnginesItem(player,"information", location));
-                    }
-                }
+                //Inventory topInventory = player.getOpenInventory().getTopInventory();
+
+                inventory.setItem(22, getMachineEnginesItem(player,"timer", location));
+                inventory.setItem(13, getMachineEnginesItem(player,"upgrade", location));
+                inventory.setItem(8, getMachineEnginesItem(player,"switch", location));
+                inventory.setItem(31, getMachineEnginesItem(player,"evolve", location));
+                inventory.setItem(0, getMachineEnginesItem(player,"information", location));
+
                 player.updateInventory();
             }
         }.runTaskTimer(getMainPlugin(), 0L, 20L).getTaskId();
@@ -1622,7 +2091,17 @@ public class GUIManager implements Listener {
             meta = item.getItemMeta();
             container = meta.getPersistentDataContainer();
 
-            double upgradePrice = (level*100)+level*120;
+            Integer machineLevelReq = GetLevelMinimum(uncolouredText(machineItems.get(location).clone().getItemMeta()
+                    .getDisplayName().replaceAll(" ", "").trim().toLowerCase()));
+            if (machineLevelReq == null){
+                machineLevelReq = 1;
+            }
+
+            //consoleLog(uncolouredText(machineItems.get(location).clone().getItemMeta()
+                    //.getDisplayName().replaceAll(" ", "").trim().toLowerCase()));
+
+            double upgradePreCalculate = (level*100)+level*120;
+            double upgradePrice = upgradePreCalculate+(machineLevelReq*35);
             int totalProductionReq = level*25;
             int advancedAcidCost = level*2;
             int baseAcidCost = advancedAcidCost*5;
@@ -1912,7 +2391,7 @@ public class GUIManager implements Listener {
             catalogItems.get(currentPage).add(item.clone());
         }
 
-        Inventory inventory = OpenGUI(player, 6, "Catalog - Page "+page);
+        Inventory inventory = OpenGUI(player, 6, "Catalog ["+page+"/"+maxCatalogPage+"]");
         int start = 0;
         for (int i = 0; i < catalogItems.get(page).size(); i++) {
             inventory.setItem(9+i, catalogItems.get(page).get(start).clone());
@@ -2019,5 +2498,129 @@ public class GUIManager implements Listener {
         }
     }
 
+    // blacksmith
+
+    public static void OpenBlacksmith(Player player){
+        Merchant merchant = Bukkit.createMerchant(sendText("&nBlacksmith"));
+        List<MerchantRecipe> trades = new ArrayList<>();
+
+
+
+        ItemStack netheriteIngot = new ItemStack(ProcessItemMeta(new ItemStack(Material.NETHERITE_INGOT)));
+        netheriteIngot.setAmount(20);
+
+
+
+        ItemStack tungstenIngot = new ItemStack(GetItem("tungsteningot"));
+        tungstenIngot.setAmount(10);
+
+        ItemStack palladiumIngot = new ItemStack(GetItem("palladiumingot"));
+        palladiumIngot.setAmount(12);
+
+        ItemStack cobaltIngot = new ItemStack(GetItem("cobaltingot"));
+        cobaltIngot.setAmount(15);
+
+
+
+
+        ItemStack mithrilIngot = new ItemStack(GetItem("mithrilingot"));
+        mithrilIngot.setAmount(18);
+
+        ItemStack orichalcumIngot = new ItemStack(GetItem("orichalcumingot"));
+        orichalcumIngot.setAmount(20);
+
+        ItemStack titaniumIngot = new ItemStack(GetItem("titaniumingot"));
+        titaniumIngot.setAmount(25);
+
+
+
+        ItemStack adamantineIngot = new ItemStack(GetItem("adamantineingot"));
+        adamantineIngot.setAmount(30);
+
+        ItemStack dragoniteIngot = new ItemStack(GetItem("dragoniteingot"));
+        dragoniteIngot.setAmount(35);
+
+
+
+
+        ItemStack voidsteelIngot = new ItemStack(GetItem("voidsteelingot"));
+        voidsteelIngot.setAmount(40);
+
+        ItemStack etheriumIngot = new ItemStack(GetItem("etheriumingot"));
+        etheriumIngot.setAmount(48);
+
+
+
+        List<String> toolsList = Arrays.asList("pickaxe", "axe", "shovel", "fishingrod");
+
+        MerchantRecipe merchantRecipe;
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("tungsten"+tool)), 9999);
+            merchantRecipe.addIngredient(tungstenIngot);
+            merchantRecipe.addIngredient(netheriteIngot);
+            trades.add(merchantRecipe);
+        }
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("palladium"+tool)), 9999);
+            merchantRecipe.addIngredient(palladiumIngot);
+            merchantRecipe.addIngredient(tungstenIngot);
+            trades.add(merchantRecipe);
+        }
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("cobalt"+tool)), 9999);
+            merchantRecipe.addIngredient(cobaltIngot);
+            merchantRecipe.addIngredient(palladiumIngot);
+            trades.add(merchantRecipe);
+        }
+
+
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("mithril"+tool)), 9999);
+            merchantRecipe.addIngredient(mithrilIngot);
+            merchantRecipe.addIngredient(cobaltIngot);
+            trades.add(merchantRecipe);
+        }
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("orichalcum"+tool)), 9999);
+            merchantRecipe.addIngredient(orichalcumIngot);
+            merchantRecipe.addIngredient(mithrilIngot);
+            trades.add(merchantRecipe);
+        }
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("titanium"+tool)), 9999);
+            merchantRecipe.addIngredient(titaniumIngot);
+            merchantRecipe.addIngredient(orichalcumIngot);
+            trades.add(merchantRecipe);
+        }
+
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("adamantine"+tool)), 9999);
+            merchantRecipe.addIngredient(adamantineIngot);
+            merchantRecipe.addIngredient(titaniumIngot);
+            trades.add(merchantRecipe);
+        }
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("dragonite"+tool)), 9999);
+            merchantRecipe.addIngredient(dragoniteIngot);
+            merchantRecipe.addIngredient(adamantineIngot);
+            trades.add(merchantRecipe);
+        }
+
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("voidsteel"+tool)), 9999);
+            merchantRecipe.addIngredient(voidsteelIngot);
+            merchantRecipe.addIngredient(dragoniteIngot);
+            trades.add(merchantRecipe);
+        }
+        for (String tool : toolsList){
+            merchantRecipe  = new MerchantRecipe(new ItemStack(GetItem("etherium"+tool)), 9999);
+            merchantRecipe.addIngredient(etheriumIngot);
+            merchantRecipe.addIngredient(voidsteelIngot);
+            trades.add(merchantRecipe);
+        }
+
+        merchant.setRecipes(trades);
+        player.openMerchant(merchant, true);
+    }
 
 }
