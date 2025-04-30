@@ -258,8 +258,28 @@ public class Commands implements CommandExecutor, TabCompleter {
                 String name = args[1];
                 Location location = player.getLocation();
 
+                if (GetSpawner(name) != null){
+                    player.sendMessage(sendText("&c"+name+" &4is already exist!"));
+                    return false;
+                }
+
                 SaveSpawner(name, location);
                 sender.sendMessage(sendText("&aSaved spawner with name: &2"+name+" &aat: &6"+location.toString()));
+            }
+
+            else if (args[0].equalsIgnoreCase("movespawner")){
+                assert sender instanceof Player;
+                Player player = (Player) sender;
+                String name = args[1];
+                Location location = player.getLocation();
+
+                if (GetSpawner(name) == null){
+                    player.sendMessage(sendText("&c"+name+" &4spawner is not exist!"));
+                    return false;
+                }
+
+                SaveSpawner(name, location);
+                sender.sendMessage(sendText("&aMoved spawner with name: &2"+name+" &aat: &6"+location.toString()));
             }
 
             else if (args[0].equalsIgnoreCase("removelocation")){
@@ -672,6 +692,12 @@ public class Commands implements CommandExecutor, TabCompleter {
                 assert target != null;
                 OpenMenu(target, MenuList.parseMenu(menuName));
             }
+            else if (args[0].equalsIgnoreCase("opentrader")){
+                String traderName = args[2];
+                Player target = Bukkit.getPlayer(args[1]);
+                assert target != null;
+                OpenTrader(target, TraderManager.TraderType.parseTrader(traderName));
+            }
             else if (args[0].equalsIgnoreCase("testmenu")){
                 assert sender instanceof Player;
                 OpenNetherSmelter((Player) sender);
@@ -801,6 +827,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("checkitem");
                 argsList.add("savelocation");
                 argsList.add("savespawner");
+                argsList.add("movespawner");
                 argsList.add("tplocation");
                 argsList.add("tpspawner");
                 argsList.add("removeitem");
@@ -818,6 +845,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("removesteam");
                 argsList.add("addsteam");
                 argsList.add("openmenu");
+                argsList.add("opentrader");
 
                 argsList.add("setprestige");
 
@@ -904,6 +932,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                         || args[0].equalsIgnoreCase("resetcooldown")
 
                         || args[0].equalsIgnoreCase("openmenu")
+                        || args[0].equalsIgnoreCase("opentrader")
 
                         || args[0].equalsIgnoreCase("resetbooster")){
 
@@ -921,7 +950,8 @@ public class Commands implements CommandExecutor, TabCompleter {
                         }
                     }
                 }
-                else if (args[0].equalsIgnoreCase("tpspawner") || args[0].equalsIgnoreCase("removespawner")){
+                else if (args[0].equalsIgnoreCase("tpspawner") || args[0].equalsIgnoreCase("removespawner")
+                        || args[0].equalsIgnoreCase("movespawner")){
                     for (String key : spawnerList.keySet()) {
                         if (key.toLowerCase().startsWith(partialInput)) {
                             suggestions.add(key);

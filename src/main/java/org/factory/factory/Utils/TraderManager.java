@@ -21,13 +21,15 @@ public class TraderManager {
     public enum TraderType{
         None,
         Dungeon_Loot_Box,
-        Dungeon_Junk_Collector;
+        Dungeon_Junk_Collector,
+        Dungeon_Loot_Master;
 
         public static TraderType parseTrader(String type){
             return switch (type.toLowerCase()){
 
                 case "dungeon_loot_box" -> TraderType.Dungeon_Loot_Box;
                 case "dungeon_junk_collector" -> TraderType.Dungeon_Junk_Collector;
+                case "dungeon_loot_master" -> TraderType.Dungeon_Loot_Master;
 
                 default -> TraderType.None;
             };
@@ -36,8 +38,8 @@ public class TraderManager {
 
 
     public static void OpenTrader(Player player, TraderType traderType){
-        if (traderType == TraderType.Dungeon_Loot_Box){
-            Merchant merchant = Bukkit.createMerchant(sendText("&n"+formatItemName(traderType.toString())));
+        if (traderType == TraderType.Dungeon_Loot_Master){
+            Merchant merchant = Bukkit.createMerchant(sendText("&nLoot Master"));
 
             List<MerchantRecipe> trades = new ArrayList<>();
 
@@ -74,7 +76,7 @@ public class TraderManager {
         }
 
         else if (traderType == TraderType.Dungeon_Junk_Collector){
-            Merchant merchant = Bukkit.createMerchant(sendText("&n"+formatItemName(traderType.toString())));
+            Merchant merchant = Bukkit.createMerchant(sendText("&nJunk Collector"));
 
             List<MerchantRecipe> trades = new ArrayList<>();
             List<String> junkList = Arrays.asList("alien", "mutant", "undead");

@@ -182,7 +182,7 @@ public class FactoryMachine {
         itemLore.add(sendText(rarityColor+"&9Requirements"));
         itemLore.add(sendText(" &8♦ &7Level Minimum to Place: &7"+levelMinimum));
         if (prestigeMinimum > 0){
-            itemLore.add(sendText(" &8♦ &7Prestige Minimum to Place: &7"+prestigeMinimum));
+            itemLore.add(sendText(" &8♦ &7Prestige Minimum to Place: &7"+intToRoman(prestigeMinimum)));
         }
         if (canUse){
             itemLore.add(sendText(" &8♦ &7Can Use: &aTrue &2"+checkSymbol));

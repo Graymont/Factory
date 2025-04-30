@@ -78,11 +78,11 @@ import static org.factory.factory.Utils.Booster.*;
 import static org.factory.factory.Utils.CooldownManager.SetCooldown;
 import static org.factory.factory.Utils.CooldownManager.hasCooldown;
 import static org.factory.factory.Utils.CraftingManager.isDisabledItem;
-import static org.factory.factory.Utils.FactoryEvents.events_machineSpeedMultiplier;
-import static org.factory.factory.Utils.FactoryEvents.events_sellMultiplier;
+import static org.factory.factory.Utils.FactoryEvents.*;
 import static org.factory.factory.Utils.FactoryItem.*;
 
 import static org.factory.factory.Utils.FactoryMachine.*;
+import static org.factory.factory.Utils.FactoryMob.*;
 import static org.factory.factory.Utils.GUIManager.*;
 import static org.factory.factory.Utils.MultiBlock.*;
 import static org.factory.factory.Utils.PersistentDataManager.*;
@@ -186,7 +186,11 @@ public class Events implements Listener {
 
     public void InitAttributes(Player player){
         for (String attr : attributeList){
-            playerAttributes.putIfAbsent(player.getName()+".attribute."+FixedAttributes(attr), 0.0);
+            playerAttributes.putIfAbsent(player.getName()+".attribute.total."+FixedAttributes(attr), 0.0);
+            playerAttributes.putIfAbsent(player.getName()+".attribute.helmet."+FixedAttributes(attr), 0.0);
+            playerAttributes.putIfAbsent(player.getName()+".attribute.chestplate."+FixedAttributes(attr), 0.0);
+            playerAttributes.putIfAbsent(player.getName()+".attribute.leggings."+FixedAttributes(attr), 0.0);
+            playerAttributes.putIfAbsent(player.getName()+".attribute.boots."+FixedAttributes(attr), 0.0);
         }
         for (String cd : cooldownList){
             playerCooldown.putIfAbsent(player.getName()+".cooldown."+cd, 0);
@@ -512,11 +516,6 @@ public class Events implements Listener {
                         }
                         Integer prestigeMinimum = GetPrestigeRequirement(levelMinimum);
 
-                        if (playerLevel.get(player.getUniqueId()) < levelMinimum || playerPrestige.get(player.getUniqueId()) < prestigeMinimum){
-                            //player.sendMessage(sendText(" &c&lWarnings!"));
-                            //player.sendMessage(sendText("  &eYou don't have enough requirements to produce item from &6"+location+" &eMachines!"));
-                            continue;
-                        }
 
                         ItemStack drop = new ItemStack(GetItem(dropName));
                         Random random = new Random();
@@ -529,6 +528,12 @@ public class Events implements Listener {
                         }
 
                         getWorld(location.getWorld().getName()).getBlockAt(location).setType(machine.getType());
+
+                        if (playerLevel.get(player.getUniqueId()) < levelMinimum || playerPrestige.get(player.getUniqueId()) < prestigeMinimum){
+                            //player.sendMessage(sendText(" &c&lWarnings!"));
+                            //player.sendMessage(sendText("  &eYou don't have enough requirements to produce item from &6"+location+" &eMachines!"));
+                            continue;
+                        }
 
                         double steam = playerSteam.get(player);
 
@@ -1909,7 +1914,9 @@ public class Events implements Listener {
                     }
                 }
 
-                ManageDurability(player, "hand");
+                if (currentEvent != EventType.Invincible_Items){
+                    ManageDurability(player, "hand");
+                }
                 UpdateItem(player, "hand", item);
             }
         }
@@ -2031,7 +2038,7 @@ public class Events implements Listener {
 
     public static List<String> attributeList = Arrays.asList(
       "Steam", "Movement Speed", "Steam Regen", "Attack Damage", "Attack Range", "Attack Speed", "Critical Chance", "Critical Damage"
-            , "Accuracy", "Armor", "Undead Damage", "Undead Defense", "Mutant Damage", "Mutant Defense",
+            , "Accuracy", "Armor", "Undead Damage", "Undead Defense", "Mutant Damage", "Mutant Defense", "Alien Damage", "Alien Defense",
             "Melee Damage", "Range Damage", "Steam Consumption", "Health"
     );
 
@@ -2492,15 +2499,32 @@ public class Events implements Listener {
 
     @EventHandler
     public void OnEntityDamagePlayer(EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Mob){
-            if (event.getEntity() instanceof Player player){
-                event.setCancelled(true);
-                Entity entity = event.getDamager();
+        if (event.getDamager() instanceof Entity damager) {
+            if (event.getEntity() instanceof Player player) {
+                if (event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK ||
+                        event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE) {
 
-                EntityDamagePlayer(player, entity);
+                    if (damager instanceof Mob ||
+                            (damager instanceof Projectile projectile && projectile.getShooter() instanceof Mob)) {
+
+                        event.setCancelled(true);
+                        EntityDamagePlayer(player, damager);
+                    }
+                }
             }
         }
     }
+
+    /*@EventHandler
+    public void OnEntityDamagePlayerProjectile(ProjectileHitEvent event) {
+        if (event.getEntity().getShooter() instanceof Mob){
+            if (event.getEntity() instanceof Player player){
+                event.setCancelled(true);
+                Entity entity = (Entity) event.getEntity().getShooter();
+                EntityDamagePlayer(player, entity);
+            }
+        }
+    }*/
 
     public static void EntityDamagePlayer(Player player, Entity entity){
 
@@ -2508,7 +2532,31 @@ public class Events implements Listener {
 
         double attackDamageValue = GetMobLevel(entity);
 
+        if (GetEntityDungeonTier(entity.getLocation()) == 0){
+            attackDamageValue = 3;
+        }
+
+        double armor = playerAttributes.get(player.getName()+".attribute.total.armor");
+        double alienDefense = playerAttributes.get(player.getName()+".attribute.total.aliendefense");
+        double mutantDefense = playerAttributes.get(player.getName()+".attribute.total.mutantdefense");
+        double undeadDefense = playerAttributes.get(player.getName()+".attribute.total.undeaddefense");
+
         double damage = attackDamageValue + (attackDamageValue * random.nextDouble());
+
+        if (isAlien(entity)){
+            alienDefense = alienDefense+armor;
+            damage = (attackDamageValue + alienDefense > 0) ? attackDamageValue / 2 * attackDamageValue / (attackDamageValue + alienDefense) : 0;
+        }
+        else if (isMutant(entity)){
+            mutantDefense = mutantDefense+armor;
+            damage = (attackDamageValue + mutantDefense > 0) ? attackDamageValue / 2 * attackDamageValue / (attackDamageValue + mutantDefense) : 0;
+        }
+        else if (isUndead(entity)){
+            undeadDefense = undeadDefense+armor;
+            damage = (attackDamageValue + undeadDefense > 0) ? attackDamageValue / 2 * attackDamageValue / (attackDamageValue + undeadDefense) : 0;
+        }else{
+            damage = (attackDamageValue + armor > 0) ? attackDamageValue / 2 * attackDamageValue / (attackDamageValue + armor) : 0;
+        }
 
         double totalDamage = damage;
 
@@ -2520,6 +2568,18 @@ public class Events implements Listener {
             player.damage(totalDamage);
             spawnDamageIndicator(player.getLocation(), totalDamage, false);
         }
+
+        if (currentEvent != FactoryEvents.EventType.Invincible_Items){
+            ManageDurability(player, "helmet");
+            ManageDurability(player, "chestplate");
+            ManageDurability(player, "leggings");
+            ManageDurability(player, "boots");
+        }
+
+        UpdateItem(player, "helmet", player.getInventory().getHelmet());
+        UpdateItem(player, "chestplate", player.getInventory().getChestplate());
+        UpdateItem(player, "leggings", player.getInventory().getLeggings());
+        UpdateItem(player, "boots", player.getInventory().getBoots());
 
     }
 
@@ -2593,7 +2653,9 @@ public class Events implements Listener {
                 else if (isBlast(item)){
                     ManageDamage(player, target, totalDamage*2);
                 }
-                ManageDurability(player, "hand");
+                if (currentEvent != FactoryEvents.EventType.Invincible_Items){
+                    ManageDurability(player, "hand");
+                }
                 UpdateItem(player, "hand", item);
             }
 
@@ -2602,7 +2664,9 @@ public class Events implements Listener {
                     ManageDamage(player, target, totalDamage*2);
                 }
                 RemoveSteam(player, steamConsumption);
-                ManageDurability(player, "hand");
+                if (currentEvent != FactoryEvents.EventType.Invincible_Items){
+                    ManageDurability(player, "hand");
+                }
                 UpdateItem(player, "hand", item);
             }
 
@@ -2627,15 +2691,31 @@ public class Events implements Listener {
             return;
         }
 
+        double criticalDamage = playerAttributes.get(player.getName()+".attribute.total.criticaldamage");
+
+        double alienDamage = playerAttributes.get(player.getName()+".attribute.total.aliendamage");
+        double mutantDamage = playerAttributes.get(player.getName()+".attribute.total.mutantdamage");
+        double undeadDamage = playerAttributes.get(player.getName()+".attribute.total.undeaddamage");
+
         if (target instanceof Mob) {
             double entityArmor = GetMobLevel(target);
+
+            if (isAlien(target)){
+                totalDamage = totalDamage+alienDamage;
+            }
+            else if (isMutant(target)){
+                totalDamage = totalDamage+mutantDamage;
+            }
+            else if (isUndead(target)){
+                totalDamage = totalDamage+undeadDamage;
+            }
 
             double damageCalculation = (totalDamage + entityArmor > 0) ? totalDamage / 2 * totalDamage / (totalDamage + entityArmor) : 0;
             if (isCrit(player)){
 
 
-                ((Mob) target).damage(damageCalculation*2, player);
-                spawnDamageIndicator(target.getLocation(), damageCalculation*2, true);
+                ((Mob) target).damage((damageCalculation*2)+criticalDamage, player);
+                spawnDamageIndicator(target.getLocation(), (damageCalculation*2)+criticalDamage, true);
                 //player.sendMessage(sendText("(mob) CRIT You damage enemy with: "+FormatDouble(totalDamage*2)));
                 return;
             }
@@ -2651,8 +2731,8 @@ public class Events implements Listener {
                 double damageCalculation = (totalDamage + entityArmor > 0) ? totalDamage / 2 * totalDamage / (totalDamage + entityArmor) : 0;
 
                 if (isCrit(player)){
-                    ((Player) target).damage(damageCalculation*2, player);
-                    spawnDamageIndicator(target.getLocation(), damageCalculation*2, true);
+                    ((Player) target).damage((damageCalculation*2)+criticalDamage, player);
+                    spawnDamageIndicator(target.getLocation(), (damageCalculation*2)+criticalDamage, true);
                     //player.sendMessage(sendText("(player) CRIT You damage enemy with: "+FormatDouble(totalDamage*2)));
                     return;
                 }
@@ -3751,12 +3831,21 @@ public class Events implements Listener {
             int level = 1;
 
             if (entity.getWorld().getName().equals("SuperiorWorld")){
+
+                if (entity instanceof Phantom){
+                    return;
+                }
+
                 Island island = SuperiorSkyblockAPI.getIslandAt(entity.getLocation());
                 SuperiorPlayer owner = island.getOwner();
                 OfflinePlayer player = Bukkit.getOfflinePlayer(owner.getUniqueId());
                 if (playerLevel.get(player.getUniqueId()) != null){
                     level = playerLevel.get(player.getUniqueId());
                 }
+            }
+
+            if (level > 10){
+                level = 10;
             }
 
             entity.addScoreboardTag("VanillaMob");

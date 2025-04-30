@@ -25,7 +25,9 @@ import java.util.*;
 
 import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
+import static org.factory.factory.Utils.FactoryEvents.currentEvent;
 import static org.factory.factory.Utils.FactoryItem.*;
+import static org.factory.factory.Utils.FactoryMob.GetEntityDungeonTier;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.PlayerProgress.*;
 import static org.factory.factory.Utils.QuestManager.TriggerFishingQuest;
@@ -307,17 +309,19 @@ public class PlayerProgressManager implements Listener {
             int currentLevel = playerLevel.get(player.getUniqueId());
             int mobLevel = GetMobLevel(entity);
 
-            if (currentLevel-mobLevel > 2){
-                gain = (gain*0.7);
-            }
-            if (currentLevel-mobLevel > 5){
-                gain = (gain*0.5);
-            }
-            if (currentLevel-mobLevel > 8){
-                gain = (gain*0.3);
-            }
-            if (currentLevel-mobLevel >= 10){
-                gain = (gain*0.1);
+            if (GetEntityDungeonTier(entity.getLocation()) > 0){
+                if (currentLevel-mobLevel > 2){
+                    gain = (gain*0.7);
+                }
+                if (currentLevel-mobLevel > 5){
+                    gain = (gain*0.5);
+                }
+                if (currentLevel-mobLevel > 8){
+                    gain = (gain*0.3);
+                }
+                if (currentLevel-mobLevel >= 10){
+                    gain = (gain*0.1);
+                }
             }
 
             double totalGain = AddExp(player, gain, proficiency);
@@ -385,8 +389,6 @@ public class PlayerProgressManager implements Listener {
                 return;
             }
 
-            ManageDurability(player, "hand");
-            UpdateItem(player, "hand", item);
 
             double fishingPowerRetriever = 1;
             Double fishingPowerContainer = container.get(GetNamespacedKey(toolPowerKey), PersistentDataType.DOUBLE);
@@ -423,6 +425,11 @@ public class PlayerProgressManager implements Listener {
 
             PlaySoundAt(Sound.BLOCK_NOTE_BLOCK_PLING, player.getLocation(), 0, 0);
             PlaySoundAt(Sound.BLOCK_GLASS_BREAK, player.getLocation(), 1, 1);
+
+            if (currentEvent != FactoryEvents.EventType.Invincible_Items){
+                ManageDurability(player, "hand");
+            }
+            UpdateItem(player, "hand", item);
         }
     }
 

@@ -402,8 +402,8 @@ public class FactoryQuest {
             AddPlayerBalance(player, Quest.getMoneyRewards(q));
             AddExp(player, Quest.getExpRewards(q), 0);
 
-            rewardsNote.add(sendText(" &2+"+Quest.getMoneyRewards(q)+" "+icon));
-            rewardsNote.add(sendText(" &2+"+Quest.getExpRewards(q)+" Exp"));
+            rewardsNote.add(sendText(" &2+"+FormatDouble(Quest.getMoneyRewards(q))+" "+icon));
+            rewardsNote.add(sendText(" &2+"+FormatDouble(Quest.getExpRewards(q))+" Exp"));
 
             for (String text : rewardsNote){
                 player.sendMessage(sendText(text));

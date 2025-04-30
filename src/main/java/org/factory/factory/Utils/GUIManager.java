@@ -463,12 +463,12 @@ public class GUIManager implements Listener {
             meta.setDisplayName(sendText("&6Progress of &b"+player.getName()));
             itemLore.add(sendText(""));
             itemLore.add(sendText(" &7Level: &e"+level));
-            itemLore.add(sendText(" &7Experience: &d&o"+exp));
+            itemLore.add(sendText(" &7Experience: &d&o"+FormatDouble(exp)));
             itemLore.add(sendText(" &7Prestige: &b"+prestige));
             itemLore.add(sendText(""));
             itemLore.add(sendText(" &8--------------------"));
             itemLore.add(sendText(" &7[Progress]"));
-            itemLore.add(sendText(" &b"+exp+"/"+maxExp+" &8[&9"+percent+"%&8]"));
+            itemLore.add(sendText(" &b"+FormatDouble(exp)+"/"+FormatDouble(maxExp)+" &8[&9"+FormatDouble(percent)+"%&8]"));
             itemLore.add(sendText(" &8--------------------"));
         }
         container.set(GetNamespacedKey("gui-icon"), PersistentDataType.STRING, name);
@@ -514,8 +514,8 @@ public class GUIManager implements Listener {
             List<ItemStack> rewardsList = RewardsManager.RewardType.getItems(rewardType);
             itemLore.add(sendText(" "));
             itemLore.add(sendText(" &8You will get:"));
-            itemLore.add(sendText(" &7- &ax"+RewardsManager.RewardType.getMoney(rewardType)+" &f"+icon));
-            itemLore.add(sendText(" &7- &ax"+RewardsManager.RewardType.getExp(rewardType)+" &fExp"));
+            itemLore.add(sendText(" &7- &ax"+FormatDouble(RewardsManager.RewardType.getMoney(rewardType))+" &f"+icon));
+            itemLore.add(sendText(" &7- &ax"+FormatDouble(RewardsManager.RewardType.getExp(rewardType))+" &fExp"));
             if (!rewardsList.isEmpty()){
                 for (ItemStack rewardItem : rewardsList){
                     itemLore.add(sendText(" &7- &ax"+rewardItem.getAmount()+" &f"+uncolouredText(rewardItem.getItemMeta().getDisplayName())));
@@ -660,20 +660,20 @@ public class GUIManager implements Listener {
 
         double moneyReq = req*5000;
 
-        meta.setDisplayName(sendText("&3&l[ &bPrestige &8➛ &3"+(index+1)+" &3&l]"));
+        meta.setDisplayName(sendText("&bPrestige &8➛ &3"+intToRoman((index+1))));
 
         itemLore.add(sendText(" "));
         if (level < req){
             item.setType(Material.REDSTONE_BLOCK);
-            itemLore.add(sendText(" &7Level Minimum: &c"+req+" &4"+xSymbol));
+            itemLore.add(sendText(" &7Level Cost: &c"+req+" &4"+xSymbol));
         }else{
-            itemLore.add(sendText(" &7Level Minimum: &a"+req+" &2"+checkSymbol));
+            itemLore.add(sendText(" &7Level Cost: &a"+req+" &2"+checkSymbol));
             //itemLore.add(sendText(" &7Money Cost: &f"+moneyReq+icon));
         }
         if (GetPlayerBalance(player) < moneyReq){
-            itemLore.add(sendText(" &7Money Cost: &c"+moneyReq+icon+" &4"+xSymbol));
+            itemLore.add(sendText(" &7Money Cost: &c"+FormatDouble(moneyReq)+icon+" &4"+xSymbol));
         }else{
-            itemLore.add(sendText(" &7Money Cost: &a"+moneyReq+icon+" &2"+checkSymbol));
+            itemLore.add(sendText(" &7Money Cost: &a"+FormatDouble(moneyReq)+icon+" &2"+checkSymbol));
         }
 
         if (current > index){
@@ -694,6 +694,8 @@ public class GUIManager implements Listener {
         List<String> itemLore = new ArrayList<>();
         PersistentDataContainer container = meta.getPersistentDataContainer();
 
+        Dungeon.DungeonList dungeonList = Dungeon.DungeonList.parseDungeon("dungeon_"+tier);
+
         int currentLevel = playerLevel.get(player.getUniqueId());
         int currentPrestige = playerPrestige.get(player.getUniqueId());
 
@@ -704,15 +706,15 @@ public class GUIManager implements Listener {
         itemLore.add(sendText(" "));
 
         if (currentLevel < levelReq){
-            itemLore.add(sendText(" &7level Minimum: &a"+ levelReq +" &2"+checkSymbol));
+            itemLore.add(sendText(" &7Level Minimum: &a"+ levelReq +" &2"+checkSymbol));
         }else{
-            itemLore.add(sendText(" &7level Minimum: &c"+ levelReq +" &4"+xSymbol));
+            itemLore.add(sendText(" &7Level Minimum: &c"+ levelReq +" &4"+xSymbol));
         }
 
         if (currentPrestige < 20){
-            itemLore.add(sendText(" &7Prestige Minimum: &a1 &2"+checkSymbol));
+            itemLore.add(sendText(" &7Prestige Minimum: &a"+intToRoman(Dungeon.DungeonList.getPrestige(dungeonList))+" &2"+checkSymbol));
         }else{
-            itemLore.add(sendText(" &7Prestige Minimum: &c1 &4"+xSymbol));
+            itemLore.add(sendText(" &7Prestige Minimum: &c"+intToRoman(Dungeon.DungeonList.getPrestige(dungeonList))+" &4"+xSymbol));
         }
 
         itemLore.add(sendText(" "));

@@ -15,6 +15,10 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.*;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
@@ -22,13 +26,44 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.factory.factory.Database.GetItem;
 import static org.factory.factory.Database.spawnerList;
 import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
 import static org.factory.factory.Utils.UserInterface.*;
 
-public class FactoryMob {
+public class FactoryMob implements Listener {
 
+    @EventHandler
+    public void OnMobDeath(EntityDeathEvent event){
+        Entity entity = event.getEntity();
+        Location location = entity.getLocation();
+
+        Random random = new Random();
+
+        assert entity instanceof Mob;
+
+        int randomDropAmount = random.nextInt(2)+1;
+
+        int randomChance = random.nextInt(100)+1;
+        if (randomChance <= 30){
+            if (isAlien(entity)){
+                ItemStack drop = new ItemStack(GetItem("alienmembrane"+GetEntityDungeonTier(location)));
+                drop.setAmount(randomDropAmount);
+                location.getWorld().dropItemNaturally(location, drop);
+            }
+            else if (isMutant(entity)){
+                ItemStack drop = new ItemStack(GetItem("mutantmembrane"+GetEntityDungeonTier(location)));
+                drop.setAmount(randomDropAmount);
+                location.getWorld().dropItemNaturally(location, drop);
+            }
+            else if (isUndead(entity)){
+                ItemStack drop = new ItemStack(GetItem("undeadmembrane"+GetEntityDungeonTier(location)));
+                drop.setAmount(randomDropAmount);
+                location.getWorld().dropItemNaturally(location, drop);
+            }
+        }
+    }
 
     public static void SpawnMob(Location location){
         Zombie zombie = (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE);
@@ -46,7 +81,7 @@ public class FactoryMob {
         return 1;
     }
 
-    public boolean isAlien(Entity entity){
+    public static boolean isAlien(Entity entity){
         if (entity.getCustomName() == null){
             return false;
         }
@@ -56,7 +91,7 @@ public class FactoryMob {
                 name.contains("mercurian") ;
     }
 
-    public boolean isUndead(Entity entity){
+    public static boolean isUndead(Entity entity){
         if (entity.getCustomName() == null){
             return false;
         }
@@ -68,7 +103,7 @@ public class FactoryMob {
                 name.contains("wither");
     }
 
-    public boolean isMutant(Entity entity){
+    public static boolean isMutant(Entity entity){
         if (entity.getCustomName() == null){
             return false;
         }
@@ -136,9 +171,9 @@ public class FactoryMob {
 
                         int dungeonTier = GetEntityDungeonTier(location);
                         int dungeonTierMax = dungeonTier*20;
-                        int randomLevel = random.nextInt(dungeonTierMax*2)+dungeonTierMax;
+                        //int randomLevel = random.nextInt(dungeonTierMax*2)+dungeonTierMax;
 
-                        SpawnDungeonMob(location, disguiseName, randomLevel);
+                        SpawnDungeonMob(location, disguiseName, dungeonTierMax);
 
                         //consoleLog("Variant Name: "+disguiseName+" Dungeon Tier: "+dungeonTier+" Level: "+randomLevel);
                     }

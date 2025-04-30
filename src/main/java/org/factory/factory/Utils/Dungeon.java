@@ -95,14 +95,23 @@ public class Dungeon implements Listener {
                 default -> 0;
             };
         }
+
+        public static Integer getPrestige(DungeonList type){
+            return switch (type.toString().toLowerCase()){
+
+                default -> Integer.parseInt(numberInText(type.toString()));
+            };
+        }
+
     }
 
 
     public static void TeleportDungeon(Player player, DungeonList dungeon){
         Location dungeonLocation = GetLocation(dungeon.toString().toLowerCase().replaceAll("_", "").trim());
 
-        if (playerPrestige.get(player.getUniqueId()) < 1){
-            player.sendMessage(sendText("&cYou need to reach &6Prestige 1 &cto enter the dungeon!"));
+        if (playerPrestige.get(player.getUniqueId()) < DungeonList.getPrestige(dungeon)){
+            player.sendMessage(sendText("&cYou need to reach &6Prestige "+intToRoman(DungeonList.getPrestige(dungeon))+" &cto enter the dungeon!"));
+            return;
         }
 
         if (dungeonLocation == null){

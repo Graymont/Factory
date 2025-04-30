@@ -53,6 +53,8 @@ public final class Factory extends JavaPlugin {
 
     public Dungeon dungeon = new Dungeon();
 
+    public FactoryMob factoryMob = new FactoryMob();
+
     public static Factory getMainPlugin() {
         return Factory.getPlugin(Factory.class);
     }
@@ -153,6 +155,7 @@ public final class Factory extends JavaPlugin {
         getServer().getPluginManager().registerEvents(questManager, this);
         getServer().getPluginManager().registerEvents(boosterManager, this);
         getServer().getPluginManager().registerEvents(dungeon, this);
+        getServer().getPluginManager().registerEvents(factoryMob, this);
     }
 
     static void EverySeconds(){

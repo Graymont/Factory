@@ -2703,37 +2703,70 @@ public class FactoryItem {
 
         int meleeAttackRange = 1;
         double meleeAttackSpeed = 1;
+        int criticalChance = 10;
+        int projectileAttackRange = 1;
+        int blastAttackRange = 1;
 
         switch (rarity) {
             case Rarity.RarityType.Common:
                 bonusAmount = 1;
                 meleeAttackRange = random.nextInt(3) + 2;
                 meleeAttackSpeed = 1.0 + (0.5 * random.nextDouble()); // 1.0 - 1.5
+
+                criticalChance = random.nextInt(15)+10;
+
+                projectileAttackRange = random.nextInt(10) + 8;
+                blastAttackRange = random.nextInt(8) + 7;
                 break;
             case Rarity.RarityType.Uncommon:
                 bonusAmount = 2;
                 meleeAttackRange = random.nextInt(4) + 3;
                 meleeAttackSpeed = 0.9 + (0.4 * random.nextDouble()); // 0.9 - 1.3
+
+                criticalChance = random.nextInt(18)+12;
+
+                projectileAttackRange = random.nextInt(12) + 10;
+                blastAttackRange = random.nextInt(9) + 8;
                 break;
             case Rarity.RarityType.Rare:
                 bonusAmount = 3;
                 meleeAttackRange = random.nextInt(4) + 3;
                 meleeAttackSpeed = 0.8 + (0.4 * random.nextDouble()); // 0.8 - 1.2
+
+                criticalChance = random.nextInt(25)+15;
+
+                projectileAttackRange = random.nextInt(14) + 12;
+                blastAttackRange = random.nextInt(10) + 9;
                 break;
             case Rarity.RarityType.Epic:
                 bonusAmount = 4;
                 meleeAttackRange = random.nextInt(5) + 4;
                 meleeAttackSpeed = 0.7 + (0.3 * random.nextDouble()); // 0.7 - 1.0
+
+                criticalChance = random.nextInt(30)+25;
+
+                projectileAttackRange = random.nextInt(16) + 14;
+                blastAttackRange = random.nextInt(10) + 9;
                 break;
             case Rarity.RarityType.Legendary:
                 bonusAmount = 5;
                 meleeAttackRange = random.nextInt(6) + 5;
                 meleeAttackSpeed = 0.6 + (0.2 * random.nextDouble()); // 0.6 - 0.8
+
+                criticalChance = random.nextInt(38)+25;
+
+                projectileAttackRange = random.nextInt(17) + 15;
+                blastAttackRange = random.nextInt(14) + 12;
                 break;
             case Rarity.RarityType.Immortal:
                 bonusAmount = 6;
                 meleeAttackRange = random.nextInt(8) + 7;
                 meleeAttackSpeed = 0.5 + (0.2 * random.nextDouble()); // 0.5 - 0.7
+
+                criticalChance = random.nextInt(45)+40;
+
+                projectileAttackRange = random.nextInt(20) + 18;
+                blastAttackRange = random.nextInt(15) + 12;
                 break;
         }
 
@@ -2916,6 +2949,7 @@ public class FactoryItem {
         if (isWeapon(item.build())){
             item.setAttackDamage(randomAttackDamage);
             item.setAttackSpeed(randomAttackSpeed);
+            item.setCriticalChance(criticalChance);
 
             item.setAttackSpeed(meleeAttackSpeed);
             item.setAttackRange(meleeAttackRange);
@@ -2925,16 +2959,19 @@ public class FactoryItem {
             item.setSteam(0);
             item.setSteamConsumption(0);
             if (isBow(item.build()) || isGun(item.build()) || isBlast(item.build())){
-                item.setSteamConsumption(level*0.025);
+                item.setSteamConsumption(level*0.08);
 
                 if (isBow(item.build())){
                     item.setAttackEffect(AttackEffect.Arrow);
+                    item.setAttackRange(projectileAttackRange);
                 }
                 else if (isGun(item.build())){
                     item.setAttackEffect(AttackEffect.Bullet);
+                    item.setAttackRange(projectileAttackRange);
                 }
                 else if (isBlast(item.build())){
                     item.setAttackEffect(AttackEffect.Steam);
+                    item.setAttackRange(blastAttackRange);
                 }
             }
         }else{

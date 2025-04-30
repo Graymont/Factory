@@ -231,7 +231,7 @@ public class PlayerProgress {
     public static void PerformPrestige(Player player){
         int current = playerPrestige.get(player.getUniqueId());
         if (current >= maxPrestige){
-            player.sendMessage(sendText("&4You already reached the maximum prestige! &c("+current+")"));
+            player.sendMessage(sendText("&4You already reached the maximum prestige! &c("+intToRoman(current)+")"));
             return;
         }
         int req = prestigeRequirement.get(playerPrestige.get(player.getUniqueId()));
@@ -257,9 +257,9 @@ public class PlayerProgress {
         RemovePlayerBalance(player, moneyReq);
         SetPrestige(player, current+1);
 
-        SendTitle(player, "&bPrestige!", "&fYou are now prestige &3"+playerPrestige.get(player.getUniqueId()), 5, 5, 5);
+        SendTitle(player, "&bPrestige!", "&fYou are now prestige &3"+intToRoman(playerPrestige.get(player.getUniqueId())), 5, 5, 5);
 
-        Broadcast("&3"+player.getName()+" &bhas reached &3Prestige &3"+playerPrestige.get(player.getUniqueId())+"! &bsay 'GG' in the chat!");
+        Broadcast("&3"+player.getName()+" &bhas reached &3Prestige &3"+intToRoman(playerPrestige.get(player.getUniqueId()))+"! &bsay 'GG' in the chat!");
 
         PlaySoundAt(Sound.UI_TOAST_CHALLENGE_COMPLETE, player.getLocation(), 1, 1);
     }
