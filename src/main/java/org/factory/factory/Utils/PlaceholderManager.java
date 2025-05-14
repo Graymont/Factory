@@ -12,8 +12,7 @@ import static org.factory.factory.Utils.CooldownManager.getGlobalFormattedRemain
 import static org.factory.factory.Utils.CooldownManager.getGlobalRemainingTime;
 import static org.factory.factory.Utils.FactoryEvents.currentEvent;
 import static org.factory.factory.Utils.PlayerProgress.*;
-import static org.factory.factory.Utils.UserInterface.FormatDouble;
-import static org.factory.factory.Utils.UserInterface.formatItemName;
+import static org.factory.factory.Utils.UserInterface.*;
 
 public class PlaceholderManager extends PlaceholderExpansion {
     @Override
@@ -37,6 +36,10 @@ public class PlaceholderManager extends PlaceholderExpansion {
 
         if (identifier.equalsIgnoreCase("level")) {
             return String.valueOf(playerLevel.get(player.getUniqueId()));
+        }
+
+        if (identifier.equalsIgnoreCase("prestige")) {
+            return String.valueOf(intToRoman(playerPrestige.get(player.getUniqueId())));
         }
 
         if (identifier.equalsIgnoreCase("exp")) {

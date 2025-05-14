@@ -107,7 +107,11 @@ public class FactoryEvents {
             SetEvent(EventType.None);
         }
 
-        AnnounceEvent(currentEvent);
+        if (currentEvent != EventType.None){
+            AnnounceEvent(currentEvent);
+        }else{
+            Broadcast(sendText("&eOops! There's no event happening right now... :("));
+        }
     }
 
     public static void AnnounceEvent(EventType type){

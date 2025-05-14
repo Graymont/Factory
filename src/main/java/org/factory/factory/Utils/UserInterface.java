@@ -96,7 +96,7 @@ public class UserInterface {
 
     public static String intToRoman(int number) {
         if (number <= 0 || number > 3999) {
-            throw new IllegalArgumentException("Number must be between 1 and 3999");
+            return "-";
         }
 
         String[] romans = {

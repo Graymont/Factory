@@ -29,10 +29,12 @@ import static org.factory.factory.Utils.CooldownManager.ResetCooldown;
 import static org.factory.factory.Utils.CooldownManager.SetCooldown;
 import static org.factory.factory.Utils.Dungeon.GetDungeonLoot;
 import static org.factory.factory.Utils.Dungeon.TeleportDungeon;
+import static org.factory.factory.Utils.FactoryEnchant.GetEnchantmentBook;
 import static org.factory.factory.Utils.FactoryEvents.RollEvents;
 import static org.factory.factory.Utils.FactoryEvents.SetEvent;
 import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.FactoryMachine.*;
+import static org.factory.factory.Utils.FactoryMob.SpawnDungeonMob;
 import static org.factory.factory.Utils.FactoryMob.SpawnMob;
 import static org.factory.factory.Utils.FactoryQuest.*;
 import static org.factory.factory.Utils.GUIManager.*;
@@ -195,6 +197,10 @@ public class Commands implements CommandExecutor, TabCompleter {
                 UpdateItem(player, "hand", item);
                 player.sendMessage(sendText("&aSet &2"+statsKey+" &ato &6"+keyValue));
             }
+            else if (args[0].equalsIgnoreCase("testenchant")){
+                assert sender instanceof Player;
+                ((Player) sender).getInventory().addItem(GetEnchantmentBook(FactoryEnchant.Enchant.Efficiency, FactoryEnchant.EnchantType.Tool, 2));
+            }
             else if (args[0].equalsIgnoreCase("testitem")){
                 FactoryItem item = new FactoryItem();
                 List<ItemStack> testItemList = Arrays.asList(
@@ -205,6 +211,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                         );
 
                 for (ItemStack addedItem : testItemList){
+                    assert sender instanceof Player;
                     ((Player) sender).getInventory().addItem(addedItem);
                 }
 
@@ -280,6 +287,15 @@ public class Commands implements CommandExecutor, TabCompleter {
 
                 SaveSpawner(name, location);
                 sender.sendMessage(sendText("&aMoved spawner with name: &2"+name+" &aat: &6"+location.toString()));
+            }
+
+            else if (args[0].equalsIgnoreCase("spawndungeonmob")){
+                assert sender instanceof Player;
+                Player player = (Player) sender;
+                Location location = player.getLocation();
+                String mob = args[1];
+                int level = Integer.parseInt(args[2]);
+                SpawnDungeonMob(location, mob, level);
             }
 
             else if (args[0].equalsIgnoreCase("removelocation")){
@@ -848,6 +864,8 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("opentrader");
 
                 argsList.add("setprestige");
+
+                argsList.add("spawndungeonmob");
 
                 argsList.add("setlevel");
                 argsList.add("addlevel");

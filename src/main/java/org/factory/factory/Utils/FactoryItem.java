@@ -25,8 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 
 import static org.factory.factory.Database.*;
-import static org.factory.factory.Events.attributeList;
-import static org.factory.factory.Events.globalMaxMachine;
+import static org.factory.factory.Events.*;
 import static org.factory.factory.Factory.getMainPlugin;
 import static org.factory.factory.Utils.Booster.GetBoosterPercent;
 import static org.factory.factory.Utils.Booster.getFormattedRemainingBooster;
@@ -47,19 +46,19 @@ public class FactoryItem {
 
     private double attackDamage = 5;
     private double attackSpeed = 1;
-    private double health = 1;
-    private double steam = 1;
+    private double health = 0;
+    private double steam = 0;
     private double attackRange = 3;
-    private double criticalChance = 10;
-    private double criticalDamage = 100;
-    private double steamConsumption = 5;
+    private double criticalChance = 0;
+    private double criticalDamage = 0;
+    private double steamConsumption = 0;
     private double armor = 1;
-    private double undeadDamage = 1;
-    private double undeadDefense = 1;
-    private double mutantDamage = 1;
-    private double mutantDefense = 1;
-    private double meleeDamage = 1;
-    private double rangeDamage = 1;
+    private double undeadDamage = 0;
+    private double undeadDefense = 0;
+    private double mutantDamage = 0;
+    private double mutantDefense = 0;
+    private double meleeDamage = 0;
+    private double rangeDamage = 0;
     private double proficiency = 0;
     private String bonusStats = "";
     private double durability = 10000;
@@ -80,6 +79,7 @@ public class FactoryItem {
     private Material material = Material.WOODEN_SWORD;
 
     public static String itemKey = "item";
+    public static String revisionCodeKey = "revisionCode";
     public static String attackDamageKey = "attackDamage";
     public static String attackRangeKey = "attackRange";
     public static String attackSpeedKey = "attackSpeed";
@@ -201,6 +201,7 @@ public class FactoryItem {
                 { "goldensword", Material.GOLDEN_SWORD, 7, 0.7d, 4, "Golden Sword", Rarity.RarityType.Epic, Type.Weapon, SubType.Sword, 850, 5 },
                 { "diamondsword", Material.DIAMOND_SWORD, 8, 0.5d, 5, "Diamond Sword", Rarity.RarityType.Legendary, Type.Weapon, SubType.Sword, 1200, 7 },
                 { "netheritesword", Material.NETHERITE_SWORD, 10, 0.3d, 6, "Netherite Sword", Rarity.RarityType.Immortal, Type.Weapon, SubType.Sword, 2500, 10 },
+                { "sharpnetheritesword", Material.NETHERITE_SWORD, 20, 0.3d, 6, "Sharp Netherite Sword", Rarity.RarityType.Immortal, Type.Weapon, SubType.Sword, 2500, 20 },
                 { "bow", Material.BOW, 4, 1.5d, 10, "Bow", Rarity.RarityType.Common, Type.Weapon, SubType.Bow, 100, 1 },
 
                 // Armor
@@ -376,6 +377,7 @@ public class FactoryItem {
                 item.setHealth(0);
                 item.setSteam(0);
                 item.setArmor(0);
+                item.setCriticalChance(10);
 
                 item.setLevelMinimum(levelMinimum);
 
@@ -820,6 +822,8 @@ public class FactoryItem {
         SaveItem("spiderspawner", CreateSpawner(EntityType.SPIDER));
         SaveItem("creeperspawner", CreateSpawner(EntityType.CREEPER));
         SaveItem("endermanspawner", CreateSpawner(EntityType.ENDERMAN));
+        SaveItem("blazespawner", CreateSpawner(EntityType.BLAZE));
+        SaveItem("guardianspawner", CreateSpawner(EntityType.GUARDIAN));
     }
 
     public static HashMap<String, List<ItemStack>> itemDatabase = new HashMap<>();
@@ -857,7 +861,7 @@ public class FactoryItem {
 
                 "coal", "iron", "copper", "platinum", "tin", "lead", "aluminium", "silver", "gold",
 
-                "amethyst", "garnet", "topaz", "jade", "aquamarine", "sapphire", "ruby", "emerald", "diamond"
+                "amethyst", "garnet", "topaz", "jade", "aquamarine", "sapphire", "ruby", "emerald", "diamond", "netherite"
 
         );
 
@@ -1007,6 +1011,7 @@ public class FactoryItem {
         preparedMachines.put("ruby", Material.RED_CONCRETE);
         preparedMachines.put("emerald", Material.EMERALD_BLOCK);
         preparedMachines.put("diamond", Material.DIAMOND_BLOCK);
+        preparedMachines.put("netherite", Material.NETHERITE_BLOCK);
 
         for (Map.Entry<String, Material> entry : preparedMachines.entrySet()) {
             name = entry.getKey();
@@ -1380,50 +1385,64 @@ public class FactoryItem {
             }
         }
 
+        container.set(GetNamespacedKey(revisionCodeKey), PersistentDataType.INTEGER, globalRevision);
+
         PersistentDataType<Double, Double> doubleType = PersistentDataType.DOUBLE;
 
         container.set(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN, true);
 
         container.set(GetNamespacedKey(attackDamageKey), PersistentDataType.DOUBLE,
-                container.get(GetNamespacedKey(baseKey+attackDamageKey), doubleType)+getBonusStats(container, attackDamageKey));
+                container.get(GetNamespacedKey(baseKey+attackDamageKey), doubleType)
+                        +getBonusStats(container, attackDamageKey));
 
         container.set(GetNamespacedKey(attackRangeKey), PersistentDataType.DOUBLE, attackRange);
 
         container.set(GetNamespacedKey(attackSpeedKey), PersistentDataType.DOUBLE, attackSpeed);
 
-        container.set(GetNamespacedKey(criticalChanceKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+criticalChanceKey), doubleType)
+        container.set(GetNamespacedKey(criticalChanceKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+criticalChanceKey), doubleType)
                 +getBonusStats(container, criticalChanceKey));
 
-        container.set(GetNamespacedKey(criticalDamageKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+criticalDamageKey), doubleType)
+        container.set(GetNamespacedKey(criticalDamageKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+criticalDamageKey), doubleType)
                 +getBonusStats(container, criticalDamageKey));
 
-        container.set(GetNamespacedKey(steamKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+steamKey), doubleType)
+        container.set(GetNamespacedKey(steamKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+steamKey), doubleType)
                 +getBonusStats(container, steamKey));
 
         container.set(GetNamespacedKey(steamConsumptionKey), PersistentDataType.DOUBLE, steamConsumption);
 
-        container.set(GetNamespacedKey(healthKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+healthKey), doubleType)
+        container.set(GetNamespacedKey(healthKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+healthKey), doubleType)
                 +getBonusStats(container, healthKey));
 
-        container.set(GetNamespacedKey(armorKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+armorKey), doubleType)
+        container.set(GetNamespacedKey(armorKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+armorKey), doubleType)
                 +getBonusStats(container, armorKey));
 
-        container.set(GetNamespacedKey(undeadDamageKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+undeadDamageKey), doubleType)
+        container.set(GetNamespacedKey(undeadDamageKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+undeadDamageKey), doubleType)
                 +getBonusStats(container, undeadDamageKey));
 
-        container.set(GetNamespacedKey(undeadDefenseKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+undeadDefenseKey), doubleType)
+        container.set(GetNamespacedKey(undeadDefenseKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+undeadDefenseKey), doubleType)
                 +getBonusStats(container, undeadDefenseKey));
 
-        container.set(GetNamespacedKey(mutantDamageKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+mutantDamageKey), doubleType)
+        container.set(GetNamespacedKey(mutantDamageKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+mutantDamageKey), doubleType)
                 +getBonusStats(container, mutantDamageKey));
 
-        container.set(GetNamespacedKey(mutantDefenseKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+mutantDefenseKey), doubleType)
+        container.set(GetNamespacedKey(mutantDefenseKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+mutantDefenseKey), doubleType)
                 +getBonusStats(container, mutantDefenseKey));
 
-        container.set(GetNamespacedKey(meleeDamageKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+meleeDamageKey), doubleType)
+        container.set(GetNamespacedKey(meleeDamageKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+meleeDamageKey), doubleType)
                 +getBonusStats(container, meleeDamageKey));
 
-        container.set(GetNamespacedKey(rangeDamageKey), PersistentDataType.DOUBLE, container.get(GetNamespacedKey(baseKey+rangeDamageKey), doubleType)
+        container.set(GetNamespacedKey(rangeDamageKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+rangeDamageKey), doubleType)
                 +getBonusStats(container, rangeDamageKey));
 
 
@@ -1941,6 +1960,11 @@ public class FactoryItem {
 
     public static boolean isHoe(ItemStack item) {
         if (item != null) {
+
+            if (item.getType() == Material.AIR){
+                return false;
+            }
+
             Material type = item.getType();
             return
                     type == Material.WOODEN_HOE || type == Material.STONE_HOE ||
@@ -2144,8 +2168,11 @@ public class FactoryItem {
         if (item == null) {
             return false;
         }
+        if (item.getType() == Material.AIR){
+            return false;
+        }
         ItemMeta meta = item.getItemMeta();
-        List<String> lore = meta.getLore();
+        //List<String> lore = meta.getLore();
 
         PersistentDataContainer container = meta.getPersistentDataContainer();
         return container.has(GetNamespacedKey(itemKey));
@@ -2710,7 +2737,7 @@ public class FactoryItem {
         switch (rarity) {
             case Rarity.RarityType.Common:
                 bonusAmount = 1;
-                meleeAttackRange = random.nextInt(3) + 2;
+                meleeAttackRange = random.nextInt(5) + 4;
                 meleeAttackSpeed = 1.0 + (0.5 * random.nextDouble()); // 1.0 - 1.5
 
                 criticalChance = random.nextInt(15)+10;
@@ -2720,7 +2747,7 @@ public class FactoryItem {
                 break;
             case Rarity.RarityType.Uncommon:
                 bonusAmount = 2;
-                meleeAttackRange = random.nextInt(4) + 3;
+                meleeAttackRange = random.nextInt(5) + 4;
                 meleeAttackSpeed = 0.9 + (0.4 * random.nextDouble()); // 0.9 - 1.3
 
                 criticalChance = random.nextInt(18)+12;
@@ -2730,7 +2757,7 @@ public class FactoryItem {
                 break;
             case Rarity.RarityType.Rare:
                 bonusAmount = 3;
-                meleeAttackRange = random.nextInt(4) + 3;
+                meleeAttackRange = random.nextInt(6) + 5;
                 meleeAttackSpeed = 0.8 + (0.4 * random.nextDouble()); // 0.8 - 1.2
 
                 criticalChance = random.nextInt(25)+15;
@@ -2740,7 +2767,7 @@ public class FactoryItem {
                 break;
             case Rarity.RarityType.Epic:
                 bonusAmount = 4;
-                meleeAttackRange = random.nextInt(5) + 4;
+                meleeAttackRange = random.nextInt(6) + 5;
                 meleeAttackSpeed = 0.7 + (0.3 * random.nextDouble()); // 0.7 - 1.0
 
                 criticalChance = random.nextInt(30)+25;

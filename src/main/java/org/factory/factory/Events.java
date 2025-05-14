@@ -87,6 +87,7 @@ import static org.factory.factory.Utils.GUIManager.*;
 import static org.factory.factory.Utils.MultiBlock.*;
 import static org.factory.factory.Utils.PersistentDataManager.*;
 import static org.factory.factory.Utils.PlayerProgress.*;
+import static org.factory.factory.Utils.PlayerProgressManager.*;
 import static org.factory.factory.Utils.SQLiteDatabase.*;
 import static org.factory.factory.Utils.UserInterface.*;
 import static org.factory.factory.Utils.VaultEconomy.*;
@@ -993,14 +994,29 @@ public class Events implements Listener {
         Block block = event.getBlock();
         Location location = block.getLocation();
 
+        ItemStack offHandItem = player.getInventory().getItemInOffHand();
+        if (isMachine(offHandItem)){
+            event.setCancelled(true);
+            player.sendMessage(sendText("&4Please empty your offhand before placing machine!"));
+            return;
+        }
+
         if (block.getType() != Material.AIR){
             ItemStack item = player.getInventory().getItemInMainHand().clone();
+
             if (!isMachine(item)){
                 return;
             }
             if (event.isCancelled()){
                 return;
             }
+
+            if (offHandItem.getType() != Material.AIR){
+                event.setCancelled(true);
+                player.sendMessage(sendText("&4Please empty your offhand before placing machine!"));
+                return;
+            }
+
             ItemMeta meta = item.getItemMeta();
             item.setAmount(1);
             NamespacedKey key = GetNamespacedKey(machineKey);
@@ -1114,7 +1130,7 @@ public class Events implements Listener {
             PlayParticleAtBlock(block, Particle.SMOKE);
             SpawnBlockCrackParticle(block);
             player.sendMessage(sendText("&bPlaced Machine "+meta.getDisplayName()+" &6["+mc+"&e/&6"+maxMachines.get(player.getUniqueId())+"]"));
-            SendTitle(player, "&bMachine Placed!", "&3Shift-Left &fto Open Engine", 0, 1, 1);
+            SendTitle(player, "&3Left-Click &fto Remove", "&3Shift-Left &fto Open Engine", 0, 1, 1);
         }
     }
 
@@ -1324,7 +1340,7 @@ public class Events implements Listener {
 
     public static void SpawnMachineTag(String player, Location location, String machineName, int taskId) {
         //RemoveMachineTags(location, 0);
-        Vector tagOffset = new Vector(0.5, 2.0, 0.5);
+        Vector tagOffset = new Vector(0.5, 1.5, 0.5);
         Location spawnLocation = location.clone().add(tagOffset);
 
 
@@ -1347,9 +1363,9 @@ public class Events implements Listener {
             statusColor = "&8⚠ ";
         }
 
-        spawnMachineTag(spawnLocation, sendText(machineName), location);
+        spawnMachineTag(spawnLocation, sendText(machineName)+" &8[&9"+player+"&8]", location);
         spawnMachineTag(spawnLocation2, statusColor + machineStatus, location);
-        spawnMachineTag(spawnLocation3, "&8[&9"+player+"&8]", location);
+        //spawnMachineTag(spawnLocation3, "&8[&9"+player+"&8]", location);
         //spawnMachineTag(spawnLocation4, "&8[ &9Left-Click &fto &3Take &8]", location);
         //spawnMachineTag(spawnLocation5, "&8[ &9Sneak &f+ &9Left-Click &fto &3Open &8]", location);
     }
@@ -1486,16 +1502,16 @@ public class Events implements Listener {
 
             else if (upgradeId.equals("hoppers-limit")){
                 if (level == 2){
-                    island.setBlockLimit(Key.of(Material.HOPPER), 25);
-                    consoleLog(sendText("&aHopper Limit of "+player.getName()+" &ahas been set to 25"));
-                }
-                else if (level == 3){
                     island.setBlockLimit(Key.of(Material.HOPPER), 45);
                     consoleLog(sendText("&aHopper Limit of "+player.getName()+" &ahas been set to 45"));
                 }
+                else if (level == 3){
+                    island.setBlockLimit(Key.of(Material.HOPPER), 75);
+                    consoleLog(sendText("&aHopper Limit of "+player.getName()+" &ahas been set to 75"));
+                }
                 else if (level == 4){
-                    island.setBlockLimit(Key.of(Material.HOPPER), 64);
-                    consoleLog(sendText("&aHopper Limit of "+player.getName()+" &ahas been set to 64"));
+                    island.setBlockLimit(Key.of(Material.HOPPER), 154);
+                    consoleLog(sendText("&aHopper Limit of "+player.getName()+" &ahas been set to 154"));
                 }
             }
 
@@ -1625,22 +1641,22 @@ public class Events implements Listener {
 
 
     public static void spawnMachineTag(Location location, String name, Location machineLocation) {
-        getScheduler().runTaskLater(getMainPlugin(), () -> {
-            World world = location.getWorld();
-            if (world == null) return;
 
-            TextDisplay textDisplay = (TextDisplay) world.spawnEntity(location, EntityType.TEXT_DISPLAY);
+        World world = location.getWorld();
+        if (world == null) return;
 
-            textDisplay.setText(sendText(name));
-            textDisplay.setBillboard(Display.Billboard.CENTER);
-            textDisplay.setShadowed(false);
-            textDisplay.setSeeThrough(false);
-            textDisplay.setLineWidth(300);
-            textDisplay.setViewRange(30.0f);
+        TextDisplay textDisplay = (TextDisplay) world.spawnEntity(location, EntityType.TEXT_DISPLAY);
 
-            textDisplay.addScoreboardTag("MachineTag." + machineLocation);
+        textDisplay.setText(sendText(name));
+        textDisplay.setBillboard(Display.Billboard.CENTER);
+        textDisplay.setShadowed(false);
+        textDisplay.setSeeThrough(false);
+        textDisplay.setLineWidth(300);
+        textDisplay.setViewRange(5.0f);
 
-        }, 5L);
+        textDisplay.addScoreboardTag("MachineTag." + machineLocation);
+
+
 
         /*Bukkit.getScheduler().runTaskLater(plugin, () -> {
 
@@ -1652,6 +1668,7 @@ public class Events implements Listener {
     public static void PlayerInventoryItems(Player player){
         //PlayerItemAttributes(player);
         PlayerMiningSpeed(player);
+        UpdatePlayerItem(player);
     }
 
     @EventHandler
@@ -1771,7 +1788,27 @@ public class Events implements Listener {
                         Integer prestigeMinimum = GetPrestigeRequirement(levelMinimum);
 
                         Boolean canUseIndicator = container.get(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN);
-                        if (playerLevel.get(player.getUniqueId()) < levelMinimum || playerPrestige.get(player.getUniqueId()) < prestigeMinimum ){
+                        boolean cont = true;
+
+                        if (isMachine(item)){
+                            if (playerLevel.get(player.getUniqueId()) < levelMinimum || playerPrestige.get(player.getUniqueId()) < prestigeMinimum ){
+                                cont = false;
+                            }
+                            /*else if (playerLevel.get(player.getUniqueId()) >= levelMinimum && playerPrestige.get(player.getUniqueId()) >= prestigeMinimum ){
+                                cont = true;
+                            }*/
+                        }
+
+                        else if (isFactoryItem(item)){
+                            if (playerLevel.get(player.getUniqueId()) < levelMinimum){
+                                cont = false;
+                            }
+                            /*else if (playerLevel.get(player.getUniqueId()) >= levelMinimum){
+                                cont = true;
+                            }*/
+                        }
+
+                        if (!cont){
                             if (canUseIndicator){
                                 container.set(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN, false);
                                 item.setItemMeta(meta);
@@ -1784,7 +1821,7 @@ public class Events implements Listener {
                             }
                         }
 
-                        else if (playerLevel.get(player.getUniqueId()) >= levelMinimum && playerPrestige.get(player.getUniqueId()) >= prestigeMinimum ){
+                        if (cont){
                             if (!canUseIndicator){
                                 container.set(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN, true);
                                 item.setItemMeta(meta);
@@ -1901,9 +1938,12 @@ public class Events implements Listener {
 
 
                 if (!ItemNotBroken(item)){
-                    Notification_ItemBroken(player);
-                    event.setCancelled(true);
-                    return;
+                    if (!isCropBlock(event.getBlock())
+                            && !isFruit(event.getBlock())){
+                        Notification_ItemBroken(player);
+                        event.setCancelled(true);
+                        return;
+                    }
                 }
 
                 if (container.has(GetNamespacedKey(levelMinimumKey))){
@@ -1921,6 +1961,84 @@ public class Events implements Listener {
             }
         }
 
+    }
+
+    public static boolean isSoil(Block block){
+        return block.getType() == Material.DIRT ||
+                block.getType() == Material.GRASS_BLOCK ||
+                block.getType() == Material.PODZOL ||
+                block.getType() == Material.COARSE_DIRT;
+    }
+
+    @EventHandler
+    public void OnGrassHoe(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (item.getType() != Material.AIR) {
+
+            if (!player.getWorld().getName().equals("SuperiorWorld")){
+                return;
+            }
+
+            if (event.getAction() == Action.RIGHT_CLICK_BLOCK){
+                if (event.getClickedBlock() == null){
+                    return;
+                }
+
+                ItemMeta meta = item.getItemMeta();
+
+                if (!hasIslandAccess(player)) {
+                    return;
+                }
+
+                if (!isSoil(event.getClickedBlock())){
+                    return;
+                }
+
+                PersistentDataContainer container = meta.getPersistentDataContainer();
+
+                if (container.has(GetNamespacedKey(itemKey))) {
+
+                    if (!isFactoryItem(item)) {
+                        return;
+                    }
+
+                    if (!isTool(item)) {
+                        return;
+                    }
+
+                    if (!isHoe(item)){
+                        return;
+                    }
+
+
+                    if (!ItemNotBroken(item)) {
+                        Notification_ItemBroken(player);
+                        event.setCancelled(true);
+                        return;
+                    }
+
+                    if (container.has(GetNamespacedKey(levelMinimumKey))) {
+                        if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))) {
+                            event.setCancelled(true);
+                            player.sendMessage(Notification_NoLevel(player));
+                            return;
+                        }
+                    }
+
+                    event.getClickedBlock().setType(Material.FARMLAND);
+
+                    if (currentEvent != EventType.Invincible_Items){
+                        ManageDurability(player, "hand");
+                    }
+
+                    UpdateItem(player, "hand", item);
+
+                    PlaySoundAt(Sound.ENTITY_VILLAGER_WORK_FARMER, event.getClickedBlock().getLocation(), 1, 2);
+                }
+            }
+        }
     }
 
 
@@ -2053,7 +2171,11 @@ public class Events implements Listener {
             if (item.getType() != Material.AIR){
                 ItemMeta meta = item.getItemMeta();
                 if (!meta.hasLore() && !meta.hasDisplayName()){
-                    event.getEntity().getItemStack().setItemMeta(ProcessItemMeta(event.getEntity().getItemStack()).getItemMeta());
+                    if (isCropItem(item)){
+                        event.setCancelled(true);
+                    }else{
+                        event.getEntity().getItemStack().setItemMeta(ProcessItemMeta(event.getEntity().getItemStack()).getItemMeta());
+                    }
                 }
             }
         }
@@ -2061,6 +2183,22 @@ public class Events implements Listener {
         if (item.getType() == Material.SPAWNER){
             if (item.getItemMeta().getLore() == null){
                 event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void OnSpawnerEgg(PlayerInteractEvent event) {
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK){
+            Player player = event.getPlayer();
+            ItemStack item = player.getInventory().getItemInMainHand();
+            if (item.getType().toString().contains("SPAWN_EGG")){
+                if (event.getClickedBlock() != null){
+                    if (event.getClickedBlock().getType() == Material.SPAWNER){
+                        event.setCancelled(true);
+                        player.sendMessage(sendText("&4You can't change spawner type!"));
+                    }
+                }
             }
         }
     }
@@ -2090,9 +2228,11 @@ public class Events implements Listener {
 
             String attributesKey = "hand";
 
+            boolean canUse = true;
+
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (!container.has(GetNamespacedKey("item"))){
-                return;
+                canUse = false;
             }
 
             Integer levelMinimum = container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER);
@@ -2100,12 +2240,12 @@ public class Events implements Listener {
                 levelMinimum = 1;
             }
             if (playerLevel.get(player.getUniqueId()) < levelMinimum){
-                return;
+                canUse = false;
             }
 
             if (isWeapon(item)){
                 if (!ItemNotBroken(item)){
-                    return;
+                    canUse = false;
                 }
                 //player.sendMessage("this is weapon");
 
@@ -2117,7 +2257,7 @@ public class Events implements Listener {
                     String fixedKey = key.getKey().toLowerCase().replaceAll(" ", "").trim();
                     /*consoleLog("key: "+key);
                     consoleLog("fixedKey: "+fixedKey);*/
-                    if (isValidAttributes(fixedKey)) {
+                    if (isValidAttributes(fixedKey) && canUse) {
                         double a = playerAttributes.get(player.getName() + ".attribute."+attributesKey+"." + fixedKey);
                         Double keyValue = container.get(key, PersistentDataType.DOUBLE);
                         assert keyValue != null;
@@ -2144,9 +2284,11 @@ public class Events implements Listener {
 
             String attributesKey = "helmet";
 
+            boolean canUse = true;
+
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (!container.has(GetNamespacedKey("item"))){
-                return;
+                canUse = false;
             }
 
             Integer levelMinimum = container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER);
@@ -2154,12 +2296,12 @@ public class Events implements Listener {
                 levelMinimum = 1;
             }
             if (playerLevel.get(player.getUniqueId()) < levelMinimum){
-                return;
+                canUse = false;
             }
 
             if (isHelmet(item)){
                 if (!ItemNotBroken(item)){
-                    return;
+                    canUse = false;
                 }
 
                 for (String attr : attributeList) {
@@ -2168,7 +2310,7 @@ public class Events implements Listener {
 
                 for (NamespacedKey key : container.getKeys()) {
                     String fixedKey = key.getKey().toLowerCase().replaceAll(" ", "").trim();
-                    if (isValidAttributes(fixedKey)) {
+                    if (isValidAttributes(fixedKey) && canUse) {
                         double a = playerAttributes.get(player.getName() + ".attribute."+attributesKey+"." + fixedKey);
                         Double keyValue = container.get(key, PersistentDataType.DOUBLE);
                         assert keyValue != null;
@@ -2193,9 +2335,11 @@ public class Events implements Listener {
 
             String attributesKey = "chestplate";
 
+            boolean canUse = true;
+
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (!container.has(GetNamespacedKey("item"))){
-                return;
+                canUse = false;
             }
 
             Integer levelMinimum = container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER);
@@ -2203,12 +2347,12 @@ public class Events implements Listener {
                 levelMinimum = 1;
             }
             if (playerLevel.get(player.getUniqueId()) < levelMinimum){
-                return;
+                canUse = false;
             }
 
             if (isChestplate(item)){
                 if (!ItemNotBroken(item)){
-                    return;
+                    canUse = false;
                 }
 
                 for (String attr : attributeList) {
@@ -2217,7 +2361,7 @@ public class Events implements Listener {
 
                 for (NamespacedKey key : container.getKeys()) {
                     String fixedKey = key.getKey().toLowerCase().replaceAll(" ", "").trim();
-                    if (isValidAttributes(fixedKey)) {
+                    if (isValidAttributes(fixedKey) && canUse) {
                         double a = playerAttributes.get(player.getName() + ".attribute."+attributesKey+"." + fixedKey);
                         Double keyValue = container.get(key, PersistentDataType.DOUBLE);
                         assert keyValue != null;
@@ -2242,9 +2386,11 @@ public class Events implements Listener {
 
             String attributesKey = "leggings";
 
+            boolean canUse = true;
+
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (!container.has(GetNamespacedKey("item"))){
-                return;
+                canUse = false;
             }
 
             Integer levelMinimum = container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER);
@@ -2252,12 +2398,12 @@ public class Events implements Listener {
                 levelMinimum = 1;
             }
             if (playerLevel.get(player.getUniqueId()) < levelMinimum){
-                return;
+                canUse = false;
             }
 
             if (isLeggings(item)){
                 if (!ItemNotBroken(item)){
-                    return;
+                    canUse = false;
                 }
 
                 for (String attr : attributeList) {
@@ -2266,7 +2412,7 @@ public class Events implements Listener {
 
                 for (NamespacedKey key : container.getKeys()) {
                     String fixedKey = key.getKey().toLowerCase().replaceAll(" ", "").trim();
-                    if (isValidAttributes(fixedKey)) {
+                    if (isValidAttributes(fixedKey) && canUse) {
                         double a = playerAttributes.get(player.getName() + ".attribute."+attributesKey+"." + fixedKey);
                         Double keyValue = container.get(key, PersistentDataType.DOUBLE);
                         assert keyValue != null;
@@ -2291,9 +2437,11 @@ public class Events implements Listener {
 
             String attributesKey = "boots";
 
+            boolean canUse = true;
+
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (!container.has(GetNamespacedKey("item"))){
-                return;
+                canUse = false;
             }
 
             Integer levelMinimum = container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER);
@@ -2301,12 +2449,12 @@ public class Events implements Listener {
                 levelMinimum = 1;
             }
             if (playerLevel.get(player.getUniqueId()) < levelMinimum){
-                return;
+                canUse = false;
             }
 
             if (isBoots(item)){
                 if (!ItemNotBroken(item)){
-                    return;
+                    canUse = false;
                 }
 
                 for (String attr : attributeList) {
@@ -2315,7 +2463,7 @@ public class Events implements Listener {
 
                 for (NamespacedKey key : container.getKeys()) {
                     String fixedKey = key.getKey().toLowerCase().replaceAll(" ", "").trim();
-                    if (isValidAttributes(fixedKey)) {
+                    if (isValidAttributes(fixedKey) && canUse) {
                         double a = playerAttributes.get(player.getName() + ".attribute."+attributesKey+"." + fixedKey);
                         Double keyValue = container.get(key, PersistentDataType.DOUBLE);
                         assert keyValue != null;
@@ -2450,17 +2598,32 @@ public class Events implements Listener {
         ItemStack item = player.getInventory().getItemInMainHand();
         if (item.getType() != Material.AIR){
 
+            if (item.getType().toString().contains("SPAWN_EGG") ||
+                    item.getType().toString().contains("BONE") ||
+                    item.getType().toString().contains("WHEAT") ||
+                    item.getType().toString().contains("INGOT") ||
+            item.getType().toString().contains("SEEDS") ||
+            item.getType().isEdible()){
+                return;
+            }
+
             ItemMeta meta = item.getItemMeta();
 
             /*if (!isFactoryItem(item)){
                 return;
             }*/
 
+
             if (!isFactoryItem(item) || !isWeapon(item)){
                 Entity target = player.getTargetEntity(3);
+
+                if (player.isSneaking()){
+                    RemoveEntityObject(target, player);
+                }
+
                 if (target instanceof LivingEntity){
                     if (!(target instanceof ArmorStand)){
-                        ManageDamage(player, target, 2);
+                        ManageDamage(player, target, 2, false);
                     }
                 }
                 return;
@@ -2489,11 +2652,72 @@ public class Events implements Listener {
 
         }else{
             Entity target = player.getTargetEntity(3);
+            if (player.isSneaking()){
+                RemoveEntityObject(target, player);
+            }
             if (target instanceof LivingEntity){
                 if (!(target instanceof ArmorStand)){
-                    ManageDamage(player, target, 2);
+                    ManageDamage(player, target, 2, false);
                 }
             }
+        }
+    }
+
+    public static void RemoveEntityObject(Entity target, Player player){
+
+        if (!player.hasPermission("admin")){
+            if (!hasIslandAccess(player)){
+                return;
+            }
+        }
+
+        if (!player.isSneaking()){
+            player.sendMessage(sendText("&eSneak + Left-Click to remove Armor Stand/Minecart"));
+            return;
+        }
+
+        if (target instanceof Minecart){
+            if (target.getType() == EntityType.MINECART){
+                DropItem(target.getLocation(), new ItemStack(Material.MINECART), 1);
+            }
+            else if (target.getType() == EntityType.CHEST_MINECART){
+                DropItem(target.getLocation(), new ItemStack(Material.CHEST_MINECART), 1);
+            }
+            else if (target.getType() == EntityType.FURNACE_MINECART){
+                DropItem(target.getLocation(), new ItemStack(Material.FURNACE_MINECART), 1);
+            }
+            else if (target.getType() == EntityType.TNT_MINECART){
+                DropItem(target.getLocation(), new ItemStack(Material.TNT_MINECART), 1);
+            }
+            else if (target.getType() == EntityType.HOPPER_MINECART){
+                DropItem(target.getLocation(), new ItemStack(Material.HOPPER_MINECART), 1);
+            }
+
+            target.remove();
+        }
+
+        if (target instanceof ArmorStand){
+
+            if (((ArmorStand) target).getHelmet().getType() != Material.AIR){
+                player.sendMessage(sendText("&4Can't remove this Armor Stand! &c(remove helmet)"));
+                return;
+            }
+            if (((ArmorStand) target).getChestplate().getType() != Material.AIR){
+                player.sendMessage(sendText("&4Can't remove this Armor Stand! &c(remove chestplate)"));
+                return;
+            }
+            if (((ArmorStand) target).getLeggings().getType() != Material.AIR){
+                player.sendMessage(sendText("&4Can't remove this Armor Stand! &c(remove leggings)"));
+                return;
+            }
+            if (((ArmorStand) target).getBoots().getType() != Material.AIR){
+                player.sendMessage(sendText("&4Can't remove this Armor Stand! &c(remove boots)"));
+                return;
+            }
+
+            DropItem(target.getLocation(), new ItemStack(Material.ARMOR_STAND), 1);
+
+            target.remove();
         }
     }
 
@@ -2530,7 +2754,8 @@ public class Events implements Listener {
 
         Random random = new Random();
 
-        double attackDamageValue = GetMobLevel(entity);
+        int mobLevel = GetMobLevel(entity);
+        double attackDamageValue = mobLevel + (mobLevel * random.nextDouble());
 
         if (GetEntityDungeonTier(entity.getLocation()) == 0){
             attackDamageValue = 3;
@@ -2651,7 +2876,7 @@ public class Events implements Listener {
                     }, (long) attackRange);
                 }
                 else if (isBlast(item)){
-                    ManageDamage(player, target, totalDamage*2);
+                    ManageDamage(player, target, totalDamage*2, true);
                 }
                 if (currentEvent != FactoryEvents.EventType.Invincible_Items){
                     ManageDurability(player, "hand");
@@ -2661,7 +2886,26 @@ public class Events implements Listener {
 
             if (target instanceof LivingEntity){
                 if (isSword(item) || isHammer(item)){
-                    ManageDamage(player, target, totalDamage*2);
+                    ManageDamage(player, target, totalDamage*2, true);
+
+                    if (isSword(item)){
+                        for (Entity entity : player.getNearbyEntities(5,5,5)){
+                            if (entity instanceof Mob){
+                                ManageDamage(player, entity, totalDamage*0.5, false);
+                            }
+                        }
+                    }
+
+                    else if (isHammer(item)){
+                        for (Entity entity : target.getNearbyEntities(6,3,6)){
+                            if (entity instanceof Mob){
+                                if (entity != target){
+                                    ManageDamage(player, entity, totalDamage*0.3, false);
+                                }
+                            }
+                        }
+                    }
+
                 }
                 RemoveSteam(player, steamConsumption);
                 if (currentEvent != FactoryEvents.EventType.Invincible_Items){
@@ -2677,7 +2921,7 @@ public class Events implements Listener {
         }
     }
 
-    public void ManageDamage(Player player, Entity target, double totalDamage){
+    public void ManageDamage(Player player, Entity target, double totalDamage, boolean main){
 
         /*
         formula
@@ -2711,7 +2955,7 @@ public class Events implements Listener {
             }
 
             double damageCalculation = (totalDamage + entityArmor > 0) ? totalDamage / 2 * totalDamage / (totalDamage + entityArmor) : 0;
-            if (isCrit(player)){
+            if (isCrit(player) && main){
 
 
                 ((Mob) target).damage((damageCalculation*2)+criticalDamage, player);
@@ -2730,7 +2974,7 @@ public class Events implements Listener {
                 double entityArmor = playerArmor.getOrDefault(target, 0.0);
                 double damageCalculation = (totalDamage + entityArmor > 0) ? totalDamage / 2 * totalDamage / (totalDamage + entityArmor) : 0;
 
-                if (isCrit(player)){
+                if (isCrit(player) && main){
                     ((Player) target).damage((damageCalculation*2)+criticalDamage, player);
                     spawnDamageIndicator(target.getLocation(), (damageCalculation*2)+criticalDamage, true);
                     //player.sendMessage(sendText("(player) CRIT You damage enemy with: "+FormatDouble(totalDamage*2)));
@@ -2752,7 +2996,7 @@ public class Events implements Listener {
                 Entity target = event.getHitEntity();
                 if (target instanceof LivingEntity){
                     double totalDamage = CalculateDamage(player, target, "range");
-                    ManageDamage(player, target, totalDamage*2);
+                    ManageDamage(player, target, totalDamage*2, true);
                 }
                 entity.remove();
             }
@@ -2790,6 +3034,9 @@ public class Events implements Listener {
     public boolean isCrit(Player player){
         boolean crit = false;
         double criticalChance = playerAttributes.get(player.getName()+".attribute.total.criticalchance");
+        if (criticalChance > 50){
+            criticalChance = 50;
+        }
         Random random = new Random();
         int criticalGet = random.nextInt(100)+1;
         if (criticalGet <= criticalChance){
@@ -2910,6 +3157,8 @@ public class Events implements Listener {
                 Double attackRange = container.get(GetNamespacedKey(attackRangeKey), PersistentDataType.DOUBLE);
                 Double attackSpeed = container.get(GetNamespacedKey(attackSpeedKey), PersistentDataType.DOUBLE);
                 Double criticalChance = container.get(GetNamespacedKey(baseKey+criticalChanceKey), PersistentDataType.DOUBLE);
+                Double criticalDamage = container.get(GetNamespacedKey(baseKey+criticalDamageKey), PersistentDataType.DOUBLE);
+                //player.sendMessage(""+criticalDamage);
                 Double steamConsumption = container.get(GetNamespacedKey(steamConsumptionKey), PersistentDataType.DOUBLE);
                 Double durability = container.get(GetNamespacedKey(durabilityKey), PersistentDataType.DOUBLE);
                 Double maxDurability = container.get(GetNamespacedKey(maxDurabilityKey), PersistentDataType.DOUBLE);
@@ -2953,6 +3202,7 @@ public class Events implements Listener {
                 updatedItem.setAttackRange(attackRange);
                 updatedItem.setAttackSpeed(attackSpeed);
                 updatedItem.setCriticalChance(criticalChance);
+                updatedItem.setCriticalDamage(criticalDamage);
                 updatedItem.setSteamConsumption(steamConsumption);
 
                 updatedItem.setHealth(health);
@@ -3180,6 +3430,10 @@ public class Events implements Listener {
 
         PersistentDataContainer container = meta.getPersistentDataContainer();
         if (container.has(GetNamespacedKey(gameMenuKey))) {
+            event.setCancelled(true);
+        }
+
+        if (isMachine(item)){
             event.setCancelled(true);
         }
     }
@@ -3818,6 +4072,7 @@ public class Events implements Listener {
 
 
         if (entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.BUILD_IRONGOLEM ||
+                entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.BREEDING ||
                 entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.BUILD_WITHER){
 
                 event.setCancelled(true);
@@ -3833,6 +4088,7 @@ public class Events implements Listener {
             if (entity.getWorld().getName().equals("SuperiorWorld")){
 
                 if (entity instanceof Phantom){
+                    entity.remove();
                     return;
                 }
 
@@ -3848,7 +4104,11 @@ public class Events implements Listener {
                 level = 10;
             }
 
-            entity.addScoreboardTag("VanillaMob");
+            if (entity.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG){
+                entity.addScoreboardTag("EggMob");
+            }else{
+                entity.addScoreboardTag("VanillaMob");
+            }
             entity.setCustomNameVisible(true);
 
             Bukkit.getScheduler().runTaskLater(getMainPlugin(), () -> {
@@ -3870,10 +4130,17 @@ public class Events implements Listener {
             //consoleLog("mob level : "+GetMobLevel(entity));
             PlaySoundAt(Sound.ENTITY_PLAYER_LEVELUP, location, 1, 3);
 
+            if (entity instanceof Animals){
+                ((Animals) entity).setAdult();
+                ((Animals) entity).setAgeLock(true);
+            }
+
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (entity.isValid()){
-                    entity.remove();
-                    PlaySoundAt(Sound.ENTITY_ITEM_PICKUP, location, 1, 3);
+                    if (entity.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.SPAWNER_EGG){
+                        entity.remove();
+                        PlaySoundAt(Sound.ENTITY_ITEM_PICKUP, location, 1, 3);
+                    }
                 }
             }, 1200L);
         }
@@ -4049,12 +4316,18 @@ public class Events implements Listener {
         }
         else if (entity instanceof Guardian){
             randomDropAmount = random.nextInt(2)+1;
-            item = new ItemStack(Material.PRISMARINE);
+            item = new ItemStack(Material.PRISMARINE_SHARD);
             item2= new ItemStack(Material.PRISMARINE_CRYSTALS);
         }
         Location location = entity.getLocation();
+
+        int randomSecondDrop = random.nextInt(100)+1;
+
         DropItem(location, item, randomDropAmount);
-        DropItem(location, item2, randomDropAmount2);
+
+        if (randomSecondDrop <= 50){
+            DropItem(location, item2, randomDropAmount2);
+        }
     }
 
     public static HashMap<String, Entity> entityList = new HashMap<>();
@@ -4081,8 +4354,18 @@ public class Events implements Listener {
                     }
                     return;
                 }
+
                 ItemStack item = player.getInventory().getItemInMainHand();
                 ItemMeta meta = item.getItemMeta();
+
+                if (item.getType() != Material.AIR){
+                    if (isJobTool(item)){
+                        if (!ItemNotBroken(item)){
+                            event.setCancelled(true);
+                            return;
+                        }
+                    }
+                }
 
                 Block block = event.getBlock();
                 //event.setCancelled(true);
@@ -4270,4 +4553,76 @@ public class Events implements Listener {
             }
         }
     }
+
+    public static int globalRevision = 3;
+
+    public static void UpdatePlayerItem(Player player) {
+        checkRevision(player, "hand", player.getInventory().getItemInMainHand());
+        checkRevision(player, "offhand", player.getInventory().getItemInOffHand());
+        checkRevision(player, "helmet", player.getInventory().getHelmet());
+        checkRevision(player, "chestplate", player.getInventory().getChestplate());
+        checkRevision(player, "leggings", player.getInventory().getLeggings());
+        checkRevision(player, "boots", player.getInventory().getBoots());
+
+        updateRevision(player, "hand", player.getInventory().getItemInMainHand());
+        updateRevision(player, "offhand", player.getInventory().getItemInOffHand());
+        updateRevision(player, "helmet", player.getInventory().getHelmet());
+        updateRevision(player, "chestplate", player.getInventory().getChestplate());
+        updateRevision(player, "leggings", player.getInventory().getLeggings());
+        updateRevision(player, "boots", player.getInventory().getBoots());
+    }
+
+    private static void checkRevision(Player player, String slot, ItemStack item) {
+        if (item == null || item.getType() == Material.AIR || !isFactoryItem(item)) return;
+
+        if (!isWeapon(item) && !isJobTool(item) && !isArmor(item)){
+            return;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        if (!container.has(GetNamespacedKey(revisionCodeKey))) {
+            container.set(GetNamespacedKey(revisionCodeKey), PersistentDataType.INTEGER, 0);
+            item.setItemMeta(meta);
+        }
+    }
+
+    private static void updateRevision(Player player, String slot, ItemStack item) {
+        if (item == null || item.getType() == Material.AIR || !isFactoryItem(item)) return;
+
+        if (!isWeapon(item) && !isJobTool(item) && !isArmor(item)){
+            return;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+
+        if (container.has(GetNamespacedKey(revisionCodeKey))) {
+            if (container.get(GetNamespacedKey(revisionCodeKey), PersistentDataType.INTEGER) < globalRevision
+            || container.get(GetNamespacedKey(revisionCodeKey), PersistentDataType.INTEGER) > globalRevision){
+
+                if (container.get(GetNamespacedKey(baseKey+criticalDamageKey), PersistentDataType.DOUBLE) != null
+                && container.get(GetNamespacedKey(baseKey+criticalDamageKey), PersistentDataType.DOUBLE) > 90 &&
+                        container.get(GetNamespacedKey(baseKey+criticalDamageKey), PersistentDataType.DOUBLE) < 100){
+                    container.set(GetNamespacedKey(baseKey+criticalDamageKey), PersistentDataType.DOUBLE, 0.0);
+                    item.setItemMeta(meta);
+                    //player.sendMessage("update: "+container.get(GetNamespacedKey(baseKey+criticalDamageKey), PersistentDataType.DOUBLE));
+                }
+                UpdateItem(player, slot, item);
+
+                meta = item.getItemMeta();
+                container = meta.getPersistentDataContainer();
+                container.set(GetNamespacedKey(revisionCodeKey), PersistentDataType.INTEGER, globalRevision);
+                item.setItemMeta(meta);
+
+                //player.sendMessage("after update: "+container.get(GetNamespacedKey(baseKey+criticalDamageKey), PersistentDataType.DOUBLE));
+
+                player.sendMessage(sendText("&aUpdated &2"+slot+" &asuccessfully!"));
+            }
+        }
+    }
+
+
+
 }

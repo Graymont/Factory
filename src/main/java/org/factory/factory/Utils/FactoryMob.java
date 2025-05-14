@@ -10,6 +10,7 @@ import com.sk89q.worldguard.protection.regions.RegionContainer;
 import it.unimi.dsi.fastutil.Hash;
 import me.libraryaddict.disguise.DisguiseAPI;
 import me.libraryaddict.disguise.disguisetypes.Disguise;
+import me.libraryaddict.disguise.disguisetypes.DisguiseType;
 import me.libraryaddict.disguise.disguisetypes.MobDisguise;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
@@ -45,6 +46,10 @@ public class FactoryMob implements Listener {
 
         int randomDropAmount = random.nextInt(2)+1;
 
+        if (GetEntityDungeonTier(location) < 1){
+            return;
+        }
+
         int randomChance = random.nextInt(100)+1;
         if (randomChance <= 30){
             if (isAlien(entity)){
@@ -78,7 +83,7 @@ public class FactoryMob implements Listener {
                 return (Integer.parseInt(numberInText(region)));
             }
         }
-        return 1;
+        return 0;
     }
 
     public static boolean isAlien(Entity entity){
@@ -116,33 +121,74 @@ public class FactoryMob implements Listener {
     }
 
     public static void SpawnDungeonMob(Location location, String name, int level){
-        Zombie entity = (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE);
-        Disguise disguise = DisguiseAPI.getCustomDisguise(name);
-        DisguiseAPI.disguiseToAll(entity, disguise);
-        entity.setCustomNameVisible(true);
+        Mob summonedEntity = null;
 
-        entity.setMaxHealth(level*8);
-        double maxHealth = entity.getMaxHealth();
-        entity.setHealth(maxHealth);
+        Disguise disguise = null;
+        if (name.contains("tarantlas")){
+            summonedEntity = (Spider) location.getWorld().spawnEntity(location, EntityType.SPIDER);
+            disguise = new MobDisguise(DisguiseType.SPIDER);
+        }
+        else if (name.contains("leech")){
+            summonedEntity = (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE);
+            disguise = new MobDisguise(DisguiseType.SILVERFISH);
+        }
+        else if (name.contains("fangveil")){
+            summonedEntity = (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE);
+            disguise = new MobDisguise(DisguiseType.BAT);
+        }
+        else if (name.contains("pteranodon")){
+            summonedEntity = (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE);
+            disguise = new MobDisguise(DisguiseType.PHANTOM);
+        }
+        else if (name.contains("werewolf")){
+            summonedEntity = (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE);
+            disguise = new MobDisguise(DisguiseType.WOLF);
+        }else{
+            disguise = DisguiseAPI.getCustomDisguise(name);
+            if (disguise == null){
+                //consoleLog(sendText("&cDisguise with name &4"+name+" &cis not exist!"));
+                return;
+            }
+            summonedEntity = (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE);
+            ((Zombie) summonedEntity).setAdult();
+        }
+        DisguiseAPI.disguiseEntity(summonedEntity, disguise);
 
-        AttributeInstance attackDamage = entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+        AttributeInstance scale = summonedEntity.getAttribute(Attribute.GENERIC_SCALE);
+        if (scale != null) {
+            double scaleValue = 1.0+ (double) (GetEntityDungeonTier(location)) /10;
+            if (scaleValue > 2){
+                scaleValue = 2.0;
+            }
+            scale.setBaseValue(scaleValue);
+        }
+
+
+        summonedEntity.setCustomNameVisible(true);
+
+        summonedEntity.setMaxHealth(level*8);
+        double maxHealth = summonedEntity.getMaxHealth();
+        summonedEntity.setHealth(maxHealth);
+
+        /*AttributeInstance attackDamage = summonedEntity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
         if (attackDamage != null) {
             attackDamage.setBaseValue(level*2);
+        }*/
+
+        summonedEntity.setCustomName(sendText("&8[&9Lv."+level+"&8] &f"+uncolouredText(formatItemName(name))+" &8- &a"+maxHealth+"&8/&a"+maxHealth+"❤"));
+
+        summonedEntity.addScoreboardTag("DungeonMob");
+
+        if (summonedEntity.getVehicle() != null){
+            summonedEntity.getVehicle().remove();
         }
 
-        entity.setCustomName(sendText("&8[&9Lv."+level+"&8] &f"+uncolouredText(formatItemName(name))+" &8- &a"+maxHealth+"&8/&a"+maxHealth+"❤"));
-
-        entity.addScoreboardTag("DungeonMob");
-
-        if (entity.getVehicle() != null){
-            entity.getVehicle().remove();
-        }
-
+        final Mob finalSummonedEntity = summonedEntity;
         Bukkit.getScheduler().runTaskLater(getMainPlugin(), () -> {
-            if (entity.isValid()){
-                entity.remove();
-                PlaySoundAt(Sound.ENTITY_ITEM_PICKUP, entity.getLocation(), 1, 0);
-                PlayParticleAtBlock(entity.getLocation().getBlock(), Particle.SOUL_FIRE_FLAME);
+            if (finalSummonedEntity.isValid()){
+                finalSummonedEntity.remove();
+                PlaySoundAt(Sound.ENTITY_ITEM_PICKUP, finalSummonedEntity.getLocation(), 1, 0);
+                PlayParticleAtBlock(finalSummonedEntity.getLocation().getBlock(), Particle.SOUL_FIRE_FLAME);
             }
         }, 1200L);
     }
@@ -156,7 +202,7 @@ public class FactoryMob implements Listener {
             Location location = storedSpawnerList.get(key);
 
             int playerCount = 0;
-            for (Player player : location.getNearbyPlayers(15)){
+            for (Player player : location.getNearbyPlayers(25)){
                 playerCount++;
             }
             int maxVariant = 3;
@@ -166,17 +212,8 @@ public class FactoryMob implements Listener {
             if (playerCount > 0){
                 for (int i = 1; i < maxVariant+1; i++) {
                     String disguiseName = variantKey+i;
-                    Disguise disguise = DisguiseAPI.getCustomDisguise(disguiseName);
-                    if (disguise != null){
-
-                        int dungeonTier = GetEntityDungeonTier(location);
-                        int dungeonTierMax = dungeonTier*20;
-                        //int randomLevel = random.nextInt(dungeonTierMax*2)+dungeonTierMax;
-
-                        SpawnDungeonMob(location, disguiseName, dungeonTierMax);
-
-                        //consoleLog("Variant Name: "+disguiseName+" Dungeon Tier: "+dungeonTier+" Level: "+randomLevel);
-                    }
+                    int dungeonTier = GetEntityDungeonTier(location);
+                    SpawnDungeonMob(location, disguiseName, dungeonTier*10);
                 }
             }else{
                 //consoleLog("There's no player in here! ("+key+")");

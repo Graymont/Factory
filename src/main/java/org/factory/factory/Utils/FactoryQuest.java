@@ -17,10 +17,10 @@ import java.util.*;
 
 import static org.factory.factory.Database.GetItem;
 import static org.factory.factory.Events.DropItem;
+import static org.factory.factory.Events.globalRevision;
 import static org.factory.factory.Utils.CooldownManager.hasCooldown;
 import static org.factory.factory.Utils.CooldownManager.SetCooldown;
-import static org.factory.factory.Utils.FactoryItem.ProcessItemMeta;
-import static org.factory.factory.Utils.FactoryItem.itemKey;
+import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.PlayerProgress.*;
 import static org.factory.factory.Utils.QuestManager.questCount;
@@ -263,6 +263,7 @@ public class FactoryQuest {
 
         PersistentDataContainer container = meta.getPersistentDataContainer();
 
+        //container.set(GetNamespacedKey(revisionCodeKey), PersistentDataType.INTEGER, globalRevision);
         container.set(GetNamespacedKey(itemKey), PersistentDataType.BOOLEAN, true);
 
         meta.setDisplayName(sendText("&fQuest Pendant &7Tier &l"+intToRoman(tier)));

@@ -22,7 +22,8 @@ public class TraderManager {
         None,
         Dungeon_Loot_Box,
         Dungeon_Junk_Collector,
-        Dungeon_Loot_Master;
+        Dungeon_Loot_Master,
+        Quarter_Master;
 
         public static TraderType parseTrader(String type){
             return switch (type.toLowerCase()){
@@ -30,6 +31,7 @@ public class TraderManager {
                 case "dungeon_loot_box" -> TraderType.Dungeon_Loot_Box;
                 case "dungeon_junk_collector" -> TraderType.Dungeon_Junk_Collector;
                 case "dungeon_loot_master" -> TraderType.Dungeon_Loot_Master;
+                case "quarter_master" -> TraderType.Quarter_Master;
 
                 default -> TraderType.None;
             };
@@ -90,6 +92,20 @@ public class TraderManager {
                     trades.add(merchantRecipe);
                 }
             }
+
+            merchant.setRecipes(trades);
+            player.openMerchant(merchant, true);
+        }
+
+        else if (traderType == TraderType.Quarter_Master){
+            Merchant merchant = Bukkit.createMerchant(sendText("&nQuarter Master"));
+
+            List<MerchantRecipe> trades = new ArrayList<>();
+
+            MerchantRecipe merchantRecipe = new MerchantRecipe(new ItemStack(GetItem("sharpnetheritesword")), 9999);
+            ItemStack ingot = new ItemStack(ProcessItemMeta(new ItemStack(Material.NETHERITE_INGOT, 20)));
+            merchantRecipe.addIngredient(ingot);
+            trades.add(merchantRecipe);
 
             merchant.setRecipes(trades);
             player.openMerchant(merchant, true);

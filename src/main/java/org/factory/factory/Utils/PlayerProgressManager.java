@@ -5,14 +5,19 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.Ageable;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -21,6 +26,7 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.Nullable;
 
+import java.security.Guard;
 import java.util.*;
 
 import static org.factory.factory.Events.*;
@@ -127,6 +133,25 @@ public class PlayerProgressManager implements Listener {
             getExp = 11;
         }
 
+        /*else if (block.getType() == Material.WHEAT){
+            getExp = 1;
+        }
+        else if (block.getType() == Material.BEETROOTS){
+            getExp = 2;
+        }
+        else if (block.getType() == Material.CARROTS){
+            getExp = 3;
+        }
+        else if (block.getType() == Material.POTATOES){
+            getExp = 4;
+        }
+        else if (block.getType() == Material.MELON){
+            getExp = 5;
+        }
+        else if (block.getType() == Material.PUMPKIN){
+            getExp = 6;
+        }*/
+
         if (getExp > 0){
             ItemStack finalDropItem = new ItemStack(dropItem);
             finalDropItem.setAmount(dropAmount);
@@ -176,7 +201,10 @@ public class PlayerProgressManager implements Listener {
                     return 30+GetMobLevel(entity);
                 }
                 else if (entity instanceof Blaze){
-                    return 30+GetMobLevel(entity);
+                    return 40+GetMobLevel(entity);
+                }
+                else if (entity instanceof Guardian){
+                    return 50+GetMobLevel(entity);
                 }
 
                 else if (entity instanceof Pig){
@@ -310,17 +338,17 @@ public class PlayerProgressManager implements Listener {
             int mobLevel = GetMobLevel(entity);
 
             if (GetEntityDungeonTier(entity.getLocation()) > 0){
-                if (currentLevel-mobLevel > 2){
+                /*if (currentLevel-mobLevel > 2){
                     gain = (gain*0.7);
                 }
                 if (currentLevel-mobLevel > 5){
                     gain = (gain*0.5);
+                }*/
+                if (currentLevel-mobLevel > 15){
+                    gain = (gain*0.8);
                 }
-                if (currentLevel-mobLevel > 8){
-                    gain = (gain*0.3);
-                }
-                if (currentLevel-mobLevel >= 10){
-                    gain = (gain*0.1);
+                if (currentLevel-mobLevel >= 20){
+                    gain = (gain*0.5);
                 }
             }
 
@@ -478,6 +506,250 @@ public class PlayerProgressManager implements Listener {
                 player.sendTitle(sendText("&aCaught!"), sendText("&2+&f"+fishingItem.get(player).getItemMeta().getDisplayName()));
                 PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, player.getLocation(), 1, 1);
             }
+        }
+    }
+
+
+    // farming manager
+    public static boolean isCropBlock(Block block){
+        return block.getType() == Material.WHEAT || block.getType() == Material.CARROTS
+                || block.getType() == Material.POTATOES|| block.getType() == Material.BEETROOTS
+                || block.getType() == Material.MELON_STEM || block.getType() == Material.PUMPKIN_STEM
+                || block.getType() == Material.COCOA|| block.getType() == Material.NETHER_WART;
+    }
+
+    public static boolean isCropItem(ItemStack item){
+
+        if (item == null){
+            return false;
+        }
+
+        if (item.getType() == Material.AIR){
+            return false;
+        }
+
+        return item.getType() == Material.WHEAT || item.getType() == Material.WHEAT_SEEDS || item.getType() == Material.CARROT
+                || item.getType() == Material.POTATO|| item.getType() == Material.BEETROOT|| item.getType() == Material.BEETROOT_SEEDS
+                || item.getType() == Material.MELON_SEEDS || item.getType() == Material.PUMPKIN_SEEDS || item.getType() == Material.COCOA_BEANS;
+    }
+
+
+    public static boolean isFruit(Block block){
+        return block.getType() == Material.MELON ||block.getType() == Material.PUMPKIN ;
+    }
+
+
+    @EventHandler
+    public void OnFarming(BlockBreakEvent event) {
+        Block block = event.getBlock();
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (!event.isCancelled()){
+            if (isCropBlock(block)){
+                event.setCancelled(true);
+                PlayerFarming(player, item, block);
+            }
+            else if (isFruit(block)){
+                event.setCancelled(true);
+                PlayerFarming(player, item, block);
+            }
+        }
+    }
+
+    @EventHandler
+    public void OnFarminInteract(PlayerInteractEvent event) {
+        Block block = event.getClickedBlock();
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (event.getAction() != Action.LEFT_CLICK_BLOCK){
+            return;
+        }
+
+        assert block != null;
+        if (hasIslandAccess(player)){
+            if (isHoe(item)){
+                if (isFruit(block)){
+                        PlayerFarming(player, item, block);
+                    event.setCancelled(true);
+                }else{
+                    if (block.getType() == Material.COCOA){
+                        event.setCancelled(true);
+                        PlayerFarming(player, item, block);
+                    }
+                }
+            }
+        }
+    }
+
+    public static void PlayerFarming(Player player, ItemStack item, Block block){
+        boolean useHoe = isHoe(item);
+
+        if (useHoe){
+            if (!ItemNotBroken(item)){
+                Notification_ItemBroken(player);
+                return;
+            }
+
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) {
+                return;
+            }
+
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+
+            if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))){
+                player.sendMessage(Notification_NoLevel(player));
+                return;
+            }
+
+            ManageDurability(player, "hand");
+            UpdateItem(player, "hand", item);
+        }
+
+        Location location = block.getLocation();
+        Material type = block.getType();
+        BlockData data = block.getBlockData();
+
+        if (data instanceof Ageable ageable) {
+
+            if (type == Material.PUMPKIN_STEM || type == Material.MELON_STEM) {
+                if (useHoe){
+                    return;
+                }
+            }
+
+            if (ageable.getAge() != ageable.getMaximumAge()){
+                if (!useHoe){
+                    block.setType(Material.AIR);
+                }
+                return;
+            }
+        }else{
+            switch (type) {
+                case PUMPKIN -> replantCrop(player, block, Material.AIR, new ItemStack(Material.PUMPKIN));
+                case MELON -> replantCrop(player, block, Material.AIR, new ItemStack(Material.MELON_SLICE));
+            }
+            PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, location, 1, 1);
+            return;
+        }
+
+        switch (type) {
+            case WHEAT -> replantCrop(player, block, Material.WHEAT, new ItemStack(Material.WHEAT));
+            case CARROTS -> replantCrop(player, block, Material.CARROTS, new ItemStack(Material.CARROT));
+            case POTATOES -> replantCrop(player, block, Material.POTATOES, new ItemStack(Material.POTATO));
+            case BEETROOTS -> replantCrop(player, block, Material.BEETROOTS, new ItemStack(Material.BEETROOT));
+            case COCOA -> replantCrop(player, block, Material.COCOA, new ItemStack(Material.COCOA_BEANS));
+            case NETHER_WART -> replantCrop(player, block, Material.NETHER_WART, new ItemStack(Material.NETHER_WART));
+            case MELON_STEM, PUMPKIN_STEM -> replantCrop(player, block, Material.AIR, new ItemStack(Material.AIR));
+        }
+
+        PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, location, 1, 1);
+    }
+
+    private static void replantCrop(Player player, Block block, Material material, ItemStack drop) {
+        Location location = block.getLocation();
+
+        if (drop.getType() != Material.AIR){
+            block.getWorld().dropItem(location, new ItemStack(ProcessItemMeta(new ItemStack(drop.getType(), 1))));
+        }
+
+        if (drop.getType().toString().contains("WHEAT")){
+            block.getWorld().dropItem(location, new ItemStack(ProcessItemMeta(new ItemStack(Material.WHEAT_SEEDS, 1))));
+        }
+
+        BlockData newData = block.getBlockData();
+        if (newData instanceof Ageable ageable) {
+            ageable.setAge(0);
+            block.setBlockData(ageable);
+            ManageCropExp(player, block);
+            if (block.getType() == Material.MELON_STEM || block.getType() == Material.PUMPKIN_STEM){
+                block.setType(material);
+            }
+        }else{
+            if (isFruit(block)){
+                if (placedBlocks.get(block.getLocation()) != null){
+                    placedBlocks.remove(block.getLocation());
+                    block.setType(material);
+                }else{
+                    ManageCropExp(player, block);
+                    block.setType(material);
+                }
+            }
+        }
+    }
+
+    public static double GetCropValue(Block block){
+        double getExp = 0;
+
+        if (block == null){
+            return getExp;
+        }
+
+        if (block.getType() == Material.AIR){
+            return getExp;
+        }
+
+        if (block.getType() == Material.WHEAT){
+            getExp = 2;
+        }
+        else if (block.getType() == Material.BEETROOTS){
+            getExp = 3;
+        }
+        else if (block.getType() == Material.CARROTS){
+            getExp = 4;
+        }
+        else if (block.getType() == Material.POTATOES){
+            getExp = 5;
+        }
+        else if (block.getType() == Material.COCOA){
+            getExp = 7;
+        }
+        else if (block.getType() == Material.MELON){
+            getExp = 9;
+        }
+        else if (block.getType() == Material.PUMPKIN){
+            getExp = 12;
+        }
+
+        return getExp;
+    }
+
+    public static void ManageCropExp(Player player, Block block){
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (item.getType() == Material.AIR){
+            return;
+        }
+
+        PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
+
+        Double proficiency = container.get(GetNamespacedKey(proficiencyKey), PersistentDataType.DOUBLE);
+        if (proficiency == null){
+            proficiency = 0.0;
+        }
+
+        if (!ItemNotBroken(item)){
+            return;
+        }
+
+        if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))){
+            return;
+        }
+
+        if (isHoe(item)){
+            if (item.getItemMeta().hasEnchant(Enchantment.SILK_TOUCH)){
+                return;
+            }
+        }
+
+        double gain = GetCropValue(block);
+
+        if (gain > 0){
+            double totalGain = AddExp(player, gain, proficiency);
+            spawnExpHologram(block.getLocation(), totalGain);
+            PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, block.getLocation(), 1, 1);
         }
     }
 
