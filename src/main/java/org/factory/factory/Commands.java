@@ -43,8 +43,10 @@ import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.PlayerProgress.*;
 import static org.factory.factory.Utils.RewardsManager.*;
 import static org.factory.factory.Utils.SQLiteDatabase.SaveAllProgress;
+import static org.factory.factory.Utils.SQLiteDatabase.TransferPlayerProgress;
 import static org.factory.factory.Utils.TraderManager.OpenTrader;
 import static org.factory.factory.Utils.UserInterface.*;
+import static org.factory.factory.Utils.UserInterface.sendText;
 
 
 public class Commands implements CommandExecutor, TabCompleter {
@@ -92,6 +94,22 @@ public class Commands implements CommandExecutor, TabCompleter {
                     player.sendMessage(sendText("&aSpeed set to "+args[1]));
                 }
             }
+
+            else if (args[0].equalsIgnoreCase("testviewdata")){
+                OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+                if (!target.hasPlayedBefore()){
+                    sender.sendMessage(sendText("&c"+target.getName()+" &4is never played before!"));
+                    return false;
+                }
+                String dataType = args[2];
+                TransferPlayerProgress(target.getUniqueId(), dataType);
+                sender.sendMessage(sendText(" "));
+                sender.sendMessage(sendText("&2"+target.getName()+" "+dataType+" &ahas been transfered"));
+                sender.sendMessage(sendText(" "));
+                sender.sendMessage(sendText("&bResult:"));
+                sender.sendMessage(sendText(" &7Level: &3"+playerLevel.get(target.getUniqueId())));
+            }
+
             else if (args[0].equalsIgnoreCase("createmachine")){
                 Player player = (Player) sender;
                 int machineLevel = Integer.parseInt(args[1]);

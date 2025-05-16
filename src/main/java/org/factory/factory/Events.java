@@ -32,6 +32,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Orientable;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
@@ -1969,6 +1970,22 @@ public class Events implements Listener {
                 block.getType() == Material.PODZOL ||
                 block.getType() == Material.COARSE_DIRT;
     }
+    public static boolean isWood(Block block) {
+        Material type = block.getType();
+        return type == Material.OAK_LOG || type == Material.OAK_WOOD ||
+                type == Material.SPRUCE_LOG || type == Material.SPRUCE_WOOD ||
+                type == Material.BIRCH_LOG || type == Material.BIRCH_WOOD ||
+                type == Material.JUNGLE_LOG || type == Material.JUNGLE_WOOD ||
+                type == Material.ACACIA_LOG || type == Material.ACACIA_WOOD ||
+                type == Material.DARK_OAK_LOG || type == Material.DARK_OAK_WOOD ||
+                type == Material.MANGROVE_LOG || type == Material.MANGROVE_WOOD ||
+                type == Material.CHERRY_LOG || type == Material.CHERRY_WOOD ||
+                type == Material.BAMBOO_BLOCK || // special case, bamboo wood is in block form
+                type == Material.BAMBOO_MOSAIC || // also bamboo
+                type == Material.CRIMSON_STEM || type == Material.CRIMSON_HYPHAE ||
+                type == Material.WARPED_STEM || type == Material.WARPED_HYPHAE;
+    }
+
 
     @EventHandler
     public void OnGrassHoe(PlayerInteractEvent event) {
@@ -1988,8 +2005,10 @@ public class Events implements Listener {
 
                 ItemMeta meta = item.getItemMeta();
 
-                if (!hasIslandAccess(player)) {
-                    return;
+                if (!player.hasPermission("admin")){
+                    if (!hasIslandAccess(player)) {
+                        return;
+                    }
                 }
 
                 if (!isSoil(event.getClickedBlock())){
@@ -2027,6 +2046,7 @@ public class Events implements Listener {
                         }
                     }
 
+                    event.setCancelled(true);
                     event.getClickedBlock().setType(Material.FARMLAND);
 
                     if (currentEvent != EventType.Invincible_Items){
@@ -2035,7 +2055,120 @@ public class Events implements Listener {
 
                     UpdateItem(player, "hand", item);
 
-                    PlaySoundAt(Sound.ENTITY_VILLAGER_WORK_FARMER, event.getClickedBlock().getLocation(), 1, 2);
+                    PlaySoundAt(Sound.ITEM_HOE_TILL, event.getClickedBlock().getLocation(), 1, 2);
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void OnAxeWoodBlock(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (item.getType() != Material.AIR) {
+
+            if (!player.getWorld().getName().equals("SuperiorWorld")){
+                return;
+            }
+
+            if (event.getAction() == Action.RIGHT_CLICK_BLOCK){
+                if (event.getClickedBlock() == null){
+                    return;
+                }
+
+                ItemMeta meta = item.getItemMeta();
+
+                if (!player.hasPermission("admin")){
+                    if (!hasIslandAccess(player)) {
+                        return;
+                    }
+                }
+
+                if (!isWood(event.getClickedBlock())){
+                    return;
+                }
+
+                PersistentDataContainer container = meta.getPersistentDataContainer();
+
+                if (container.has(GetNamespacedKey(itemKey))) {
+
+                    if (!isFactoryItem(item)) {
+                        return;
+                    }
+
+                    if (!isTool(item)) {
+                        return;
+                    }
+
+                    if (!isAxe(item)){
+                        return;
+                    }
+
+
+                    if (!ItemNotBroken(item)) {
+                        Notification_ItemBroken(player);
+                        event.setCancelled(true);
+                        return;
+                    }
+
+                    if (container.has(GetNamespacedKey(levelMinimumKey))) {
+                        if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))) {
+                            event.setCancelled(true);
+                            player.sendMessage(Notification_NoLevel(player));
+                            return;
+                        }
+                    }
+
+                    Block block = event.getClickedBlock();
+                    BlockData oldData = block.getBlockData();
+
+                    event.setCancelled(true);
+                    if (block.getType().toString().contains("LOG")) {
+                        String logName = block.getType().toString().replaceAll("_LOG", "").trim();
+                        Material strippedType = Material.getMaterial("STRIPPED_" + logName + "_LOG");
+                        if (strippedType != null) {
+                            block.setType(strippedType);
+                        }
+                    } else if (block.getType().toString().contains("WOOD")) {
+                        String logName = block.getType().toString().replaceAll("_WOOD", "").trim();
+                        Material strippedType = Material.getMaterial("STRIPPED_" + logName + "_WOOD");
+                        if (strippedType != null) {
+                            block.setType(strippedType);
+                        }
+                    }
+
+                    if (block.getType() == Material.BAMBOO_BLOCK) {
+                        block.setType(Material.STRIPPED_BAMBOO_BLOCK);
+                    }
+                    else if (block.getType() == Material.CRIMSON_STEM) {
+                        block.setType(Material.STRIPPED_CRIMSON_STEM);
+                    }
+                    else if (block.getType() == Material.CRIMSON_HYPHAE) {
+                        block.setType(Material.STRIPPED_CRIMSON_HYPHAE);
+                    }
+                    else if (block.getType() == Material.WARPED_STEM) {
+                        block.setType(Material.STRIPPED_WARPED_STEM);
+                    }
+                    else if (block.getType() == Material.WARPED_HYPHAE) {
+                        block.setType(Material.STRIPPED_WARPED_HYPHAE);
+                    }
+
+                    BlockData newData = block.getBlockData();
+                    if (oldData instanceof Orientable && newData instanceof Orientable) {
+                        Axis axis = ((Orientable) oldData).getAxis();
+                        ((Orientable) newData).setAxis(axis);
+                        block.setBlockData(newData);
+                    }
+
+                    if (currentEvent != EventType.Invincible_Items){
+                        ManageDurability(player, "hand");
+                    }
+
+                    UpdateItem(player, "hand", item);
+
+                    PlaySoundAt(Sound.ITEM_AXE_STRIP, event.getClickedBlock().getLocation(), 1, 2);
+                    PlayParticleAtBlock(block, Particle.WHITE_ASH);
                 }
             }
         }

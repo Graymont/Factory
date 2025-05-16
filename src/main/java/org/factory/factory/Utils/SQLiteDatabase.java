@@ -1,9 +1,6 @@
 package org.factory.factory.Utils;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -230,6 +227,24 @@ public class SQLiteDatabase {
 
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+
+    public static void TransferPlayerProgress(UUID uuid, String name){
+        if (name.equals("level")){
+            String sql = "SELECT "+name+" FROM PlayerAttributes WHERE uuid = ?";
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, uuid.toString());
+                ResultSet rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    playerLevel.put(uuid, rs.getInt(name));
+                }
+
+            }catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
