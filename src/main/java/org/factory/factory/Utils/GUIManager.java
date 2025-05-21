@@ -14,10 +14,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -55,6 +52,9 @@ import static org.factory.factory.Utils.VaultEconomy.*;
 
 public class GUIManager implements Listener {
 
+    public static HashMap<Player, Integer> playerInput_Integer = new HashMap<>();
+    public static HashMap<Player, Boolean> isInput = new HashMap<>();
+
     public enum MenuList{
         None,
         MachineEngine,
@@ -75,7 +75,8 @@ public class GUIManager implements Listener {
         Carbon_Forge,
         Trash,
         Prestige,
-        Dungeon;
+        Dungeon,
+        Farms;
 
         public static MenuList parseMenu(String m){
             return switch (m.toLowerCase()) {
@@ -98,6 +99,7 @@ public class GUIManager implements Listener {
                 case "trash" -> MenuList.Trash;
                 case "prestige" -> MenuList.Prestige;
                 case "dungeon" -> MenuList.Dungeon;
+                case "farms" -> MenuList.Farms;
 
                 default -> MenuList.None;
             };
@@ -154,6 +156,21 @@ public class GUIManager implements Listener {
 
             player.openInventory(inventory);
             PlaySoundAt(Sound.BLOCK_ANVIL_PLACE, player.getLocation(), 1, 1);
+        }
+
+        else if (menu.equals(MenuList.Farms)){
+            Inventory inventory = OpenGUI(player, 4, "Farms");
+
+            SetHeaderFooter(inventory);
+            inventory.setItem(10, getBasicUi("wheatfarm"));
+            inventory.setItem(12, getBasicUi("beetrootfarm"));
+            inventory.setItem(14, getBasicUi("carrotfarm"));
+            inventory.setItem(16, getBasicUi("potatofarm"));
+            inventory.setItem(22, getBasicUi("netherwartfarm"));
+            SetBackground(inventory, Material.GRAY_STAINED_GLASS_PANE);
+
+            player.openInventory(inventory);
+            //PlaySoundAt(Sound.BLOCK_ANVIL_PLACE, player.getLocation(), 1, 1);
         }
 
         else if (menu.equals(MenuList.Dungeon)){
@@ -233,7 +250,7 @@ public class GUIManager implements Listener {
         }
 
         else if (menu.equals(MenuList.WarpMenu)){
-            Inventory inventory = OpenGUI(player, 4, "Warp Menu");
+            Inventory inventory = OpenGUI(player, 5, "Warp Menu");
 
             SetHeaderFooter(inventory);
 
@@ -246,6 +263,7 @@ public class GUIManager implements Listener {
             inventory.setItem(22, getBasicUi("warp_graveyard"));
             inventory.setItem(23, getBasicUi("warp_dungeon"));
             inventory.setItem(24, getBasicUi("warp_communitycenter"));
+            inventory.setItem(31, getBasicUi("warp_farms"));
 
             SetBackground(inventory, Material.BLACK_STAINED_GLASS_PANE);
 
@@ -320,6 +338,7 @@ public class GUIManager implements Listener {
             inventory.setItem(21, getCarbonEquipmentIcon(player, "previous_page"));
             inventory.setItem(23, getCarbonEquipmentIcon(player, "next_page"));
             inventory.setItem(4, getCarbonEquipmentIcon(player, "view"));
+            inventory.setItem(0, getCarbonEquipmentIcon(player, "input"));
 
             player.openInventory(inventory);
         }
@@ -437,6 +456,10 @@ public class GUIManager implements Listener {
         else if (name.equals("view")){
             item.setType(Material.PAPER);
             meta.setDisplayName(sendText("&bView all Equipments"));
+        }
+        else if (name.equals("input")){
+            item.setType(Material.OAK_SIGN);
+            meta.setDisplayName(sendText("&bInput Selection"));
         }
 
         container.set(GetNamespacedKey("gui-icon"), PersistentDataType.STRING, name);
@@ -1079,6 +1102,13 @@ public class GUIManager implements Listener {
             itemLore.add(sendText("&bClick to teleport"));
             container.set(GetNamespacedKey("warpName"), PersistentDataType.STRING, "graveyard");
         }
+        else if (name.equals("warp_farms")) {
+            item.setType(Material.IRON_HOE);
+            meta.setDisplayName(sendText("&3Warp: &b&lFarms"));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("warpName"), PersistentDataType.STRING, "farms");
+        }
 
         else if (name.equals("multiblock_machine")){
             item.setType(Material.HAY_BLOCK);
@@ -1093,6 +1123,75 @@ public class GUIManager implements Listener {
             itemLore.add(sendText(" &7and netherrack"));
             itemLore.add(sendText(" "));
         }
+
+        else if (name.equals("wheatfarm")) {
+            item.setType(Material.WHEAT);
+            meta.setDisplayName(sendText("&b&l"+formatItemName(name.replace("farm", ""))+" Farm"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&8Specification:"));
+            itemLore.add(sendText(" &7Wheat Sell Value: &f"+GetWorth("wheat")+icon));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("farmName"), PersistentDataType.STRING, name);
+            container.set(GetNamespacedKey("farmPrestige"), PersistentDataType.INTEGER, 0);
+        }
+        else if (name.equals("beetrootfarm")) {
+            item.setType(Material.BEETROOT);
+            meta.setDisplayName(sendText("&b&l"+formatItemName(name.replace("farm", ""))+" Farm"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&8Specification:"));
+            itemLore.add(sendText(" &7Beetroot Sell Value: &f"+GetWorth("beetroot")+icon));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&8Requirements:"));
+            itemLore.add(sendText(" &7Prestige Minimum: &72"));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("farmName"), PersistentDataType.STRING, name);
+            container.set(GetNamespacedKey("farmPrestige"), PersistentDataType.INTEGER, 2);
+        }
+        else if (name.equals("carrotfarm")) {
+            item.setType(Material.CARROT);
+            meta.setDisplayName(sendText("&b&l"+formatItemName(name.replace("farm", ""))+" Farm"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&8Specification:"));
+            itemLore.add(sendText(" &7Carrot Sell Value: &f"+GetWorth("carrot")+icon));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&8Requirements:"));
+            itemLore.add(sendText(" &7Prestige Minimum: &74"));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("farmName"), PersistentDataType.STRING, name);
+            container.set(GetNamespacedKey("farmPrestige"), PersistentDataType.INTEGER, 4);
+        }
+        else if (name.equals("potatofarm")) {
+            item.setType(Material.POTATO);
+            meta.setDisplayName(sendText("&b&l"+formatItemName(name.replace("farm", ""))+" Farm"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&8Specification:"));
+            itemLore.add(sendText(" &7Potato Sell Value: &f"+GetWorth("potato")+icon));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&8Requirements:"));
+            itemLore.add(sendText(" &7Prestige Minimum: &76"));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("farmName"), PersistentDataType.STRING, name);
+            container.set(GetNamespacedKey("farmPrestige"), PersistentDataType.INTEGER, 6);
+        }
+        else if (name.equals("netherwartfarm")) {
+            item.setType(Material.NETHER_WART);
+            meta.setDisplayName(sendText("&b&l"+formatItemName(name.replace("farm", "").replace("wart", ""))+" Wart Farm"));
+            itemLore.add(sendText(" "));
+            itemLore.add(sendText("&8Specification:"));
+            itemLore.add(sendText(" &7Nether Wart Sell Value: &f"+GetWorth("netherwart")+icon));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&8Requirements:"));
+            itemLore.add(sendText(" &7Prestige Minimum: &78"));
+            itemLore.add(sendText(""));
+            itemLore.add(sendText("&bClick to teleport"));
+            container.set(GetNamespacedKey("farmName"), PersistentDataType.STRING, name);
+            container.set(GetNamespacedKey("farmPrestige"), PersistentDataType.INTEGER, 8);
+        }
+
 
         meta = SetAditMeta(meta);
 
@@ -1219,6 +1318,7 @@ public class GUIManager implements Listener {
     }
 
     public static HashMap<Player, MenuList> openedMenu = new HashMap<>();
+    public static HashMap<Player, MenuList> tempMenu = new HashMap<>();
 
     @EventHandler
     public void onInventoryClickHolder(InventoryClickEvent event) {
@@ -1424,6 +1524,10 @@ public class GUIManager implements Listener {
                     int acidCost = currentLevel*100;
                     int totalProductionReq = currentLevel*500;
 
+                    if (acidCost > 2000){
+                        acidCost = 2000;
+                    }
+
                     Integer totalProduction = Integer.parseInt(placedMachines.get(machineLocation+__totalProductionKey));
                     Rarity.RarityType rarity = Rarity.RarityType.parseRarity(placedMachines.get(machineLocation+__rarityKey));
 
@@ -1523,6 +1627,30 @@ public class GUIManager implements Listener {
                     //player.sendMessage(sendText("&aPressed the switch"));
                 }
             }
+
+            else if (inventory.equals(MenuList.Farms)) {
+                if (GetTag(item).contains("farm")){
+                    String farmName = container.get(GetNamespacedKey("farmName"), PersistentDataType.STRING);
+                    Integer prestigeReq = container.get(GetNamespacedKey("farmPrestige"), PersistentDataType.INTEGER);
+
+                    int currentPrestige = playerPrestige.get(player.getUniqueId());
+
+                    if (currentPrestige < prestigeReq){
+                        player.sendMessage(sendText("&cYou need to reach &6Prestige "+intToRoman(prestigeReq)+" &cto enter "+farmName.replace("farm", "")+" farm!"));
+                        return;
+                    }
+
+                    Location farmLocation = GetLocation(farmName);
+                    if (farmLocation == null){
+                        player.sendMessage(sendText("&4Sorry, that farm location is currently unavailable!"));
+                        return;
+                    }
+
+                    player.teleport(farmLocation);
+                }
+            }
+
+
             else if (inventory.equals(MenuList.Shop)){
                 if (GetTag(item).equals("category")){
                     String category = container.get(GetNamespacedKey("category"), PersistentDataType.STRING);
@@ -1823,7 +1951,7 @@ public class GUIManager implements Listener {
 
             else if (inventory.equals(MenuList.AcidMaker)) {
                 //player.sendMessage("AcidMaker");
-                if (GetTag(item).equals("acidmaker_acid")) {
+                /*if (GetTag(item).equals("acidmaker_acid")) {
                     //player.sendMessage("acidmaker_acid");
                     ItemStack waterBottle = new ItemStack(GetPotion(PotionType.WATER));
                     ItemStack sugar = new ItemStack(Material.SUGAR);
@@ -1845,7 +1973,7 @@ public class GUIManager implements Listener {
                     RemoveItemFromPlayer(player, sugar, 1);
 
                     player.getInventory().addItem(GetItem("acid"));
-                }
+                }*/
             }
 
             else if (inventory.equals(MenuList.Rewards)) {
@@ -1911,7 +2039,7 @@ public class GUIManager implements Listener {
 
                 else if (GetTag(item).equals("next_page")){
                     int currentPage = playerSelector.get(player);
-                    if (currentPage < carbonMaterials.length){
+                    if (currentPage < carbonMaterials.length-1){
                         currentPage++;
                         playerSelector.put(player, currentPage);
                         OpenMenu(player, MenuList.Carbon_Forge);
@@ -1935,6 +2063,13 @@ public class GUIManager implements Listener {
                         player.sendMessage(sendText("  &7["+index+"] &f"+formatItemName(eq)+" Equipments"));
                         index++;
                     }
+                }
+
+                else if (GetTag(item).equals("input")){
+                    player.closeInventory();
+                    Notification_Input(player);
+                    isInput.put(player, true);
+                    tempMenu.put(player, MenuList.Carbon_Forge);
                 }
             }
 
@@ -2623,6 +2758,35 @@ public class GUIManager implements Listener {
 
         merchant.setRecipes(trades);
         player.openMerchant(merchant, true);
+    }
+
+    @EventHandler
+    public void OnChatInput(PlayerChatEvent event){
+        Player player = event.getPlayer();
+        if (isInput.get(player)){
+            event.setCancelled(true);
+            if (tempMenu.get(player) == MenuList.Carbon_Forge){
+                isInput.put(player, false);
+                String messages = event.getMessage();
+                Integer number = 0;
+                number = Integer.valueOf(numberInText(messages));
+                if (number > 0){
+                    playerInput_Integer.put(player, number);
+                }else{
+                    player.sendMessage(sendText("&4Input must be &c1 or higher!"));
+                }
+            }
+
+            if (tempMenu.get(player) == MenuList.Carbon_Forge){
+                if (playerInput_Integer.get(player) <= carbonMaterials.length){
+                    playerSelector.put(player, playerInput_Integer.get(player)-1);
+                    OpenMenu(player, MenuList.Carbon_Forge);
+                    consoleLog(sendText("&2"+player.getName()+" &ainputed &2"+playerInput_Integer.get(player)+" &afor carbon forge"));
+                }
+            }
+
+            playerInput_Integer.put(player, 0);
+        }
     }
 
 }

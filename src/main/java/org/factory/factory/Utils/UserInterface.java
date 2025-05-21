@@ -185,6 +185,10 @@ public class UserInterface {
         return sendText("&4Still on cooldown! &c("+getFormattedRemainingTime(player, type)+" left)");
     }
 
+    public static void Notification_Input(Player player){
+        SendTitle(player, "&bType in chat!", "", 1, 1, 1);
+    }
+
     public static String formatItemName(String itemName) {
         String[] words = itemName.split("_"); // Split by underscore
         StringBuilder formattedName = new StringBuilder();

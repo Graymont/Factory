@@ -110,6 +110,15 @@ public class Commands implements CommandExecutor, TabCompleter {
                 sender.sendMessage(sendText(" &7Level: &3"+playerLevel.get(target.getUniqueId())));
             }
 
+            else if (args[0].equalsIgnoreCase("testacidmaker")){
+                assert sender instanceof Player;
+                OpenAcidMaker((Player) sender);
+            }
+
+            else if (args[0].equalsIgnoreCase("gr")){
+                sender.sendMessage("globalRevision: "+globalRevision);
+            }
+
             else if (args[0].equalsIgnoreCase("createmachine")){
                 Player player = (Player) sender;
                 int machineLevel = Integer.parseInt(args[1]);

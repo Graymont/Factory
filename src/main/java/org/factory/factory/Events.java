@@ -224,6 +224,9 @@ public class Events implements Listener {
 
         canRemoveMachine.put(player, true);
 
+        playerInput_Integer.putIfAbsent(player, 0);
+        isInput.put(player, false);
+
         consoleLog(sendText("&aAttributes of &2"+player.getName()+" &ahas been Initialized Successfully!"));
     }
 
@@ -550,7 +553,7 @@ public class Events implements Listener {
 
                             if (!hasSteam(player, (double) steamConsumption)){
                                 SpawnBlockCrackParticle(block);
-                                PlaySoundAt(Sound.BLOCK_NOTE_BLOCK_SNARE, location, 0.3f, 2);
+                                //PlaySoundAt(Sound.BLOCK_NOTE_BLOCK_SNARE, location, 0.3f, 2);
                                 continue;
                             }
                             /*if (GetSteam(player) < steamConsumption){
@@ -1955,6 +1958,12 @@ public class Events implements Listener {
                     }
                 }
 
+                if (isHoe(item)){
+                    if (getRegionByLocation(event.getBlock().getLocation()).contains("farm")){
+                        return;
+                    }
+                }
+
                 if (currentEvent != EventType.Invincible_Items){
                     ManageDurability(player, "hand");
                 }
@@ -2290,7 +2299,7 @@ public class Events implements Listener {
     public static List<String> attributeList = Arrays.asList(
       "Steam", "Movement Speed", "Steam Regen", "Attack Damage", "Attack Range", "Attack Speed", "Critical Chance", "Critical Damage"
             , "Accuracy", "Armor", "Undead Damage", "Undead Defense", "Mutant Damage", "Mutant Defense", "Alien Damage", "Alien Defense",
-            "Melee Damage", "Range Damage", "Steam Consumption", "Health"
+            "Melee Damage", "Range Damage", "Steam Consumption", "Health", "Mining Fortune", "Farming Fortune", "Fishing Fortune", "Foraging Fortune", "Combat Fortune"
     );
 
     public static List<String> cooldownList = Arrays.asList(
@@ -3318,6 +3327,13 @@ public class Events implements Listener {
                 Boolean canUse = container.get(GetNamespacedKey(canUseKey), PersistentDataType.BOOLEAN);
 
 
+                Double miningFortune = container.get(GetNamespacedKey(baseKey+miningFortuneKey), PersistentDataType.DOUBLE);
+                Double foragingFortune = container.get(GetNamespacedKey(baseKey+foragingFortuneKey), PersistentDataType.DOUBLE);
+                Double farmingFortune = container.get(GetNamespacedKey(baseKey+farmingFortuneKey), PersistentDataType.DOUBLE);
+                Double fishingFortune = container.get(GetNamespacedKey(baseKey+fishingFortuneKey), PersistentDataType.DOUBLE);
+                Double combatFortune = container.get(GetNamespacedKey(baseKey+combatFortuneKey), PersistentDataType.DOUBLE);
+
+
                 //List<String> bonusStats = new ArrayList<>();
                 String bonusStats = container.get(GetNamespacedKey(bonusStatsKey), PersistentDataType.STRING);
                 /*if (storedStats != null){
@@ -3381,6 +3397,29 @@ public class Events implements Listener {
                     proficiency = 0.0;
                 }
                 updatedItem.setProficiency(proficiency);
+
+
+                if (miningFortune == null){
+                    miningFortune = 0.0;
+                }
+                updatedItem.setMiningFortune(miningFortune);
+                if (foragingFortune == null){
+                    foragingFortune = 0.0;
+                }
+                updatedItem.setForagingFortune(foragingFortune);
+                if (farmingFortune == null){
+                    farmingFortune = 0.0;
+                }
+                updatedItem.setFarmingFortune(farmingFortune);
+                if (fishingFortune == null){
+                    fishingFortune = 0.0;
+                }
+                updatedItem.setFishingFortune(fishingFortune);
+                if (combatFortune == null){
+                    combatFortune = 0.0;
+                }
+                updatedItem.setCombatFortune(combatFortune);
+
 
                 item.setItemMeta(updatedItem.build().getItemMeta());
             }
@@ -3605,14 +3644,16 @@ public class Events implements Listener {
                 }
 
                 if (isAcidMaker(block)){
-                    openedMenu.put(player, MenuList.AcidMaker);
+                    /*openedMenu.put(player, MenuList.AcidMaker);
                     Inventory inventory = OpenGUI(player, 3, "Acid Maker");
 
                     SetHeaderFooter(inventory);
 
                     inventory.setItem(13, getBasicUi("acidmaker_acid"));
                     player.openInventory(inventory);
-                    player.updateInventory();
+                    player.updateInventory();*/
+
+                    OpenAcidMaker(player);
 
                     PlaySoundAt(Sound.ENTITY_SLIME_DEATH_SMALL, block.getLocation(),1,1);
                 }
@@ -4742,6 +4783,40 @@ public class Events implements Listener {
                     item.setItemMeta(meta);
                     //player.sendMessage("update: "+container.get(GetNamespacedKey(baseKey+criticalDamageKey), PersistentDataType.DOUBLE));
                 }
+
+                for (String itemStats : itemStatsList){
+                    String itemKey = uncolouredText(meta.getDisplayName()).toLowerCase().replaceAll(" ", "").trim();
+                    String storedTarget = itemKey+"."+itemStats.toLowerCase();
+                    if (itemStats.equals("displayname")){
+                        if (!meta.getDisplayName().equals(storedItemStats.get(storedTarget))){
+                            meta.setDisplayName(sendText(storedItemStats.get(storedTarget)));
+                        }
+                    } else if (itemStats.equals("material")){
+                        if (item.getType() != Material.getMaterial(storedItemStats.get(storedTarget))){
+                            item.setType(Material.getMaterial(storedItemStats.get(storedTarget)));
+                        }
+                    }else{
+                        if (container.has(GetNamespacedKey(baseKey+itemStats))){
+                            if (!container.get(GetNamespacedKey(baseKey+itemStats), PersistentDataType.DOUBLE).toString().equals(storedItemStats.get(storedTarget))){
+                                container.set(GetNamespacedKey(baseKey+itemStats), PersistentDataType.DOUBLE, Double.parseDouble(storedItemStats.get(storedTarget)));
+                            }
+                        }else{
+                            if (container.has(GetNamespacedKey(itemStats), PersistentDataType.DOUBLE)){
+                                if (!container.get(GetNamespacedKey(itemStats), PersistentDataType.DOUBLE).toString().equals(storedItemStats.get(storedTarget))){
+                                    container.set(GetNamespacedKey(itemStats), PersistentDataType.DOUBLE, Double.parseDouble(storedItemStats.get(storedTarget)));
+                                }
+                            }
+                            if (container.has(GetNamespacedKey(itemStats), PersistentDataType.INTEGER)){
+                                if (!container.get(GetNamespacedKey(itemStats), PersistentDataType.INTEGER).toString().equals(storedItemStats.get(storedTarget))){
+                                    container.set(GetNamespacedKey(itemStats), PersistentDataType.INTEGER, Integer.parseInt(storedItemStats.get(storedTarget)));
+                                }
+                            }
+                        }
+                    }
+                    item.setItemMeta(meta);
+                }
+
+
                 UpdateItem(player, slot, item);
 
                 meta = item.getItemMeta();

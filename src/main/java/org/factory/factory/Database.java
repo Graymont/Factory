@@ -13,6 +13,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+import static org.factory.factory.Events.globalRevision;
+import static org.factory.factory.Factory.getMainPlugin;
 import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.FactoryMachine.machineKey;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
@@ -22,10 +24,14 @@ public class Database {
 
     public static String pluginName = "Factory";
 
-    static String databasePath = "plugins/"+pluginName+"/Database";
-    static String developmentPath = databasePath+"/Development/";
-    static String developmentDataFile = "Development Data.yml";
-    static String developmentItemFile = "Development Item.yml";
+    public static String configFile = "config.yml";
+
+    public static String directory = "plugins/"+pluginName;
+    public static String databasePath = "plugins/"+pluginName+"/Database";
+    public static String developmentPath = databasePath+"/Development/";
+    public static String developmentDataFile = "Development Data.yml";
+    public static String developmentItemFile = "Development Item.yml";
+    public static String itemConfigurationFile = "Item Configuration.yml";
 
     static Events events;
     static Factory plugin;
@@ -142,6 +148,22 @@ public class Database {
     public static void RemoveSpawner(String name){
         spawnerList.remove(name);
         consoleLog(sendText("&bRemoved Spawner with name: &6"+name));
+    }
+
+    public static void InitDefaultFile(){
+        File file = new File(directory, configFile);
+        if (!file.exists()) {
+            getMainPlugin().saveResource(configFile, false);
+            consoleLog(sendText("&eConfig file not exist, creating a new one!"));
+        }
+    }
+
+    public static void LoadConfigurations(){
+        File file = new File(directory, configFile);
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+
+        globalRevision = config.getInt("revision");
+        consoleLog(sendText("&aGlobal Revision: "+globalRevision));
     }
 
     public static void SaveLocations(){
@@ -487,7 +509,9 @@ public class Database {
         LoadShopItems();
         LoadLocations();
         LoadSpawners();
-        consoleLog(sendText("&3[Factory Config] &aLoading all configuration data..."));
+        LoadConfigurations();
+        GenerateItemConfig();
+        consoleLog(sendText("&3[Factory Config] &aLoading all configuration and model data..."));
     }
 
     public static void SaveAllData(){

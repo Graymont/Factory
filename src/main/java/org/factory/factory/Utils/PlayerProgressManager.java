@@ -24,6 +24,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.Nullable;
 
 import java.security.Guard;
@@ -44,7 +45,7 @@ public class PlayerProgressManager implements Listener {
 
     public static HashMap<Location, Boolean> placedBlocks = new HashMap<>();
 
-    public static double GetBlockValue(Block block){
+    public static double GetBlockValue(Block block) {
         Random random = new Random();
 
         Location location = block.getLocation();
@@ -53,83 +54,61 @@ public class PlayerProgressManager implements Listener {
         int dropAmount = 1;
         ItemStack dropItem = new ItemStack(ProcessItemMeta(new ItemStack(block.getType())));
 
-        if (block.getType() == Material.DIORITE){
+        if (block.getType() == Material.DIORITE) {
             getExp = 1;
-        }
-        else if (block.getType() == Material.ANDESITE){
+        } else if (block.getType() == Material.ANDESITE) {
             getExp = 1;
-        }
-        else if (block.getType() == Material.GRANITE){
+        } else if (block.getType() == Material.GRANITE) {
             getExp = 1;
-        }
-        else if (block.getType() == Material.COAL_ORE){
+        } else if (block.getType() == Material.COAL_ORE) {
             dropItem = new ItemStack(ProcessItemMeta(new ItemStack(Material.COAL)));
             getExp = 5;
-        }
-        else if (block.getType() == Material.COPPER_ORE){
+        } else if (block.getType() == Material.COPPER_ORE) {
             dropItem = new ItemStack(ProcessItemMeta(new ItemStack(Material.RAW_COPPER)));
             getExp = 8;
-        }
-        else if (block.getType() == Material.LAPIS_ORE){
-            dropAmount = random.nextInt(3)+1;
+        } else if (block.getType() == Material.LAPIS_ORE) {
+            dropAmount = random.nextInt(3) + 1;
             dropItem = new ItemStack(ProcessItemMeta(new ItemStack(Material.LAPIS_LAZULI)));
             getExp = 8;
-        }
-        else if (block.getType() == Material.REDSTONE_ORE){
-            dropAmount = random.nextInt(3)+1;
+        } else if (block.getType() == Material.REDSTONE_ORE) {
+            dropAmount = random.nextInt(3) + 1;
             dropItem = new ItemStack(ProcessItemMeta(new ItemStack(Material.REDSTONE)));
             getExp = 8;
-        }
-        else if (block.getType() == Material.IRON_ORE){
+        } else if (block.getType() == Material.IRON_ORE) {
             dropItem = new ItemStack(ProcessItemMeta(new ItemStack(Material.RAW_IRON)));
             getExp = 12;
-        }
-        else if (block.getType() == Material.GOLD_ORE){
+        } else if (block.getType() == Material.GOLD_ORE) {
             dropItem = new ItemStack(ProcessItemMeta(new ItemStack(Material.RAW_GOLD)));
             getExp = 18;
-        }
-        else if (block.getType() == Material.DIAMOND_ORE){
+        } else if (block.getType() == Material.DIAMOND_ORE) {
             dropItem = new ItemStack(ProcessItemMeta(new ItemStack(Material.DIAMOND)));
             getExp = 20;
-        }
-        else if (block.getType() == Material.EMERALD_ORE){
+        } else if (block.getType() == Material.EMERALD_ORE) {
             dropItem = new ItemStack(ProcessItemMeta(new ItemStack(Material.EMERALD)));
             getExp = 25;
-        }
-        else if (block.getType() == Material.ANCIENT_DEBRIS){
+        } else if (block.getType() == Material.ANCIENT_DEBRIS) {
             getExp = 35;
-        }
-        else if (block.getType() == Material.NETHER_QUARTZ_ORE){
-            dropAmount = random.nextInt(3)+1;
+        } else if (block.getType() == Material.NETHER_QUARTZ_ORE) {
+            dropAmount = random.nextInt(3) + 1;
             dropItem = new ItemStack(ProcessItemMeta(new ItemStack(Material.QUARTZ)));
             getExp = 10;
-        }
-
-        else if (block.getType() == Material.OAK_LOG){
+        } else if (block.getType() == Material.OAK_LOG) {
             getExp = 1;
-        }
-        else if (block.getType() == Material.SPRUCE_LOG){
+        } else if (block.getType() == Material.SPRUCE_LOG) {
             getExp = 2;
-        }
-        else if (block.getType() == Material.BIRCH_LOG){
+        } else if (block.getType() == Material.BIRCH_LOG) {
             getExp = 3;
-        }
-        else if (block.getType() == Material.ACACIA_LOG){
+        } else if (block.getType() == Material.ACACIA_LOG) {
             getExp = 5;
-        }
-        else if (block.getType() == Material.DARK_OAK_LOG){
+        } else if (block.getType() == Material.DARK_OAK_LOG) {
             getExp = 7;
-        }
-        else if (block.getType() == Material.MANGROVE_LOG){
+        } else if (block.getType() == Material.MANGROVE_LOG) {
             getExp = 8;
-        }
-        else if (block.getType() == Material.CHERRY_LOG){
+        } else if (block.getType() == Material.CHERRY_LOG) {
             getExp = 9;
-        }
-        else if (block.getType() == Material.CRIMSON_STEM){
+        } else if (block.getType() == Material.CRIMSON_STEM) {
             getExp = 10;
-        }
-        else if (block.getType() == Material.WARPED_STEM){
+        } else if (block.getType() == Material.WARPED_STEM) {
             getExp = 11;
         }
 
@@ -152,7 +131,7 @@ public class PlayerProgressManager implements Listener {
             getExp = 6;
         }*/
 
-        if (getExp > 0){
+        if (getExp > 0) {
             ItemStack finalDropItem = new ItemStack(dropItem);
             finalDropItem.setAmount(dropAmount);
 
@@ -161,19 +140,16 @@ public class PlayerProgressManager implements Listener {
         return getExp;
     }
 
-    public static double GetFishValue(ItemStack item){
+    public static double GetFishValue(ItemStack item) {
 
-        if (item != null){
-            if (item.getType() == Material.COD){
+        if (item != null) {
+            if (item.getType() == Material.COD) {
                 return 10;
-            }
-            else if (item.getType() == Material.SALMON){
+            } else if (item.getType() == Material.SALMON) {
                 return 15;
-            }
-            else if (item.getType() == Material.TROPICAL_FISH){
+            } else if (item.getType() == Material.TROPICAL_FISH) {
                 return 20;
-            }
-            else if (item.getType() == Material.PUFFERFISH){
+            } else if (item.getType() == Material.PUFFERFISH) {
                 return 25;
             }
         }
@@ -181,46 +157,34 @@ public class PlayerProgressManager implements Listener {
         return 0;
     }
 
-    public static double GetMobValue(Entity entity){
+    public static double GetMobValue(Entity entity) {
 
-        if (entity instanceof LivingEntity){
-            if (entity instanceof Mob){
-                if (entity instanceof Zombie){
-                    return 10+GetMobLevel(entity);
-                }
-                else if (entity instanceof Skeleton){
-                    return 15+GetMobLevel(entity);
-                }
-                else if (entity instanceof Spider){
-                    return 20+GetMobLevel(entity);
-                }
-                else if (entity instanceof Creeper){
-                    return 25+GetMobLevel(entity);
-                }
-                else if (entity instanceof Enderman){
-                    return 30+GetMobLevel(entity);
-                }
-                else if (entity instanceof Blaze){
-                    return 40+GetMobLevel(entity);
-                }
-                else if (entity instanceof Guardian){
-                    return 50+GetMobLevel(entity);
-                }
-
-                else if (entity instanceof Pig){
-                    return 5+GetMobLevel(entity);
-                }
-                else if (entity instanceof Chicken){
-                    return 7+GetMobLevel(entity);
-                }
-                else if (entity instanceof Sheep){
-                    return 8+GetMobLevel(entity);
-                }
-                else if (entity instanceof Cow){
-                    return 10+GetMobLevel(entity);
-                }
-                else if (entity instanceof Rabbit){
-                    return 15+GetMobLevel(entity);
+        if (entity instanceof LivingEntity) {
+            if (entity instanceof Mob) {
+                if (entity instanceof Zombie) {
+                    return 10 + GetMobLevel(entity);
+                } else if (entity instanceof Skeleton) {
+                    return 15 + GetMobLevel(entity);
+                } else if (entity instanceof Spider) {
+                    return 20 + GetMobLevel(entity);
+                } else if (entity instanceof Creeper) {
+                    return 25 + GetMobLevel(entity);
+                } else if (entity instanceof Enderman) {
+                    return 30 + GetMobLevel(entity);
+                } else if (entity instanceof Blaze) {
+                    return 40 + GetMobLevel(entity);
+                } else if (entity instanceof Guardian) {
+                    return 50 + GetMobLevel(entity);
+                } else if (entity instanceof Pig) {
+                    return 5 + GetMobLevel(entity);
+                } else if (entity instanceof Chicken) {
+                    return 7 + GetMobLevel(entity);
+                } else if (entity instanceof Sheep) {
+                    return 8 + GetMobLevel(entity);
+                } else if (entity instanceof Cow) {
+                    return 10 + GetMobLevel(entity);
+                } else if (entity instanceof Rabbit) {
+                    return 15 + GetMobLevel(entity);
                 }
             }
 
@@ -230,42 +194,42 @@ public class PlayerProgressManager implements Listener {
     }
 
     @EventHandler
-    public void OnBlockBreak(BlockBreakEvent event){
+    public void OnBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (event.isCancelled()){
+        if (event.isCancelled()) {
             return;
         }
 
-        if (item.getType() == Material.AIR){
+        if (item.getType() == Material.AIR) {
             return;
         }
 
-        if (!isBlockInRegion(block, "mine")){
+        if (!isBlockInRegion(block, "mine")) {
             return;
         }
 
-        if (placedBlocks.get(block.getLocation()) == null){
+        if (placedBlocks.get(block.getLocation()) == null) {
 
             PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
 
             Double proficiency = container.get(GetNamespacedKey(proficiencyKey), PersistentDataType.DOUBLE);
-            if (proficiency == null){
+            if (proficiency == null) {
                 proficiency = 0.0;
             }
 
-            if (!ItemNotBroken(item)){
+            if (!ItemNotBroken(item)) {
                 return;
             }
 
-            if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))){
+            if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))) {
                 return;
             }
 
-            if (isPickaxe(item)){
-                if (item.getItemMeta().hasEnchant(Enchantment.SILK_TOUCH)){
+            if (isPickaxe(item)) {
+                if (item.getItemMeta().hasEnchant(Enchantment.SILK_TOUCH)) {
                     return;
                 }
             }
@@ -277,7 +241,7 @@ public class PlayerProgressManager implements Listener {
             consoleLog("Proficiency : "+proficiency);
             consoleLog("Total Gain  : "+gain);*/
 
-            if (gain > 0){
+            if (gain > 0) {
                 //event.setCancelled(true);
                 //block.setType(Material.AIR);
 
@@ -290,27 +254,27 @@ public class PlayerProgressManager implements Listener {
                 PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, block.getLocation(), 1, 1);
             }
 
-        }else{
+        } else {
             placedBlocks.remove(block.getLocation());
         }
 
     }
 
     @EventHandler
-    public void OnBlockPlace(BlockPlaceEvent event){
+    public void OnBlockPlace(BlockPlaceEvent event) {
         Block block = event.getBlock();
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
-        if (item.getType() != Material.AIR){
+        if (item.getType() != Material.AIR) {
             placedBlocks.put(block.getLocation(), true);
         }
     }
 
     @EventHandler
-    public void EntityDeathEvent(EntityDeathEvent event){
+    public void EntityDeathEvent(EntityDeathEvent event) {
         Entity entity = event.getEntity();
 
-        if (event.getEntity().getKiller() == null){
+        if (event.getEntity().getKiller() == null) {
             return;
         }
 
@@ -320,14 +284,14 @@ public class PlayerProgressManager implements Listener {
 
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (GetMobValue(entity) > 0){
+        if (GetMobValue(entity) > 0) {
             Double proficiency = 0.0;
 
-            if (item.getType() != Material.AIR){
+            if (item.getType() != Material.AIR) {
                 PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
 
                 proficiency = container.get(GetNamespacedKey(proficiencyKey), PersistentDataType.DOUBLE);
-                if (proficiency == null){
+                if (proficiency == null) {
                     proficiency = 0.0;
                 }
             }
@@ -337,23 +301,23 @@ public class PlayerProgressManager implements Listener {
             int currentLevel = playerLevel.get(player.getUniqueId());
             int mobLevel = GetMobLevel(entity);
 
-            if (GetEntityDungeonTier(entity.getLocation()) > 0){
+            if (GetEntityDungeonTier(entity.getLocation()) > 0) {
                 /*if (currentLevel-mobLevel > 2){
                     gain = (gain*0.7);
                 }
                 if (currentLevel-mobLevel > 5){
                     gain = (gain*0.5);
                 }*/
-                if (currentLevel-mobLevel > 15){
-                    gain = (gain*0.8);
+                if (currentLevel - mobLevel > 15) {
+                    gain = (gain * 0.8);
                 }
-                if (currentLevel-mobLevel >= 20){
-                    gain = (gain*0.5);
+                if (currentLevel - mobLevel >= 20) {
+                    gain = (gain * 0.5);
                 }
             }
 
             double totalGain = AddExp(player, gain, proficiency);
-            if (gain > 0){
+            if (gain > 0) {
                 spawnExpHologram(entity.getLocation(), totalGain);
                 PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, entity.getLocation(), 1, 1);
             }
@@ -362,12 +326,12 @@ public class PlayerProgressManager implements Listener {
 
 
     @EventHandler
-    public void OnJoin(PlayerJoinEvent event){
+    public void OnJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         ResetFishing(player);
     }
 
-    public static void ResetFishing(Player player){
+    public static void ResetFishing(Player player) {
         isFishing.put(player, false);
         fishHealth.put(player, 0);
         fishingPower.put(player, 0);
@@ -381,21 +345,19 @@ public class PlayerProgressManager implements Listener {
     public static HashMap<Player, ItemStack> fishingItem = new HashMap<>();
 
     @EventHandler
-    public void OnFishing(PlayerFishEvent event){
+    public void OnFishing(PlayerFishEvent event) {
         Player player = event.getPlayer();
 
-        if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH){
+        if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH) {
             event.setCancelled(true);
             ProcessFishingState(player);
-        }
-
-        else if (event.getState() == PlayerFishEvent.State.REEL_IN){
-            if (event.getState() != PlayerFishEvent.State.IN_GROUND){
-                if (isFishing.get(player)){
-                    if (!player.isSneaking()){
+        } else if (event.getState() == PlayerFishEvent.State.REEL_IN) {
+            if (event.getState() != PlayerFishEvent.State.IN_GROUND) {
+                if (isFishing.get(player)) {
+                    if (!player.isSneaking()) {
                         event.setCancelled(true);
                         player.sendMessage(sendText("&cSneak+Right-Click &4to cancel fishing!"));
-                    }else{
+                    } else {
                         isFishing.put(player, false);
                     }
                 }
@@ -403,16 +365,16 @@ public class PlayerProgressManager implements Listener {
         }
     }
 
-    public static void ProcessFishingState(Player player){
-        if (!isFishing.get(player)){
+    public static void ProcessFishingState(Player player) {
+        if (!isFishing.get(player)) {
             ItemStack item = player.getInventory().getItemInMainHand();
             ItemMeta meta = item.getItemMeta();
             PersistentDataContainer container = meta.getPersistentDataContainer();
-            if (!isFishingRod(item)){
+            if (!isFishingRod(item)) {
                 return;
             }
 
-            if (!isPlayerInRegion(player, "lake")){
+            if (!isPlayerInRegion(player, "lake")) {
                 player.sendMessage(sendText("&4You must be in a lake to catch a fish! &6type /warp (select -> 'lake')"));
                 return;
             }
@@ -420,7 +382,7 @@ public class PlayerProgressManager implements Listener {
 
             double fishingPowerRetriever = 1;
             Double fishingPowerContainer = container.get(GetNamespacedKey(toolPowerKey), PersistentDataType.DOUBLE);
-            if (fishingPowerContainer != null){
+            if (fishingPowerContainer != null) {
                 fishingPowerRetriever = fishingPowerContainer;
             }
             int _fishingPower = (int) fishingPowerRetriever;
@@ -432,16 +394,14 @@ public class PlayerProgressManager implements Listener {
             ItemStack fishGet = new ItemStack(Material.COD);
 
             Random random = new Random();
-            int randomFish = random.nextInt(100)+1;
-            if (randomFish <= 20){
+            int randomFish = random.nextInt(100) + 1;
+            if (randomFish <= 20) {
                 fishGet.setType(Material.PUFFERFISH);
-            }
-            else if (randomFish <= 30){
+            } else if (randomFish <= 30) {
                 fishGet.setType(Material.TROPICAL_FISH);
-            }
-            else if (randomFish <= 50){
+            } else if (randomFish <= 50) {
                 fishGet.setType(Material.SALMON);
-            }else {
+            } else {
                 fishGet.setType(Material.COD);
             }
 
@@ -454,35 +414,33 @@ public class PlayerProgressManager implements Listener {
             PlaySoundAt(Sound.BLOCK_NOTE_BLOCK_PLING, player.getLocation(), 0, 0);
             PlaySoundAt(Sound.BLOCK_GLASS_BREAK, player.getLocation(), 1, 1);
 
-            if (currentEvent != FactoryEvents.EventType.Invincible_Items){
+            if (currentEvent != FactoryEvents.EventType.Invincible_Items) {
                 ManageDurability(player, "hand");
             }
             UpdateItem(player, "hand", item);
         }
     }
 
-    public static void TriggerFishing(Player player){
-        if (isFishing.get(player)){
+    public static void TriggerFishing(Player player) {
+        if (isFishing.get(player)) {
             int _fishHealth = fishHealth.get(player);
             int _fishingPower = fishingPower.get(player);
-            if (_fishHealth > 0){
+            if (_fishHealth > 0) {
                 _fishHealth -= _fishingPower;
                 fishHealth.put(player, _fishHealth);
 
                 player.swingHand(EquipmentSlot.HAND);
-                player.sendTitle(sendText("&bFishing..."), sendText("&f[ &3"+_fishHealth+" &f]"));
+                player.sendTitle(sendText("&bFishing..."), sendText("&f[ &3" + _fishHealth + " &f]"));
                 PlaySoundAt(Sound.ENTITY_FISHING_BOBBER_RETRIEVE, player.getLocation(), 1, 1);
-            }
-
-            else {
+            } else {
                 isFishing.put(player, false);
 
                 Double proficiency = 0.0;
                 ItemStack item = player.getInventory().getItemInMainHand();
-                if (item.getType() != Material.AIR){
+                if (item.getType() != Material.AIR) {
                     PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
                     proficiency = container.get(GetNamespacedKey(proficiencyKey), PersistentDataType.DOUBLE);
-                    if (proficiency == null){
+                    if (proficiency == null) {
                         proficiency = 0.0;
                     }
                 }
@@ -491,7 +449,7 @@ public class PlayerProgressManager implements Listener {
 
                 double totalGain = AddExp(player, gain, proficiency);
                 Map<Integer, ItemStack> addedItem = player.getInventory().addItem(fishingItem.get(player));
-                if (!addedItem.isEmpty()){
+                if (!addedItem.isEmpty()) {
                     DropItem(player.getLocation(), fishingItem.get(player), 1);
                     player.sendMessage(sendText("&eYour inventory is full, the fish has been dropped..."));
                     PlaySoundAt(Sound.ENTITY_ITEM_PICKUP, player.getLocation(), 1, 1);
@@ -499,11 +457,11 @@ public class PlayerProgressManager implements Listener {
 
                 TriggerFishingQuest(player, fishingItem.get(player));
 
-                if (gain > 0){
+                if (gain > 0) {
                     spawnExpHologram(player.getEyeLocation(), totalGain);
                 }
 
-                player.sendTitle(sendText("&aCaught!"), sendText("&2+&f"+fishingItem.get(player).getItemMeta().getDisplayName()));
+                player.sendTitle(sendText("&aCaught!"), sendText("&2+&f" + fishingItem.get(player).getItemMeta().getDisplayName()));
                 PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, player.getLocation(), 1, 1);
             }
         }
@@ -511,31 +469,31 @@ public class PlayerProgressManager implements Listener {
 
 
     // farming manager
-    public static boolean isCropBlock(Block block){
+    public static boolean isCropBlock(Block block) {
         return block.getType() == Material.WHEAT || block.getType() == Material.CARROTS
-                || block.getType() == Material.POTATOES|| block.getType() == Material.BEETROOTS
+                || block.getType() == Material.POTATOES || block.getType() == Material.BEETROOTS
                 || block.getType() == Material.MELON_STEM || block.getType() == Material.PUMPKIN_STEM
-                || block.getType() == Material.COCOA|| block.getType() == Material.NETHER_WART;
+                || block.getType() == Material.COCOA || block.getType() == Material.NETHER_WART;
     }
 
-    public static boolean isCropItem(ItemStack item){
+    public static boolean isCropItem(ItemStack item) {
 
-        if (item == null){
+        if (item == null) {
             return false;
         }
 
-        if (item.getType() == Material.AIR){
+        if (item.getType() == Material.AIR) {
             return false;
         }
 
         return item.getType() == Material.WHEAT || item.getType() == Material.WHEAT_SEEDS || item.getType() == Material.CARROT
-                || item.getType() == Material.POTATO|| item.getType() == Material.BEETROOT|| item.getType() == Material.BEETROOT_SEEDS
+                || item.getType() == Material.POTATO || item.getType() == Material.BEETROOT || item.getType() == Material.BEETROOT_SEEDS
                 || item.getType() == Material.MELON_SEEDS || item.getType() == Material.PUMPKIN_SEEDS || item.getType() == Material.COCOA_BEANS;
     }
 
 
-    public static boolean isFruit(Block block){
-        return block.getType() == Material.MELON ||block.getType() == Material.PUMPKIN ;
+    public static boolean isFruit(Block block) {
+        return block.getType() == Material.MELON || block.getType() == Material.PUMPKIN;
     }
 
 
@@ -545,12 +503,24 @@ public class PlayerProgressManager implements Listener {
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (!event.isCancelled()){
-            if (isCropBlock(block)){
+        if (!event.isCancelled()) {
+            if (getRegionByLocation(block.getLocation()).contains("farm")) {
+                if (isCropBlock(block)) {
+                    event.setCancelled(true);
+                    ManageFarm(player, block);
+                    return;
+                } else {
+                    if (!player.hasPermission("admin")) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                }
+            }
+
+            if (isCropBlock(block)) {
                 event.setCancelled(true);
                 PlayerFarming(player, item, block);
-            }
-            else if (isFruit(block)){
+            } else if (isFruit(block)) {
                 event.setCancelled(true);
                 PlayerFarming(player, item, block);
             }
@@ -563,18 +533,25 @@ public class PlayerProgressManager implements Listener {
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (event.getAction() != Action.LEFT_CLICK_BLOCK){
+        if (event.getAction() != Action.LEFT_CLICK_BLOCK) {
             return;
         }
 
         assert block != null;
-        if (hasIslandAccess(player)){
-            if (isHoe(item)){
-                if (isFruit(block)){
-                        PlayerFarming(player, item, block);
+        /*if (getRegionByLocation(block.getLocation()).contains("farm")){
+            if (isCropBlock(block)){
+                event.setCancelled(true);
+                ManageFarm(player, block);
+                return;
+            }
+        }*/
+        if (hasIslandAccess(player)) {
+            if (isHoe(item)) {
+                if (isFruit(block)) {
+                    PlayerFarming(player, item, block);
                     event.setCancelled(true);
-                }else{
-                    if (block.getType() == Material.COCOA){
+                } else {
+                    if (block.getType() == Material.COCOA) {
                         event.setCancelled(true);
                         PlayerFarming(player, item, block);
                     }
@@ -583,11 +560,11 @@ public class PlayerProgressManager implements Listener {
         }
     }
 
-    public static void PlayerFarming(Player player, ItemStack item, Block block){
+    public static void PlayerFarming(Player player, ItemStack item, Block block) {
         boolean useHoe = isHoe(item);
 
-        if (useHoe){
-            if (!ItemNotBroken(item)){
+        if (useHoe) {
+            if (!ItemNotBroken(item)) {
                 Notification_ItemBroken(player);
                 return;
             }
@@ -599,7 +576,7 @@ public class PlayerProgressManager implements Listener {
 
             PersistentDataContainer container = meta.getPersistentDataContainer();
 
-            if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))){
+            if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))) {
                 player.sendMessage(Notification_NoLevel(player));
                 return;
             }
@@ -615,18 +592,18 @@ public class PlayerProgressManager implements Listener {
         if (data instanceof Ageable ageable) {
 
             if (type == Material.PUMPKIN_STEM || type == Material.MELON_STEM) {
-                if (useHoe){
+                if (useHoe) {
                     return;
                 }
             }
 
-            if (ageable.getAge() != ageable.getMaximumAge()){
-                if (!useHoe){
+            if (ageable.getAge() != ageable.getMaximumAge()) {
+                if (!useHoe) {
                     block.setType(Material.AIR);
                 }
                 return;
             }
-        }else{
+        } else {
             switch (type) {
                 case PUMPKIN -> replantCrop(player, block, Material.AIR, new ItemStack(Material.PUMPKIN));
                 case MELON -> replantCrop(player, block, Material.AIR, new ItemStack(Material.MELON_SLICE));
@@ -651,12 +628,15 @@ public class PlayerProgressManager implements Listener {
     private static void replantCrop(Player player, Block block, Material material, ItemStack drop) {
         Location location = block.getLocation();
 
-        if (drop.getType() != Material.AIR){
+        if (drop.getType() != Material.AIR) {
             block.getWorld().dropItem(location, new ItemStack(ProcessItemMeta(new ItemStack(drop.getType(), 1))));
         }
 
-        if (drop.getType().toString().contains("WHEAT")){
+        if (drop.getType().toString().contains("WHEAT")) {
             block.getWorld().dropItem(location, new ItemStack(ProcessItemMeta(new ItemStack(Material.WHEAT_SEEDS, 1))));
+        }
+        if (drop.getType().toString().contains("BEETROOT")) {
+            block.getWorld().dropItem(location, new ItemStack(ProcessItemMeta(new ItemStack(Material.BEETROOT_SEEDS, 1))));
         }
 
         BlockData newData = block.getBlockData();
@@ -664,15 +644,15 @@ public class PlayerProgressManager implements Listener {
             ageable.setAge(0);
             block.setBlockData(ageable);
             ManageCropExp(player, block);
-            if (block.getType() == Material.MELON_STEM || block.getType() == Material.PUMPKIN_STEM){
+            if (block.getType() == Material.MELON_STEM || block.getType() == Material.PUMPKIN_STEM) {
                 block.setType(material);
             }
-        }else{
-            if (isFruit(block)){
-                if (placedBlocks.get(block.getLocation()) != null){
+        } else {
+            if (isFruit(block)) {
+                if (placedBlocks.get(block.getLocation()) != null) {
                     placedBlocks.remove(block.getLocation());
                     block.setType(material);
-                }else{
+                } else {
                     ManageCropExp(player, block);
                     block.setType(material);
                 }
@@ -680,76 +660,169 @@ public class PlayerProgressManager implements Listener {
         }
     }
 
-    public static double GetCropValue(Block block){
+    public static double GetCropValue(Block block) {
         double getExp = 0;
 
-        if (block == null){
+        if (block == null) {
             return getExp;
         }
 
-        if (block.getType() == Material.AIR){
+        if (block.getType() == Material.AIR) {
             return getExp;
         }
 
-        if (block.getType() == Material.WHEAT){
-            getExp = 2;
-        }
-        else if (block.getType() == Material.BEETROOTS){
-            getExp = 3;
-        }
-        else if (block.getType() == Material.CARROTS){
-            getExp = 4;
-        }
-        else if (block.getType() == Material.POTATOES){
-            getExp = 5;
-        }
-        else if (block.getType() == Material.COCOA){
-            getExp = 7;
-        }
-        else if (block.getType() == Material.MELON){
-            getExp = 9;
-        }
-        else if (block.getType() == Material.PUMPKIN){
-            getExp = 12;
+        if (block.getType() == Material.WHEAT) {
+            getExp = 0.05;
+        } else if (block.getType() == Material.BEETROOTS) {
+            getExp = 0.06;
+        } else if (block.getType() == Material.CARROTS) {
+            getExp = 0.07;
+        } else if (block.getType() == Material.POTATOES) {
+            getExp = 0.08;
+        } else if (block.getType() == Material.NETHER_WART) {
+            getExp = 0.1;
+        } else if (block.getType() == Material.COCOA) {
+            getExp = 0.8;
+        } else if (block.getType() == Material.MELON) {
+            getExp = 1.5;
+        } else if (block.getType() == Material.PUMPKIN) {
+            getExp = 2.5;
         }
 
         return getExp;
     }
 
-    public static void ManageCropExp(Player player, Block block){
+    public static void ManageCropExp(Player player, Block block) {
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (item.getType() == Material.AIR){
+        if (item.getType() == Material.AIR) {
             return;
         }
 
         PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
 
         Double proficiency = container.get(GetNamespacedKey(proficiencyKey), PersistentDataType.DOUBLE);
-        if (proficiency == null){
+        if (proficiency == null) {
             proficiency = 0.0;
         }
 
-        if (!ItemNotBroken(item)){
+        if (!ItemNotBroken(item)) {
             return;
         }
 
-        if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))){
+        if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))) {
             return;
         }
 
-        if (isHoe(item)){
-            if (item.getItemMeta().hasEnchant(Enchantment.SILK_TOUCH)){
+        if (isHoe(item)) {
+            if (item.getItemMeta().hasEnchant(Enchantment.SILK_TOUCH)) {
                 return;
             }
         }
 
         double gain = GetCropValue(block);
 
-        if (gain > 0){
-            double totalGain = AddExp(player, gain, proficiency);
+        if (gain > 0) {
+            double totalGain = AddExp(player, gain, proficiency / 10);
             spawnExpHologram(block.getLocation(), totalGain);
-            PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, block.getLocation(), 1, 1);
+            PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, block.getLocation(), 0.2f, 1);
+        }
+    }
+
+    public static void ManageFarm(Player player, Block block) {
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (item.getType() == Material.AIR) {
+            player.sendMessage(sendText("&4Use hoe to harvest!"));
+            return;
+        }
+
+        if (item.getType() != Material.AIR) {
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+
+            if (!isFactoryItem(item)) {
+                player.sendMessage(sendText("&4Use hoe to harvest!"));
+                return;
+            }
+
+            if (!isHoe(item)) {
+                player.sendMessage(sendText("&4Use hoe to harvest!"));
+            }
+
+            if (!ItemNotBroken(item)) {
+                Notification_ItemBroken(player);
+                return;
+            }
+
+            if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))) {
+                return;
+            }
+        }
+
+        BlockData newData = block.getBlockData();
+        if (newData instanceof Ageable ageable) {
+
+            if (ageable.getAge() != ageable.getMaximumAge()) {
+                return;
+            }
+
+            ageable.setAge(0);
+            block.setBlockData(ageable);
+            //ManageCropExp(player, block);
+            if (isCropBlock(block)) {
+                new BukkitRunnable() {
+                    int currentAge = 0;
+                    final int maxAge = ageable.getMaximumAge();
+
+                    @Override
+                    public void run() {
+                        if (currentAge >= maxAge) {
+                            this.cancel();
+                            return;
+                        }
+                        currentAge++;
+                        if (block.getBlockData() instanceof Ageable growable) {
+                            growable.setAge(currentAge);
+                            block.setBlockData(growable.clone());
+                        }
+                    }
+                }.runTaskTimer(getMainPlugin(), 20L, 10L);
+
+                Random random = new Random();
+                int randomDrop = random.nextInt(100) + 1;
+                int randomDrop2 = random.nextInt(100) + 1;
+                int randomDropAmount = random.nextInt(3) + 1;
+
+                if (randomDrop <= 5) {
+                    if (block.getType() == Material.WHEAT) {
+                        DropItem(block.getLocation(), new ItemStack(ProcessItemMeta(new ItemStack(Material.WHEAT))), 1);
+                        if (randomDrop2 <= 50) {
+                            DropItem(block.getLocation(), new ItemStack(ProcessItemMeta(new ItemStack(Material.WHEAT_SEEDS))), 1);
+                        }
+                    } else if (block.getType() == Material.BEETROOTS) {
+                        DropItem(block.getLocation(), new ItemStack(ProcessItemMeta(new ItemStack(Material.BEETROOT))), 1);
+                        if (randomDrop2 <= 50) {
+                            DropItem(block.getLocation(), new ItemStack(ProcessItemMeta(new ItemStack(Material.BEETROOT_SEEDS))), 1);
+                        }
+                    } else if (block.getType() == Material.CARROTS) {
+                        DropItem(block.getLocation(), new ItemStack(ProcessItemMeta(new ItemStack(Material.CARROT))), randomDropAmount);
+                    } else if (block.getType() == Material.POTATOES) {
+                        DropItem(block.getLocation(), new ItemStack(ProcessItemMeta(new ItemStack(Material.POTATO))), randomDropAmount);
+                    } else if (block.getType() == Material.NETHER_WART) {
+                        DropItem(block.getLocation(), new ItemStack(ProcessItemMeta(new ItemStack(Material.NETHER_WART))), randomDropAmount + 1);
+                    }
+                }
+            }
+            Random random = new Random();
+            int randomConsumeDurability = random.nextInt(100) + 1;
+            ManageCropExp(player, block);
+            if (randomConsumeDurability <= 10) {
+                if (currentEvent != FactoryEvents.EventType.Invincible_Items) {
+                    ManageDurability(player, "hand");
+                    UpdateItem(player, "hand", item);
+                }
+            }
         }
     }
 

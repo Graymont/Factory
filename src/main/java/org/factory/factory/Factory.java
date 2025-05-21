@@ -18,12 +18,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.factory.factory.Database.SaveAllData;
+import static org.factory.factory.Database.*;
 import static org.factory.factory.Events.*;
 import static org.factory.factory.Utils.Booster.ManageBooster;
 import static org.factory.factory.Utils.CraftingManager.InitRecipes;
 import static org.factory.factory.Utils.CraftingManager.InitSmeltings;
 import static org.factory.factory.Utils.FactoryEvents.*;
+import static org.factory.factory.Utils.FactoryItem.GenerateItemConfig;
 import static org.factory.factory.Utils.FactoryItem.InitFactoryItems;
 import static org.factory.factory.Utils.FactoryMachine.*;
 import static org.factory.factory.Utils.FactoryMob.Every1SecondsSpawnerParticle;
@@ -55,6 +56,8 @@ public final class Factory extends JavaPlugin {
 
     public FactoryMob factoryMob = new FactoryMob();
 
+    public FarmlandProtection farmlandProtection = new FarmlandProtection();
+
     public static Factory getMainPlugin() {
         return Factory.getPlugin(Factory.class);
     }
@@ -73,7 +76,8 @@ public final class Factory extends JavaPlugin {
         RegisterAllEvents();
         RegisterAllCommands();
         setupEconomy();
-        Database.LoadAllData();
+        InitDefaultFile();
+        LoadAllData();
         InitFactoryItems();
         InitRecipes();
         InitSmeltings();
@@ -105,6 +109,8 @@ public final class Factory extends JavaPlugin {
 
         Every30SecondsDungeonMobSpawn();
         Every1SecondsSpawnerParticle();
+
+        //GenerateItemConfig();
     }
 
 
@@ -156,6 +162,7 @@ public final class Factory extends JavaPlugin {
         getServer().getPluginManager().registerEvents(boosterManager, this);
         getServer().getPluginManager().registerEvents(dungeon, this);
         getServer().getPluginManager().registerEvents(factoryMob, this);
+        getServer().getPluginManager().registerEvents(farmlandProtection, this);
     }
 
     static void EverySeconds(){

@@ -5,6 +5,7 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.CreatureSpawner;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
@@ -22,6 +23,9 @@ import org.bukkit.util.Vector;
 import org.factory.factory.Factory;
 import org.jetbrains.annotations.NotNull;
 
+import javax.json.Json;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 import static org.factory.factory.Database.*;
@@ -78,6 +82,12 @@ public class FactoryItem {
     private String displayname = "Unnamed Item";
     private Material material = Material.WOODEN_SWORD;
 
+    private double farmingFortune = 0;
+    private double miningFortune = 0;
+    private double fishingFortune = 0;
+    private double combatFortune = 0;
+    private double foragingFortune = 0;
+
     public static String itemKey = "item";
     public static String revisionCodeKey = "revisionCode";
     public static String attackDamageKey = "attackDamage";
@@ -124,6 +134,12 @@ public class FactoryItem {
     public static String boosterTypeKey = "boosterType";
     public static String boosterDurationKey = "boosterDuration";
 
+    public static String farmingFortuneKey = "farmingFortune";
+    public static String miningFortuneKey = "miningFortune";
+    public static String combatFortuneKey = "combatFortune";
+    public static String foragingFortuneKey = "foragingFortune";
+    public static String fishingFortuneKey = "fishingFortune";
+
     public static Boolean canUse = true;
 
     public static void SpawnAttackEffect(Player player, AttackEffect e, double range){
@@ -167,32 +183,32 @@ public class FactoryItem {
                 { "stonepickaxe", Material.STONE_PICKAXE, 2, 1, "Stone Pickaxe", Rarity.RarityType.Uncommon, Type.Tool, SubType.Pickaxe, 250, 2 },
                 { "ironpickaxe", Material.IRON_PICKAXE, 3, 1, "Iron Pickaxe", Rarity.RarityType.Rare, Type.Tool, SubType.Pickaxe, 500, 3 },
                 { "goldenpickaxe", Material.GOLDEN_PICKAXE, 4, 1, "Golden Pickaxe", Rarity.RarityType.Epic, Type.Tool, SubType.Pickaxe, 850, 10 },
-                { "diamondpickaxe", Material.DIAMOND_PICKAXE, 5, 1, "Diamond Pickaxe", Rarity.RarityType.Legendary, Type.Tool, SubType.Pickaxe, 1200, 20 },
-                { "netheritepickaxe", Material.NETHERITE_PICKAXE, 6, 1, "Netherite Pickaxe", Rarity.RarityType.Immortal, Type.Tool, SubType.Pickaxe, 2500, 35 },
+                { "diamondpickaxe", Material.DIAMOND_PICKAXE, 5, 1, "Diamond Pickaxe", Rarity.RarityType.Legendary, Type.Tool, SubType.Pickaxe, 1200, 15 },
+                { "netheritepickaxe", Material.NETHERITE_PICKAXE, 6, 1, "Netherite Pickaxe", Rarity.RarityType.Immortal, Type.Tool, SubType.Pickaxe, 2500, 20 },
 
                 // Shovels
                 { "woodenshovel", Material.WOODEN_SHOVEL, 1, 1, "Wooden Shovel", Rarity.RarityType.Common, Type.Tool, SubType.Shovel, 100, 1 },
                 { "stoneshovel", Material.STONE_SHOVEL, 2, 1, "Stone Shovel", Rarity.RarityType.Uncommon, Type.Tool, SubType.Shovel, 250, 2 },
                 { "ironshovel", Material.IRON_SHOVEL, 3, 1, "Iron Shovel", Rarity.RarityType.Rare, Type.Tool, SubType.Shovel, 500, 3 },
                 { "goldenshovel", Material.GOLDEN_SHOVEL, 4, 1, "Golden Shovel", Rarity.RarityType.Epic, Type.Tool, SubType.Shovel, 850, 10 },
-                { "diamondshovel", Material.DIAMOND_SHOVEL, 5, 1, "Diamond Shovel", Rarity.RarityType.Legendary, Type.Tool, SubType.Shovel, 1200, 20 },
-                { "netheriteshovel", Material.NETHERITE_SHOVEL, 6, 1, "Netherite Shovel", Rarity.RarityType.Immortal, Type.Tool, SubType.Shovel, 2500, 35 },
+                { "diamondshovel", Material.DIAMOND_SHOVEL, 5, 1, "Diamond Shovel", Rarity.RarityType.Legendary, Type.Tool, SubType.Shovel, 1200, 15 },
+                { "netheriteshovel", Material.NETHERITE_SHOVEL, 6, 1, "Netherite Shovel", Rarity.RarityType.Immortal, Type.Tool, SubType.Shovel, 2500, 20 },
 
                 // Axes
                 { "woodenaxe", Material.WOODEN_AXE, 1, 1, "Wooden Axe", Rarity.RarityType.Common, Type.Tool, SubType.Axe, 100, 1 },
                 { "stoneaxe", Material.STONE_AXE, 2, 1, "Stone Axe", Rarity.RarityType.Uncommon, Type.Tool, SubType.Axe, 250, 2 },
                 { "ironaxe", Material.IRON_AXE, 3, 1, "Iron Axe", Rarity.RarityType.Rare, Type.Tool, SubType.Axe, 500, 3 },
                 { "goldenaxe", Material.GOLDEN_AXE, 4, 1, "Golden Axe", Rarity.RarityType.Epic, Type.Tool, SubType.Axe, 850, 10 },
-                { "diamondaxe", Material.DIAMOND_AXE, 5, 1, "Diamond Axe", Rarity.RarityType.Legendary, Type.Tool, SubType.Axe, 1200, 20 },
-                { "netheriteaxe", Material.NETHERITE_AXE, 6, 1, "Netherite Axe", Rarity.RarityType.Immortal, Type.Tool, SubType.Axe, 2500, 35 },
+                { "diamondaxe", Material.DIAMOND_AXE, 5, 1, "Diamond Axe", Rarity.RarityType.Legendary, Type.Tool, SubType.Axe, 1200, 15 },
+                { "netheriteaxe", Material.NETHERITE_AXE, 6, 1, "Netherite Axe", Rarity.RarityType.Immortal, Type.Tool, SubType.Axe, 2500, 20 },
 
                 // Hoes
                 { "woodenhoe", Material.WOODEN_HOE, 1, 1, "Wooden Hoe", Rarity.RarityType.Common, Type.Tool, SubType.Hoe, 100, 1 },
                 { "stonehoe", Material.STONE_HOE, 2, 1, "Stone Hoe", Rarity.RarityType.Uncommon, Type.Tool, SubType.Hoe, 250, 2 },
                 { "ironhoe", Material.IRON_HOE, 3, 1, "Iron Hoe", Rarity.RarityType.Rare, Type.Tool, SubType.Hoe, 500, 3 },
                 { "goldenhoe", Material.GOLDEN_HOE, 4, 1, "Golden Hoe", Rarity.RarityType.Epic, Type.Tool, SubType.Hoe, 850, 10 },
-                { "diamondhoe", Material.DIAMOND_HOE, 5, 1, "Diamond Hoe", Rarity.RarityType.Legendary, Type.Tool, SubType.Hoe, 1200, 20 },
-                { "netheritehoe", Material.NETHERITE_HOE, 6, 1, "Netherite Hoe", Rarity.RarityType.Immortal, Type.Tool, SubType.Hoe, 2500, 35 },
+                { "diamondhoe", Material.DIAMOND_HOE, 5, 1, "Diamond Hoe", Rarity.RarityType.Legendary, Type.Tool, SubType.Hoe, 1200, 15 },
+                { "netheritehoe", Material.NETHERITE_HOE, 6, 1, "Netherite Hoe", Rarity.RarityType.Immortal, Type.Tool, SubType.Hoe, 2500, 20 },
 
                 // Swords
                 { "woodensword", Material.WOODEN_SWORD, 4, 1.2d, 2, "Wooden Sword", Rarity.RarityType.Common, Type.Weapon, SubType.Sword, 100, 1 },
@@ -596,6 +612,7 @@ public class FactoryItem {
         InitSpawners();
         InitEquipments();
         InitMinerals();
+        InitFactoryCustomTools();
 
         consoleLog(sendText("&aFactory items initialized successfully!"));
     }
@@ -760,6 +777,37 @@ public class FactoryItem {
         preparedEquipments.put("cherryleaves", Color.fromRGB(255, 105, 180)); // Hot Pink
         preparedEquipments.put("jungleleaves", Color.fromRGB(34, 139, 34)); // Jungle Green
         preparedEquipments.put("mangroveleaves", Color.fromRGB(46, 139, 87)); // Deep Green
+
+        // new
+
+        preparedEquipments.put("limestone", Color.fromRGB(210, 210, 180)); // Pale Stone Beige
+        preparedEquipments.put("marble", Color.fromRGB(255, 250, 250)); // White Marble
+        preparedEquipments.put("basalt", Color.fromRGB(70, 70, 90)); // Dark Grayish Purple
+        preparedEquipments.put("slate", Color.fromRGB(112, 128, 144)); // Slate Gray
+        preparedEquipments.put("obsidian", Color.fromRGB(53, 56, 57)); // Obsidian Black
+        preparedEquipments.put("quartz", Color.fromRGB(240, 240, 255)); // Icy White
+        preparedEquipments.put("granite", Color.fromRGB(198, 145, 120)); // Brownish Pink
+        preparedEquipments.put("coal", Color.fromRGB(54, 69, 79)); // Coal Gray
+        preparedEquipments.put("copper", Color.fromRGB(184, 115, 51)); // Copper Orange
+        preparedEquipments.put("tin", Color.fromRGB(192, 192, 192)); // Tin Silver
+        preparedEquipments.put("iron", Color.fromRGB(160, 160, 160)); // Iron Gray
+        preparedEquipments.put("lead", Color.fromRGB(120, 120, 120)); // Lead Gray
+        preparedEquipments.put("aluminium", Color.fromRGB(200, 200, 200)); // Light Silver
+        preparedEquipments.put("silver", Color.fromRGB(192, 192, 192)); // Metallic Silver
+        preparedEquipments.put("gold", Color.fromRGB(255, 215, 0)); // Gold
+        preparedEquipments.put("platinum", Color.fromRGB(229, 228, 226)); // Platinum White
+        preparedEquipments.put("amethyst", Color.fromRGB(153, 102, 204)); // Violet
+        preparedEquipments.put("garnet", Color.fromRGB(115, 0, 0)); // Deep Red
+        preparedEquipments.put("topaz", Color.fromRGB(255, 200, 50)); // Golden Yellow
+        preparedEquipments.put("jade", Color.fromRGB(0, 168, 107)); // Jade Green
+        preparedEquipments.put("aquamarine", Color.fromRGB(127, 255, 212)); // Aqua Blue-Green
+        preparedEquipments.put("sapphire", Color.fromRGB(15, 82, 186)); // Deep Blue
+        preparedEquipments.put("ruby", Color.fromRGB(224, 17, 95)); // Crimson Red
+        preparedEquipments.put("emerald", Color.fromRGB(80, 200, 120)); // Emerald Green
+        preparedEquipments.put("diamond", Color.fromRGB(185, 242, 255)); // Light Cyan
+        preparedEquipments.put("netherite", Color.fromRGB(48, 25, 52)); // Dark Purple-Gray
+
+
 
 
 
@@ -1235,13 +1283,34 @@ public class FactoryItem {
         return this;
     }
 
+    public FactoryItem setMiningFortune(double miningFortune) {
+        this.miningFortune = miningFortune;
+        return this;
+    }
+    public FactoryItem setForagingFortune(double foragingFortune) {
+        this.foragingFortune = foragingFortune;
+        return this;
+    }
+    public FactoryItem setFarmingFortune(double farmingFortune) {
+        this.farmingFortune = farmingFortune;
+        return this;
+    }
+    public FactoryItem setFishingFortune(double fishingFortune) {
+        this.fishingFortune = fishingFortune;
+        return this;
+    }
+    public FactoryItem setCombatFortune(double combatFortune) {
+        this.combatFortune = combatFortune;
+        return this;
+    }
+
 
     public ItemStack build() {
         return CreateItem(
                 type, subType, attackDamage, attackRange, attackSpeed, criticalChance, criticalDamage, steamConsumption,
                 health, steam, armor, undeadDamage, undeadDefense, mutantDamage, mutantDefense, meleeDamage, rangeDamage,
                 durability, maxDurability, toolPower, toolSpeed, bonusStats, rarity, displayname, material, attackEffect, levelMinimum,
-                canUse, color, wandMultiplier, boosterType, boosterDuration, proficiency);
+                canUse, color, wandMultiplier, boosterType, boosterDuration, proficiency, miningFortune, foragingFortune, farmingFortune, fishingFortune, combatFortune);
     }
 
     public ItemStack testItem(){
@@ -1252,7 +1321,7 @@ public class FactoryItem {
                 Type.Weapon, SubType.Sword, attackDamage, attackRange, attackSpeed, criticalChance, criticalDamage, steamConsumption,
                 health, steam, armor, undeadDamage, undeadDefense, mutantDamage, mutantDefense, meleeDamage, rangeDamage,
                 durability, maxDurability, toolPower, toolSpeed, addedBonus, rarity, displayname, material, attackEffect,
-                levelMinimum, canUse, color, wandMultiplier, boosterType, boosterDuration, proficiency);
+                levelMinimum, canUse, color, wandMultiplier, boosterType, boosterDuration, proficiency, miningFortune, foragingFortune, farmingFortune, fishingFortune, combatFortune);
     }
 
     public String getBonusKey(String key){
@@ -1302,7 +1371,13 @@ public class FactoryItem {
             double wandMultiplier,
             Booster.BoosterType boosterType,
             int boosterDuration,
-            double proficiency
+            double proficiency,
+
+            double miningFortune,
+            double foragingFortune,
+            double farmingFortune,
+            double fishingFortune,
+            double combatFortune
     )
 
     {
@@ -1381,6 +1456,22 @@ public class FactoryItem {
                     value = rangeDamage;
                 }
 
+                else if (statsKey.equalsIgnoreCase(baseKey+miningFortuneKey)){
+                    value = miningFortune;
+                }
+                else if (statsKey.equalsIgnoreCase(baseKey+foragingFortuneKey)){
+                    value = foragingFortune;
+                }
+                else if (statsKey.equalsIgnoreCase(baseKey+farmingFortuneKey)){
+                    value = farmingFortune;
+                }
+                else if (statsKey.equalsIgnoreCase(baseKey+fishingFortuneKey)){
+                    value = fishingFortune;
+                }
+                else if (statsKey.equalsIgnoreCase(baseKey+combatFortuneKey)){
+                    value = combatFortune;
+                }
+
                 container.set(GetNamespacedKey(statsKey), PersistentDataType.DOUBLE, value);
             }
         }
@@ -1445,6 +1536,27 @@ public class FactoryItem {
                 container.get(GetNamespacedKey(baseKey+rangeDamageKey), doubleType)
                 +getBonusStats(container, rangeDamageKey));
 
+
+        // fortune
+        container.set(GetNamespacedKey(miningFortuneKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+miningFortuneKey), doubleType)
+                        +getBonusStats(container, miningFortuneKey));
+
+        container.set(GetNamespacedKey(foragingFortuneKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+foragingFortuneKey), doubleType)
+                        +getBonusStats(container, foragingFortuneKey));
+
+        container.set(GetNamespacedKey(farmingFortuneKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+farmingFortuneKey), doubleType)
+                        +getBonusStats(container, farmingFortuneKey));
+
+        container.set(GetNamespacedKey(fishingFortuneKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+fishingFortuneKey), doubleType)
+                        +getBonusStats(container, fishingFortuneKey));
+
+        container.set(GetNamespacedKey(combatFortuneKey), PersistentDataType.DOUBLE,
+                container.get(GetNamespacedKey(baseKey+combatFortuneKey), doubleType)
+                        +getBonusStats(container, combatFortuneKey));
 
 
 
@@ -1572,6 +1684,35 @@ public class FactoryItem {
             if (toolSpeed > 0){
                 itemLore.add(sendText(" "+sendRgbText("⚡", "#F2C206")+" &7"+toolName+" Speed: &f" + (int) toolSpeed));
             }
+
+            if (miningFortune > 0){
+                itemLore.add(sendText(" "));
+                itemLore.add(sendText(" "+sendRgbText("\uD83C\uDF40", "#00FF00")+" &aMining Fortune: +" + (int) toolSpeed));
+                itemLore.add(sendText("  &7Increase Mineral drop amounts"));
+                itemLore.add(sendText(" "));
+            }
+            if (foragingFortune > 0){
+                itemLore.add(sendText(" "+sendRgbText("\uD83C\uDF40", "#00FF00")+" &aForaging Fortune: +" + (int) toolSpeed));
+                itemLore.add(sendText("  &7Increase Wood drop amounts"));
+                itemLore.add(sendText(" "));
+            }
+            if (farmingFortune > 0){
+                itemLore.add(sendText(" "+sendRgbText("\uD83C\uDF40", "#00FF00")+" &aFarming Fortune: +" + (int) toolSpeed));
+                itemLore.add(sendText("  &7Increase Crops drop rates at Farms"));
+                itemLore.add(sendText("  &7when drop rates reaches &f100% &7fortune"));
+                itemLore.add(sendText("  &7will converted into drop amounts"));
+                itemLore.add(sendText(" "));
+            }
+            if (fishingFortune > 0){
+                itemLore.add(sendText(" "+sendRgbText("\uD83C\uDF40", "#00FF00")+" &aFishing Fortune: +" + (int) toolSpeed));
+                itemLore.add(sendText("  &7Increase Fish amount per catch"));
+                itemLore.add(sendText(" "));
+            }
+            if (combatFortune > 0){
+                itemLore.add(sendText(" "+sendRgbText("\uD83C\uDF40", "#00FF00")+" &aCombat Fortune: &f" + (int) toolSpeed));
+                itemLore.add(sendText("  &7Increase Mob Loot drop rates"));
+            }
+
             if (proficiency > 0){
                 itemLore.add(sendText(" "));
                 itemLore.add(sendText(" &9+"+proficiency+" &f"+jobName+" Proficiency"));
@@ -3105,6 +3246,109 @@ public class FactoryItem {
 
         item.setItemMeta(meta);
         return item;
+    }
+
+
+    public static void InitFactoryCustomTools(){
+        FactoryItem item = new FactoryItem();
+
+        item.setType(Type.Tool);
+        item.setSubType(SubType.Pickaxe);
+
+        item.setMaterial(Material.IRON_PICKAXE);
+        item.setDisplayname("&aRedstone Pickaxe");
+        item.setToolPower(7);
+        item.setToolSpeed(1);
+        item.setLevelMinimum(25);
+        item.setRarity(Rarity.RarityType.Common);
+        item.setMiningFortune(2);
+
+        SaveItem("redstonepickaxe", new ItemStack(item.build()));
+    }
+
+    public static HashMap<String, String> storedItemStats = new HashMap<>();
+
+    public static List<String> itemStatsList = Arrays.asList(
+            "type", "subType", "attackDamage", "attackRange", "attackSpeed",
+            "criticalChance", "criticalDamage", "steamConsumption",
+            "health", "steam", "armor",
+            "undeadDamage", "undeadDefense",
+            "mutantDamage", "mutantDefense",
+            "meleeDamage", "rangeDamage",
+            "durability", "maxDurability",
+            "toolPower", "toolSpeed", "bonusStats",
+            "rarity", "displayname", "material", "attackEffect", "levelMinimum",
+            "canUse", "color", "wandMultiplier",
+            "boosterType", "boosterDuration", "proficiency",
+            "miningFortune", "foragingFortune", "farmingFortune", "fishingFortune", "combatFortune"
+    );
+
+    public static void GenerateItemConfig(){
+        File file = new File(developmentPath, itemConfigurationFile);
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+
+        config.set("configuration", null);
+
+        for (String key : itemList.keySet()){
+
+            ItemStack item = new ItemStack(GetItem(key));
+            ItemMeta meta = item.getItemMeta();
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+
+
+            if (isFactoryItem(item)){
+                if (isWeapon(item) || isArmor(item) || isJobTool(item)){
+                    String parent = "configuration.";
+
+                    for (String itemStats : itemStatsList){
+                        String itemKey = uncolouredText(meta.getDisplayName()).toLowerCase().replaceAll(" ", "").trim();
+                        String statsTarget = parent+"."+itemKey+"."+itemStats;
+                        String storedTarget = itemKey+"."+itemStats.toLowerCase();
+                        if (config.get(statsTarget) == null){
+
+                            if (itemStats.equals("displayname")){
+                                config.set(statsTarget, meta.getDisplayName());
+                                storedItemStats.put(storedTarget, meta.getDisplayName());
+                            } else if (itemStats.equals("material")){
+                                config.set(statsTarget, item.getType().toString());
+                                storedItemStats.put(storedTarget, item.getType().toString());
+                            }else{
+                                if (container.has(GetNamespacedKey(baseKey+itemStats))){
+                                    String value = ""+container.get(GetNamespacedKey(baseKey+itemStats), PersistentDataType.DOUBLE);
+                                    config.set(statsTarget, value);
+                                    storedItemStats.put(storedTarget, value);
+                                }else{
+                                    if (container.has(GetNamespacedKey(itemStats), PersistentDataType.DOUBLE)){
+                                        String value = ""+container.get(GetNamespacedKey(itemStats), PersistentDataType.DOUBLE);
+                                        config.set(statsTarget, value);
+                                        storedItemStats.put(storedTarget, value);
+                                    }
+                                    if (container.has(GetNamespacedKey(itemStats), PersistentDataType.INTEGER)){
+                                        String value = ""+container.get(GetNamespacedKey(itemStats), PersistentDataType.INTEGER);
+                                        config.set(statsTarget, value);
+                                        storedItemStats.put(storedTarget, value);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+
+                    consoleLog(sendText("&dSaved item configuration for: &b"+key));
+                }
+            }
+
+        }
+
+
+        try{
+            config.save(file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        consoleLog(sendText("&aItem Config has been generated!"));
     }
 
 }

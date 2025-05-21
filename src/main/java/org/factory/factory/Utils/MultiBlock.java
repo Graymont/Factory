@@ -16,14 +16,14 @@ import org.bukkit.inventory.MerchantRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.factory.factory.Database.GetItem;
-import static org.factory.factory.Utils.FactoryItem.ProcessItemMeta;
-import static org.factory.factory.Utils.FactoryItem.SetAditMeta;
+import static org.factory.factory.Utils.FactoryItem.*;
 import static org.factory.factory.Utils.FactoryMachine.serialCodeKey;
 import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.UserInterface.GenerateSerialCode;
@@ -128,17 +128,35 @@ public class MultiBlock {
 
 
     public static String[] carbonMaterials = {
+            // Crops & Fruits
             "wheat", "barley", "corn", "carrot", "potato", "beetroot", "whiteonion", "redonion",
             "lettuce", "cabbage", "broccoli", "cauliflower", "radish", "cucumber", "greenbeans",
             "eggplant", "chilipepper", "apple", "banana", "orange", "grape", "melon", "pumpkin",
             "strawberry", "blueberry", "blackberry", "kiwi", "lemon", "peach", "papaya", "pineapple",
-            "mango", "purplemushroom", "redmushroom", "bluemushroom", "brownmushroom", "greenmushroom",
-            "pinkmushroom", "yellowmushroom", "cherrylog", "birchlog", "crimsonstem", "junglelog",
-            "mangrovelog", "sprucelog", "warpedstem", "oaklog", "acacialog", "darkoaklog", "oakleaves",
-            "pinkleaves", "purpleleaves", "redleaves", "wisterialeaves", "fallleaves", "autumnleaves",
-            "azalealeaves", "acacialeaves", "spruceleaves", "sakuraleaves", "birchleaves", "cherryleaves",
-            "jungleleaves", "mangroveleaves"
+            "mango",
+
+            // Mushrooms
+            "purplemushroom", "redmushroom", "bluemushroom", "brownmushroom", "greenmushroom",
+            "pinkmushroom", "yellowmushroom",
+
+            // Logs
+            "cherrylog", "birchlog", "crimsonstem", "junglelog", "mangrovelog", "sprucelog",
+            "warpedstem", "oaklog", "acacialog", "darkoaklog",
+
+            // Leaves
+            "oakleaves", "pinkleaves", "purpleleaves", "redleaves", "wisterialeaves", "fallleaves",
+            "autumnleaves", "azalealeaves", "acacialeaves", "spruceleaves", "sakuraleaves",
+            "birchleaves", "cherryleaves", "jungleleaves", "mangroveleaves",
+
+            // Minerals & Gems
+            "limestone", "marble", "basalt", "slate", "obsidian", "quartz", "granite", "coal",
+            "copper", "tin", "iron", "lead", "aluminium", "silver", "gold", "platinum",
+
+            // Crystals & Gems
+            "amethyst", "garnet", "topaz", "jade", "aquamarine", "sapphire", "ruby", "emerald",
+            "diamond", "netherite"
     };
+
 
 
     public static void OpenCarbonForge(Player player, String material) {
@@ -251,6 +269,47 @@ public class MultiBlock {
             roll++;
             amount += 5;
         }
+
+        merchant.setRecipes(trades);
+        player.openMerchant(merchant, true);
+    }
+
+    public static void OpenAcidMaker(Player player){
+        Merchant merchant = Bukkit.createMerchant(sendText("&nAcid Maker"));
+        List<MerchantRecipe> trades = new ArrayList<>();
+
+        ItemStack waterBottle = new ItemStack(GetPotion(PotionType.WATER));
+        ItemStack acid = new ItemStack(GetItem("acid"));
+        acid.setAmount(8);
+
+        List<ItemStack> sugarIngredientList = Arrays.asList(
+                new ItemStack(ProcessItemMeta(new ItemStack(Material.SUGAR_CANE, 16))),
+                new ItemStack(ProcessItemMeta(new ItemStack(Material.CACTUS, 12))),
+                new ItemStack(ProcessItemMeta(new ItemStack(Material.BAMBOO, 8))),
+                new ItemStack(ProcessItemMeta(new ItemStack(Material.KELP, 5))));
+
+        int startSugarAmount = 16;
+        for (int i = 0; i < sugarIngredientList.size(); i++) {
+            ItemStack sugar = new ItemStack(ProcessItemMeta(new ItemStack(Material.SUGAR, 10)));
+            MerchantRecipe sugarRecipe = new MerchantRecipe(sugar, 9999);
+            sugar.setAmount(startSugarAmount);
+            if (i > 0){
+                sugarRecipe.addIngredient(sugarIngredientList.get(i));
+                sugarRecipe.addIngredient(sugarIngredientList.get(i-1));
+            }else{
+                sugarRecipe.addIngredient(sugarIngredientList.get(i));
+            }
+            trades.add(sugarRecipe);
+            startSugarAmount+=4;
+        }
+
+        ItemStack sugar = new ItemStack(ProcessItemMeta(new ItemStack(Material.SUGAR, 10)));
+        sugar.setAmount(10);
+        MerchantRecipe acidRecipe = new MerchantRecipe(acid, 9999);
+        acidRecipe.addIngredient(waterBottle);
+        acidRecipe.addIngredient(sugar);
+
+        trades.add(acidRecipe);
 
         merchant.setRecipes(trades);
         player.openMerchant(merchant, true);

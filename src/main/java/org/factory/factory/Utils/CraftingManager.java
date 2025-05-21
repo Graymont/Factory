@@ -294,6 +294,7 @@ public class CraftingManager implements Listener {
         }
 
 
-        else return item.getType() == Material.END_CRYSTAL || item.getType() == Material.RESPAWN_ANCHOR;
+        else return item.getType() == Material.END_CRYSTAL || item.getType() == Material.RESPAWN_ANCHOR
+                || item.getType() == Material.SUGAR;
     }
 }
