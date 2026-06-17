@@ -8,27 +8,31 @@ softdepend: [ProtocolLib, PlaceholderAPI]
 commands:
   factoryutils:
     aliases: [futils, fu]
-  refundmachine:
-  shop:
-    aliases: [buy, market]
-  spawn:
-  sellall:
-  sellgui:
-    aliases: [sellitem]
-  catalog:
-    aliases: [catalogs]
-  multiblock:
-  warp:
-    aliases: [warps, warplist]
-  profile:
-    aliases: [profiles]
-  hazmat:
-  rewards:
-    aliases: [reward]
-  abandonquest:
-  quest:
-    aliases: [quests]
-  sell:
-  trash:
-  prestige:
-    aliases: [prestiges]
+#  refundmachine:
+#  shop:
+#    aliases: [buy, market]
+#  spawn:
+#  sellall:
+#  sellgui:
+#    aliases: [sellitem]
+#  catalog:
+#    aliases: [catalogs]
+#  multiblock:
+#  warp:
+#    aliases: [warps, warplist]
+#  profile:
+#    aliases: [profiles]
+#  hazmat:
+#  rewards:
+#    aliases: [reward]
+#  abandonquest:
+#  quest:
+#    aliases: [quests]
+#  sell:
+#  trash:
+#  prestige:
+#    aliases: [prestiges]
+#  portablecraft:
+#    aliases:
+#      - craft
+#      - pc

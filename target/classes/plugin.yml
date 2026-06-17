@@ -32,3 +32,7 @@ commands:
   trash:
   prestige:
     aliases: [prestiges]
+  portablecraft:
+    aliases:
+      - craft
+      - pc

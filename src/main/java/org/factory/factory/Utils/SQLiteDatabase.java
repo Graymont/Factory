@@ -3,9 +3,8 @@ package org.factory.factory.Utils;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
-import org.factory.factory.Factory;
+import org.factory.factory.GameHandler.Booster;
+import org.factory.factory.GameManager.CooldownManager;
 
 import java.io.File;
 import java.sql.*;
@@ -15,11 +14,12 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.factory.factory.Events.*;
-import static org.factory.factory.Factory.getMainPlugin;
-import static org.factory.factory.Utils.Booster.activeBooster;
-import static org.factory.factory.Utils.Booster.boosters;
-import static org.factory.factory.Utils.CooldownManager.*;
-import static org.factory.factory.Utils.PlayerProgress.*;
+import static org.factory.factory.GameHandler.Booster.activeBooster;
+import static org.factory.factory.GameHandler.Booster.boosters;
+import static org.factory.factory.GameManager.CooldownManager.*;
+import static org.factory.factory.GameHandler.FactoryMachine.SavePlayerMachineItems;
+import static org.factory.factory.GameHandler.FactoryMachine.SavePlayerMachines;
+import static org.factory.factory.GameHandler.PlayerProgress.*;
 import static org.factory.factory.Utils.UserInterface.*;
 
 public class SQLiteDatabase {
@@ -91,7 +91,10 @@ public class SQLiteDatabase {
                 "sellMultiplier REAL, " +
                 "expMultiplier REAL, " +
                 "booster TEXT, " +
-                "boosterDuration INTEGER)";
+                "boosterDuration INTEGER, " +
+                "prestige, " +
+                "acid INTEGER, " +
+                "maxAcid INTEGER)";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sql5);
         } catch (SQLException e) {
@@ -109,12 +112,41 @@ public class SQLiteDatabase {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
+
     }
+
+    public static void InsertColumn(Connection connection) {
+
+    }
+
+    public static String ViewTables(Connection connection) {
+        StringBuilder tables = new StringBuilder();
+
+        try (Statement stmt = connection.createStatement()) {
+            // Query to get all table names (excluding SQLite internal tables)
+            ResultSet rs = stmt.executeQuery(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+
+            while (rs.next()) {
+                String tableName = rs.getString("name");
+                tables.append(tableName).append("\n"); // or ", " if you prefer comma-separated
+            }
+
+            return tables.toString().isEmpty() ? "No tables found." : tables.toString();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Error retrieving tables.";
+        }
+    }
+
+
 
     public static void SavePlayerProgress(Player player) {
         String sql = "INSERT OR REPLACE INTO PlayerAttributes (uuid, playerName, level, exp, maxMachine, sellMultiplier, expMultiplier" +
-                ", booster, boosterDuration, prestige) VALUES " +
-                "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                ", booster, boosterDuration, prestige, acid, maxAcid) VALUES " +
+                "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, player.getUniqueId().toString());
@@ -127,6 +159,8 @@ public class SQLiteDatabase {
             pstmt.setString(8, boosters.get(player.getUniqueId()).toString());
             pstmt.setLong(9, activeBooster.get(player.getUniqueId()));
             pstmt.setLong(10, playerPrestige.get(player.getUniqueId()));
+            pstmt.setInt(11, playerAcid.get(player.getUniqueId()));
+            pstmt.setInt(12, playerMaxAcid.get(player.getUniqueId()));
             pstmt.executeUpdate();
 
             //consoleLog(sendText("&aSaved Player Leveling of &2" + player.getName() + " &a(level: " + playerLevel.get(player.getUniqueId()) + " exp: " + playerExp.get(player.getUniqueId()) + ")"));
@@ -153,7 +187,7 @@ public class SQLiteDatabase {
 
     public static void LoadPlayerProgress(Player player) {
         String sql = "SELECT level, exp, maxMachine, sellMultiplier, expMultiplier, " +
-                "booster, boosterDuration, prestige FROM PlayerAttributes WHERE uuid = ?";
+                "booster, boosterDuration, prestige, acid, maxAcid FROM PlayerAttributes WHERE uuid = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, player.getUniqueId().toString());
@@ -196,6 +230,15 @@ public class SQLiteDatabase {
                 if (rs.wasNull()) prestige = 0;
                 playerPrestige.put(uuid, prestige);
 
+
+                int acid = rs.getInt("acid");
+                if (rs.wasNull()) acid = 0;
+                playerAcid.put(player.getUniqueId(), acid);
+
+                int maxAcid = rs.getInt("maxAcid");
+                if (rs.wasNull()) maxAcid = defaultMaxAcid;
+                playerMaxAcid.put(player.getUniqueId(), maxAcid);
+
             } else {
                 consoleLog(sendText("&cNo progress found for &4" + player.getName()));
             }
@@ -228,6 +271,8 @@ public class SQLiteDatabase {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
+
     }
 
 
@@ -298,20 +343,22 @@ public class SQLiteDatabase {
         }
     }
 
+    public static String machineSqlSyntax = "INSERT OR REPLACE INTO PlacedMachines (location, owner, uuid, taskId, machineLevel, " +
+            "speed, productionRate, steamConsumption, durability, maxDurability, dropName, potentialDrop, rarity, machineName, " +
+            "status, totalProduction, machineType, steamProduction) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
     public static void SaveMachineData(HashMap<String, String> placedMachines){
         if (connection == null || !isConnected()) {
-            consoleLog(sendText("&cSQLite connection is closed!"));
+            consoleLog(sendText("&4[DB] &cSQLite connection is closed! error code: 1"));
             return;
         }
 
-        clearPlacedMachineTable(); // clear table supaya refresh
+        //clearPlacedMachineTable(); // clear table supaya refresh
 
         createTable();
 
-        String sqlInsert = "INSERT OR REPLACE INTO PlacedMachines (location, owner, uuid, taskId, machineLevel, " +
-                "speed, productionRate, steamConsumption, durability, maxDurability, dropName, potentialDrop, rarity, machineName, " +
-                "status, totalProduction, machineType, steamProduction) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sqlInsert = machineSqlSyntax;
 
         try (PreparedStatement pstmt = connection.prepareStatement(sqlInsert)) {
             for (String key : placedMachines.keySet()) {
@@ -369,7 +416,7 @@ public class SQLiteDatabase {
 
     public static HashMap<String, String> LoadMachineData(Connection connection) {
         if (connection == null || !isConnected()) {
-            consoleLog(sendText("&cSQLite connection is null or closed!"));
+            consoleLog(sendText("&4[DB] &cSQLite connection is null or closed! error code: 1"));
             return new HashMap<>();
         }
 
@@ -411,11 +458,11 @@ public class SQLiteDatabase {
 
     public static void SaveMachineItems(HashMap<Location, ItemStack> machineItems){
         if (connection == null || !isConnected()) {
-            consoleLog(sendText("&cSQLite connection is closed!"));
+            consoleLog(sendText("&4[DB] &cSQLite connection is closed! error code: 1"));
             return;
         }
 
-        clearMachineItemsTable(); // clear table supaya refresh
+        //clearMachineItemsTable(); // clear table supaya refresh
 
         createTable();
 
@@ -443,7 +490,7 @@ public class SQLiteDatabase {
 
     public static HashMap<Location, ItemStack> LoadMachineItems(Connection connection) {
         if (connection == null || !isConnected()) {
-            consoleLog(sendText("&cSQLite connection is closed!"));
+            consoleLog(sendText("&4[DB] &cSQLite connection is closed! error code: 1"));
             return new HashMap<>();
         }
 
@@ -476,11 +523,11 @@ public class SQLiteDatabase {
 
     public static void SaveStoredMachines(HashMap<UUID, List<ItemStack>> storedMachines){
         if (connection == null || !isConnected()) {
-            consoleLog(sendText("&cSQLite connection is closed!"));
+            consoleLog(sendText("&4[DB] &cSQLite connection is closed! error code: 1"));
             return;
         }
 
-        clearStoredMachinesTable(); // clear table supaya refresh
+        clearStoredMachinesTable();
 
         createTable();
 
@@ -509,7 +556,7 @@ public class SQLiteDatabase {
 
     public static HashMap<UUID, List<ItemStack>> LoadStoredMachines(Connection connection) {
         if (connection == null || !isConnected()) {
-            consoleLog(sendText("&cSQLite connection is closed!"));
+            consoleLog(sendText("&4[DB] &cSQLite connection is closed! error code: 1"));
             return new HashMap<>();
         }
 
@@ -636,14 +683,23 @@ public class SQLiteDatabase {
 
 
     public static void SaveAllProgress(){
-        StopMachineBehaviour();
         Broadcast(" ");
-        Broadcast(" &8☗ &7Saving&8...");
+        Broadcast(" &8☗ &7Saving Entire Data&8...");
+        //StopMachineBehaviour();
         //Broadcast(" &4⚠ &7&o(please do not quit until saving process completed)");
         SaveMachineData(placedMachines);
         SaveMachineItems(machineItems);
         SaveStoredMachines(storedMachines);
         SaveAllPlayerProgress();
-        Broadcast(" &8☗ &8[&aSaving Completed&8]");
+        Broadcast(" &8☗ &8[&aSaving Completed (all)&8]");
+    }
+
+    public static void AutoSave(Player player){
+
+        SavePlayerMachines(player, connection);
+        SavePlayerMachineItems(player, connection);
+        SavePlayerProgress(player);
+
+        consoleLog(sendText("&3[DB] &aData of &2"+player.getName()+" &ahas been saved!"));
     }
 }

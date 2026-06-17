@@ -8,7 +8,6 @@ import com.bgsoftware.superiorskyblock.api.events.IslandKickEvent;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.key.Key;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
-import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldguard.WorldGuard;
@@ -18,11 +17,6 @@ import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
 import io.papermc.paper.event.player.PlayerArmSwingEvent;
-import it.unimi.dsi.fastutil.Hash;
-import net.bytebuddy.implementation.bind.annotation.Super;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -33,7 +27,6 @@ import org.bukkit.block.Chest;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Orientable;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -47,48 +40,37 @@ import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.factory.factory.GameHandler.*;
+import org.factory.factory.GameManager.CooldownManager;
 import org.factory.factory.Utils.*;
-import org.jetbrains.annotations.NotNull;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
-import javax.naming.Name;
-import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.text.Format;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.bukkit.Bukkit.*;
 import static org.factory.factory.Database.*;
 import static org.factory.factory.Factory.getMainPlugin;
-import static org.factory.factory.Utils.Booster.*;
-import static org.factory.factory.Utils.CooldownManager.SetCooldown;
-import static org.factory.factory.Utils.CooldownManager.hasCooldown;
-import static org.factory.factory.Utils.CraftingManager.isDisabledItem;
-import static org.factory.factory.Utils.FactoryEvents.*;
-import static org.factory.factory.Utils.FactoryItem.*;
+import static org.factory.factory.GameHandler.Booster.*;
+import static org.factory.factory.GameManager.CooldownManager.SetCooldown;
+import static org.factory.factory.GameManager.CooldownManager.hasCooldown;
+import static org.factory.factory.GameManager.CraftingManager.isDisabledItem;
+import static org.factory.factory.GameHandler.FactoryEvents.*;
+import static org.factory.factory.GameHandler.FactoryItem.*;
 
-import static org.factory.factory.Utils.FactoryMachine.*;
-import static org.factory.factory.Utils.FactoryMob.*;
-import static org.factory.factory.Utils.GUIManager.*;
-import static org.factory.factory.Utils.MultiBlock.*;
-import static org.factory.factory.Utils.PersistentDataManager.*;
-import static org.factory.factory.Utils.PlayerProgress.*;
-import static org.factory.factory.Utils.PlayerProgressManager.*;
+import static org.factory.factory.GameHandler.FactoryMachine.*;
+import static org.factory.factory.GameHandler.FactoryMob.*;
+import static org.factory.factory.GameManager.GUIManager.*;
+import static org.factory.factory.GameHandler.MultiBlock.*;
+import static org.factory.factory.GameManager.PersistentDataManager.*;
+import static org.factory.factory.GameHandler.PlayerProgress.*;
+import static org.factory.factory.GameManager.PlayerProgressManager.*;
+import static org.factory.factory.Utils.Benefit.ManageBenefit;
 import static org.factory.factory.Utils.SQLiteDatabase.*;
 import static org.factory.factory.Utils.UserInterface.*;
 import static org.factory.factory.Utils.VaultEconomy.*;
@@ -144,6 +126,8 @@ public class Events implements Listener {
     public static HashMap<Player, Double> playerSteam = new HashMap<>();
     public static HashMap<Player, Double> playerMaxSteam = new HashMap<>();
     public static HashMap<Player, Double> playerArmor = new HashMap<>();
+    public static HashMap<UUID, Integer> playerAcid = new HashMap<>();
+    public static HashMap<UUID, Integer> playerMaxAcid = new HashMap<>();
 
     public static HashMap<String, String> placedMachines = new HashMap<>();
     public static HashMap<Location, ItemStack> machineItems = new HashMap<>();
@@ -156,6 +140,8 @@ public class Events implements Listener {
 
     static double defaultSteam = 20;
     static double defaultMaxSteam = 20;
+
+    public static int defaultMaxAcid = 3500;
 
 
     public static HashMap<Player, List<String>> chatMessages = new HashMap<>();
@@ -200,11 +186,14 @@ public class Events implements Listener {
 
         playerSteam.putIfAbsent(player, defaultSteam);
         playerMaxSteam.putIfAbsent(player, defaultMaxSteam);
+        playerAcid.putIfAbsent(player.getUniqueId(), 0);
+        playerMaxAcid.putIfAbsent(player.getUniqueId(), defaultMaxAcid);
         playerArmor.putIfAbsent(player, 0.0);
         storedMachines.putIfAbsent(player.getUniqueId(), new ArrayList<>());
         isBackpack.putIfAbsent(player, false);
 
         maxMachines.putIfAbsent(player.getUniqueId(), defaultMaxMachine);
+        extraMaxMachines.putIfAbsent(player.getUniqueId(), 0);
 
         playerLevel.putIfAbsent(player.getUniqueId(), 1);
         playerExp.putIfAbsent(player.getUniqueId(), 0.0);
@@ -226,6 +215,8 @@ public class Events implements Listener {
 
         playerInput_Integer.putIfAbsent(player, 0);
         isInput.put(player, false);
+
+        menuPage.put(player, 1);
 
         consoleLog(sendText("&aAttributes of &2"+player.getName()+" &ahas been Initialized Successfully!"));
     }
@@ -510,6 +501,7 @@ public class Events implements Listener {
                         int steamConsumption = Integer.parseInt(storedPlacedMachines.get(location+__steamConsumptionKey));
                         String dropName = storedPlacedMachines.get(location+__dropNameKey);
                         String machineName = storedPlacedMachines.get(location+__machineNameKey);
+                        Rarity.RarityType machineRarity = Rarity.RarityType.parseRarity(storedPlacedMachines.get(location+__rarityKey));
 
                         ItemStack machine = machineItems.get(location);
                         ItemMeta machineMeta = machine.getItemMeta();
@@ -638,12 +630,10 @@ public class Events implements Listener {
                                 tag = "";
                             }
 
+                            /*ItemStack acidItem;
+                            ItemStack carbonItem;*/
 
-                            ItemStack dropItem = new ItemStack(createDropItem(drop, rarity, 1.0, machineLevel, tag));
-                            ItemStack acidItem;
-                            ItemStack carbonItem;
-
-                            if (acidDropChance <= 50 && canProduceAcid(block)) {
+                            /*if (acidDropChance <= 50 && canProduceAcid(block)) {
                                 String acidId = switch (rarity) {
                                     case Legendary -> "adaptiveacid";
                                     case Epic -> "mutagenicacid";
@@ -654,23 +644,59 @@ public class Events implements Listener {
                                 };
 
                                 acidItem = new ItemStack(GetItem(acidId));
-                                carbonItem = new ItemStack(GetItem("carbon" + dropName));
                             } else {
                                 carbonItem = null;
                                 acidItem = null;
+                            }*/
+
+                            int acidAmount = 1;
+                            int acidMultiplier = 1;
+
+                            if (machineLevel >= 5){
+                                acidAmount = 1+(machineLevel/5);
+                            }else{
+                                acidAmount = 1;
+                            }
+                            ItemStack carbonItem;
+                            if (canProduceAcid(block)){
+                                acidMultiplier = switch (machineRarity) {
+                                    case Immortal -> 6;
+                                    case Legendary -> 5;
+                                    case Epic -> 4;
+                                    case Rare -> 3;
+                                    case Uncommon -> 2;
+                                    default -> 1;
+                                };
+                                carbonItem = new ItemStack(GetItem("carbon" + dropName));
+                            }else{
+                                carbonItem = new ItemStack(Material.STICK);
                             }
 
 
+                            ItemStack dropItem = new ItemStack(createDropItem(drop, rarity, 1.0, machineLevel, tag));
+                            int finalAcidAmount = acidAmount * acidMultiplier;
                             Bukkit.getScheduler().runTask(getMainPlugin(), () -> {
-                                DropItem(dropLocation, dropItem, productionRate);
-
-                                if (acidItem != null) {
-                                    DropItem(dropLocation, acidItem, productionRate);
+                                //DropItem(dropLocation, acidItem, productionRate);
+                                if (canProduceAcid(block)){
                                     DropItem(dropLocation, carbonItem, productionRate);
+                                }
+
+                                int randomPotentialDrop = random.nextInt(100)+1;
+                                if (randomPotentialDrop <= 45){
+                                    DropItem(dropLocation, dropItem, productionRate);
+                                    PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, block.getLocation(), 1, 0);
+                                }else{
+                                    DropItem(dropLocation, dropItem, 1);
+                                }
+
+                                AddAcid(player, finalAcidAmount, false);
+
+                                if (canProduceAcid(block)){
                                     PlaySoundAt(Sound.ENTITY_SLIME_DEATH, block.getLocation(), 1, 2);
                                     SpawnBlockRedstoneParticle(block, Color.LIME);
                                     SpawnBlockRedstoneParticle(block, Color.GREEN);
                                 }
+
                                 SpawnBlockRedstoneParticle(block, Color.BLACK);
 
                             });
@@ -683,6 +709,42 @@ public class Events implements Listener {
                         storedPlacedMachines.put(key, ""+currentProduction);
                         _durability -= 1;
                         storedPlacedMachines.put(location+__durabilityKey, ""+_durability);
+
+                        // manage carbon armor durability
+
+                        int randomConsumeCarbon = random.nextInt(100)+1;
+                        int consumeChance = 10;
+
+                        if (player.getInventory().getHelmet() != null && player.getInventory().getHelmet().getType() != Material.AIR
+                                && !isHazmat(player.getInventory().getHelmet())){
+                            if (randomConsumeCarbon <= 10){
+                                ManageDurability(player, "helmet");
+                                UpdateItem(player, "helmet", player.getInventory().getHelmet());
+                            }
+                        }
+                        if (player.getInventory().getChestplate() != null && player.getInventory().getChestplate().getType() != Material.AIR
+                                && !isHazmat(player.getInventory().getChestplate())){
+                            if (randomConsumeCarbon <= 10){
+                                ManageDurability(player, "chestplate");
+                                UpdateItem(player, "chestplate", player.getInventory().getChestplate());
+                            }
+                        }
+                        if (player.getInventory().getLeggings() != null && player.getInventory().getLeggings().getType() != Material.AIR
+                                && !isHazmat(player.getInventory().getLeggings())){
+                            if (randomConsumeCarbon <= 10){
+                                ManageDurability(player, "leggings");
+                                UpdateItem(player, "leggings", player.getInventory().getLeggings());
+                            }
+                        }
+                        if (player.getInventory().getBoots() != null && player.getInventory().getBoots().getType() != Material.AIR
+                                && !isHazmat(player.getInventory().getBoots())){
+                            if (randomConsumeCarbon <= 10){
+                                ManageDurability(player, "boots");
+                                UpdateItem(player, "boots", player.getInventory().getBoots());
+                            }
+                        }
+
+
                         PlaySoundAt(Sound.ENTITY_EXPERIENCE_ORB_PICKUP, block.getLocation(), 0.3f, 1);
 
                     }
@@ -804,6 +866,8 @@ public class Events implements Listener {
         }
 
         SetPlayerIslandLimit(superiorPlayer);
+
+        ManageBenefit(player);
     }
 
     @EventHandler
@@ -811,8 +875,10 @@ public class Events implements Listener {
         Player player = event.getPlayer();
         StopAllMachines(player);
 
-        SavePlayerProgress(event.getPlayer());
+        //SavePlayerProgress(event.getPlayer());
         HandleCloseEvent(player);
+
+        AutoSave(player);
     }
 
     public void EnableMachine(Player player, Location location){
@@ -850,6 +916,7 @@ public class Events implements Listener {
 
     public static int globalMaxMachine = 50;
     public static HashMap<UUID, Integer> maxMachines = new HashMap<>();
+    public static HashMap<UUID, Integer> extraMaxMachines = new HashMap<>();
 
     public static void StartAllMachines(Player player){
         int mCount = 0;
@@ -1014,6 +1081,11 @@ public class Events implements Listener {
             if (event.isCancelled()){
                 return;
             }
+            if (player.getWorld().getName().equals("Flat")){
+                event.setCancelled(true);
+                player.sendMessage(sendText("&4Sorry, You can't place machine in here!"));
+                return;
+            }
 
             if (offHandItem.getType() != Material.AIR){
                 event.setCancelled(true);
@@ -1067,7 +1139,7 @@ public class Events implements Listener {
 
             playerCooldown.put(player.getName()+".cooldown.Place Machine", 2);
             int mc = machineCount.get(player.getUniqueId());
-            if (mc >= maxMachines.get(player.getUniqueId())){
+            if (mc >= GetMaxMachine(player)){
                 event.setCancelled(true);
                 player.sendMessage(sendText("&4You already reach the maximum machine placement!"));
                 PlaySoundAt(Sound.BLOCK_MUD_BRICKS_PLACE, location, 1, 3);
@@ -1133,7 +1205,13 @@ public class Events implements Listener {
             PlaySoundAt(Sound.BLOCK_ANVIL_PLACE, location, 1, 3);
             PlayParticleAtBlock(block, Particle.SMOKE);
             SpawnBlockCrackParticle(block);
-            player.sendMessage(sendText("&bPlaced Machine "+meta.getDisplayName()+" &6["+mc+"&e/&6"+maxMachines.get(player.getUniqueId())+"]"));
+
+            String extraSlotString = "";
+            if (extraMaxMachines.get(player.getUniqueId()) > 0){
+                extraSlotString = "&8&l(&2+"+extraMaxMachines.get(player.getUniqueId())+"&8&l)";
+            }
+
+            player.sendMessage(sendText("&8✦ &7Placed Machine "+meta.getDisplayName()+" &8&l[ &f"+mc+"&2&l/&a"+maxMachines.get(player.getUniqueId())+" "+extraSlotString+" &8&l]"));
             SendTitle(player, "&3Left-Click &fto Remove", "&3Shift-Left &fto Open Engine", 0, 1, 1);
         }
     }
@@ -1291,7 +1369,11 @@ public class Events implements Listener {
 
         if (onlinePlayer != null){
             //onlinePlayer.sendMessage(" ");
-            onlinePlayer.sendMessage(sendText("&bRemoved Machine "+obtainedMachine.getItemMeta().getDisplayName()+" &6["+mc+"&e/&6"+maxMachines.get(player)+"]"));
+            String extraSlotString = "";
+            if (extraMaxMachines.get(player) > 0){
+                extraSlotString = "&8&l(&2+"+extraMaxMachines.get(player)+"&8&l)";
+            }
+            onlinePlayer.sendMessage(sendText("&8✦ &7Removed Machine &a"+obtainedMachine.getItemMeta().getDisplayName()+" &8&l[ &f"+mc+"&2&l/&a"+maxMachines.get(player)+extraSlotString+" &8&l]"));
         }
 
         playerPlacedMachines.get(player).remove(location);
@@ -1309,6 +1391,7 @@ public class Events implements Listener {
     }
 
     private void RemoveMachineAttributes(Location location){
+
         placedMachines.remove(location+__locationKey);
         placedMachines.remove(location+__ownerKey);
         placedMachines.remove(location+__uuidKey);
@@ -1326,7 +1409,12 @@ public class Events implements Listener {
         placedMachines.remove(location+__countdownKey);
         placedMachines.remove(location+__machineTypeKey);
         placedMachines.remove(location+__steamProductionKey);
+
         machineItems.remove(location);
+
+        // SQL Clearing
+        DeleteMachineFromDatabase(connection, location);
+        DeleteMachineItemsFromDatabase(connection, location);
 
         consoleLog(sendText("&aAll Machine Attributes at &2"+location+" &ahas been reset!"));
     }
@@ -1367,7 +1455,7 @@ public class Events implements Listener {
             statusColor = "&8⚠ ";
         }
 
-        spawnMachineTag(spawnLocation, sendText(machineName)+" &8[&9"+player+"&8]", location);
+        spawnMachineTag(spawnLocation, sendText("&8[&9Lv."+placedMachines.get(location+".machineLevel")+"&8] "+machineName)+" &8[&9"+player+"&8]", location);
         spawnMachineTag(spawnLocation2, statusColor + machineStatus, location);
         //spawnMachineTag(spawnLocation3, "&8[&9"+player+"&8]", location);
         //spawnMachineTag(spawnLocation4, "&8[ &9Left-Click &fto &3Take &8]", location);
@@ -1731,18 +1819,18 @@ public class Events implements Listener {
                         NamespacedKey speedKey = new NamespacedKey(getMainPlugin(), "attack_speed");
                         AttributeModifier speedModifier = new AttributeModifier(speedKey, 0, AttributeModifier.Operation.ADD_NUMBER);
 
-                        if (meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_DAMAGE) == null ||
-                                meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_DAMAGE).stream().noneMatch(modifier ->
+                        if (meta.getAttributeModifiers(Attribute.ATTACK_DAMAGE) == null ||
+                                meta.getAttributeModifiers(Attribute.ATTACK_DAMAGE).stream().noneMatch(modifier ->
                                         modifier.getKey().equals(damageKey))) {
 
-                            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, damageModifier);
+                            meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, damageModifier);
                         }
 
-                        if (meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_SPEED) == null ||
-                                meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_SPEED).stream().noneMatch(modifier ->
+                        if (meta.getAttributeModifiers(Attribute.ATTACK_SPEED) == null ||
+                                meta.getAttributeModifiers(Attribute.ATTACK_SPEED).stream().noneMatch(modifier ->
                                         modifier.getKey().equals(speedKey))) {
 
-                            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, speedModifier);
+                            meta.addAttributeModifier(Attribute.ATTACK_SPEED, speedModifier);
                         }
 
                         meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
@@ -1884,7 +1972,7 @@ public class Events implements Listener {
             double powerValue = (int) ((defaultPower+power)*enchantValue);
 
             if (isPickaxe(item) || isAxe(item) || isShovel(item)){
-                AttributeInstance miningSpeed = player.getAttribute(Attribute.PLAYER_MINING_EFFICIENCY);
+                AttributeInstance miningSpeed = player.getAttribute(Attribute.MINING_EFFICIENCY);
                 if (miningSpeed != null) {
                     if (miningSpeed.getValue() != powerValue){
                         miningSpeed.setBaseValue(powerValue);
@@ -2183,6 +2271,93 @@ public class Events implements Listener {
         }
     }
 
+    @EventHandler
+    public void OnShovelPath(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (item.getType() != Material.AIR) {
+
+            if (!player.getWorld().getName().equals("SuperiorWorld")){
+                return;
+            }
+
+            if (event.getAction() == Action.RIGHT_CLICK_BLOCK){
+                if (event.getClickedBlock() == null){
+                    return;
+                }
+
+                ItemMeta meta = item.getItemMeta();
+
+                if (!player.hasPermission("admin")){
+                    if (!hasIslandAccess(player)) {
+                        return;
+                    }
+                }
+
+                if (!isSoil(event.getClickedBlock())){
+                    return;
+                }
+
+                PersistentDataContainer container = meta.getPersistentDataContainer();
+
+                if (container.has(GetNamespacedKey(itemKey))) {
+
+                    if (!isFactoryItem(item)) {
+                        return;
+                    }
+
+                    if (!isTool(item)) {
+                        return;
+                    }
+
+                    if (!isShovel(item)){
+                        return;
+                    }
+
+
+                    if (!ItemNotBroken(item)) {
+                        Notification_ItemBroken(player);
+                        event.setCancelled(true);
+                        return;
+                    }
+
+                    if (container.has(GetNamespacedKey(levelMinimumKey))) {
+                        if (!hasLevel(player, container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER))) {
+                            event.setCancelled(true);
+                            player.sendMessage(Notification_NoLevel(player));
+                            return;
+                        }
+                    }
+
+                    Block block = event.getClickedBlock();
+                    BlockData oldData = block.getBlockData();
+
+                    event.setCancelled(true);
+                    if (block.getType() == Material.GRASS_BLOCK){
+                        block.setType(Material.DIRT_PATH);
+                    }
+
+                    BlockData newData = block.getBlockData();
+                    if (oldData instanceof Orientable && newData instanceof Orientable) {
+                        Axis axis = ((Orientable) oldData).getAxis();
+                        ((Orientable) newData).setAxis(axis);
+                        block.setBlockData(newData);
+                    }
+
+                    if (currentEvent != EventType.Invincible_Items){
+                        ManageDurability(player, "hand");
+                    }
+
+                    UpdateItem(player, "hand", item);
+
+                    PlaySoundAt(Sound.ITEM_SHOVEL_FLATTEN, event.getClickedBlock().getLocation(), 1, 2);
+                    PlayParticleAtBlock(block, Particle.WHITE_ASH);
+                }
+            }
+        }
+    }
+
 
     // Armor Equip Manager
 
@@ -2273,7 +2448,9 @@ public class Events implements Listener {
                 || player.getOpenInventory().getTopInventory().getType() == InventoryType.ENDER_CHEST ||
                         player.getOpenInventory().getTopInventory().getType() == InventoryType.DISPENSER||
                         player.getOpenInventory().getTopInventory().getType() == InventoryType.DROPPER ||
-                        player.getOpenInventory().getTopInventory().getType() == InventoryType.BARREL){
+                        player.getOpenInventory().getTopInventory().getType() == InventoryType.BARREL ||
+                        player.getOpenInventory().getTopInventory().getType() == InventoryType.BREWING ||
+                        player.getOpenInventory().getTopInventory().getType() == InventoryType.MERCHANT){
                     return;
                 }
 
@@ -2309,24 +2486,56 @@ public class Events implements Listener {
     @EventHandler
     public void OnItemSpawn(ItemSpawnEvent event){
         ItemStack item = event.getEntity().getItemStack();
-        if (!isTool(item) && !isFactoryItem(item)){
-            if (item.getType() != Material.AIR){
-                ItemMeta meta = item.getItemMeta();
-                if (!meta.hasLore() && !meta.hasDisplayName()){
-                    if (isCropItem(item)){
-                        event.setCancelled(true);
-                    }else{
-                        event.getEntity().getItemStack().setItemMeta(ProcessItemMeta(event.getEntity().getItemStack()).getItemMeta());
+        if (item.getType() != Material.AIR){
+            if (!isTool(item) && !isFactoryItem(item)){
+                    ItemMeta meta = item.getItemMeta();
+                    if (!meta.hasLore() && !meta.hasDisplayName()){
+                        if (isCropItem(item)){
+                            event.setCancelled(true);
+                        }else{
+                            event.getEntity().getItemStack().setItemMeta(ProcessItemMeta(event.getEntity().getItemStack()).getItemMeta());
+                        }
                     }
+            }
+            if (item.getType() == Material.SPAWNER){
+                if (item.getItemMeta().getLore() == null){
+                    event.setCancelled(true);
+                }
+            }
+
+            if (!isFactoryItem(item) && !isMachine(item)){
+                event.getEntity().getItemStack().setItemMeta(new ItemStack(FormatTools(item)).getItemMeta());
+            }
+        }
+    }
+
+    @EventHandler
+    public void RightClickChestChangeItem(PlayerInteractEvent event) {
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (event.getClickedBlock() != null && event.getClickedBlock().getType() == Material.CHEST) {
+                Chest chest = (Chest) event.getClickedBlock().getState();
+                Inventory chestInventory = chest.getInventory();
+
+                for (int i = 0; i < chestInventory.getSize(); i++) {
+                    ItemStack item = chestInventory.getItem(i);
+
+                    if (item != null){
+                        if (!isFactoryItem(item) && !isMachine(item)){
+                            chestInventory.setItem(i, new ItemStack(FormatTools(item)));
+                        }
+                    }
+
                 }
             }
         }
+    }
 
-        if (item.getType() == Material.SPAWNER){
-            if (item.getItemMeta().getLore() == null){
-                event.setCancelled(true);
-            }
+    public static ItemStack FormatTools(ItemStack item){
+        if (isTool(item) && !isDisabledItem(item)){
+            item.setItemMeta(new ItemStack(GetItem(item.getType().toString().toLowerCase().replaceAll("_", "").trim())).getItemMeta());
         }
+
+        return item;
     }
 
     @EventHandler
@@ -2346,21 +2555,43 @@ public class Events implements Listener {
     }
 
     @EventHandler
-    public void OnItemCraft(PrepareItemCraftEvent event) {
+    public void OnItemPrepareCraft(PrepareItemCraftEvent event) {
         if (event.getInventory().getResult() != null) {
             ItemStack item = event.getInventory().getResult();
+
+            if (item.getType() == Material.AIR){
+                return;
+            }
 
             // If the item is disallowed (armor or END_CRYSTAL/RESPAWN_ANCHOR), cancel it
             if (isDisabledItem(item)) {
                 event.getInventory().setResult(new ItemStack(Material.AIR));
             }
             // If it's not a tool, but allowed, process meta
-            else if (!isTool(item)) {
+            else if (isTool(item) && !isDisabledItem(item)) {
+                event.getInventory().setResult(new ItemStack(GetItem(item.getType().toString().toLowerCase().replaceAll("_", "").trim())));
+            }else{
                 item.setItemMeta(ProcessItemMeta(item).getItemMeta());
                 event.getInventory().setResult(item);
             }
         }
+    }//
+
+    @EventHandler
+    public void OnItemCraft(CraftItemEvent event) {
+        if (event.getInventory().getResult() != null) {
+            ItemStack item = event.getInventory().getResult();
+
+            if (item.getType() == Material.AIR){
+                return;
+            }
+
+            if (isTool(item) && !isDisabledItem(item)) {
+                event.getInventory().setResult(new ItemStack(GetItem(item.getType().toString().toLowerCase().replaceAll("_", "").trim())));
+            }
+        }
     }
+
 
 
     public static void InventoryItemCheck(Player player){
@@ -2385,7 +2616,7 @@ public class Events implements Listener {
                 canUse = false;
             }
 
-            if (isWeapon(item)){
+            if (isWeapon(item) || isJobTool(item)){
                 if (!ItemNotBroken(item)){
                     canUse = false;
                 }
@@ -2420,7 +2651,7 @@ public class Events implements Listener {
             }
         }
 
-        if (player.getInventory().getHelmet() != null) {
+        if (player.getInventory().getHelmet() != null && player.getInventory().getHelmet().getType() != Material.AIR) {
             ItemStack item = player.getInventory().getHelmet();
             ItemMeta meta = item.getItemMeta();
 
@@ -2471,7 +2702,7 @@ public class Events implements Listener {
             }
         }
 
-        if (player.getInventory().getChestplate() != null) {
+        if (player.getInventory().getChestplate() != null&& player.getInventory().getChestplate().getType() != Material.AIR) {
             ItemStack item = player.getInventory().getChestplate();
             ItemMeta meta = item.getItemMeta();
 
@@ -2522,7 +2753,7 @@ public class Events implements Listener {
             }
         }
 
-        if (player.getInventory().getLeggings() != null) {
+        if (player.getInventory().getLeggings() != null&& player.getInventory().getLeggings().getType() != Material.AIR) {
             ItemStack item = player.getInventory().getLeggings();
             ItemMeta meta = item.getItemMeta();
 
@@ -2573,7 +2804,7 @@ public class Events implements Listener {
             }
         }
 
-        if (player.getInventory().getBoots() != null) {
+        if (player.getInventory().getBoots() != null&& player.getInventory().getBoots().getType() != Material.AIR) {
             ItemStack item = player.getInventory().getBoots();
             ItemMeta meta = item.getItemMeta();
 
@@ -2656,36 +2887,36 @@ public class Events implements Listener {
         playerMaxSteam.put(player, defaultMaxSteam+playerAttributes.get(player.getName()+".attribute.total.steam"));
 
         double totalMovementSpeed = playerAttributes.get(player.getName() + ".attribute.total.movementspeed");
-        AttributeInstance movementSpeed = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+        AttributeInstance movementSpeed = player.getAttribute(Attribute.MOVEMENT_SPEED);
         if (movementSpeed != null) {
             movementSpeed.setBaseValue(0.1 + (totalMovementSpeed / 10000));
         }
         player.setHealthScale(20);
 
         //double totalAttackSpeed = playerAttributes.get(player.getName() + ".attribute.total.movementspeed");
-        AttributeInstance attackSpeed = player.getAttribute(Attribute.GENERIC_ATTACK_SPEED);
+        AttributeInstance attackSpeed = player.getAttribute(Attribute.ATTACK_SPEED);
         if (attackSpeed != null) {
             attackSpeed.setBaseValue(100);
         }
 
-        AttributeInstance knockbackResistance = player.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE);
+        AttributeInstance knockbackResistance = player.getAttribute(Attribute.KNOCKBACK_RESISTANCE);
         if (knockbackResistance != null) {
             knockbackResistance.setBaseValue(1000);
         }
 
-        AttributeInstance attackKnockback = player.getAttribute(Attribute.GENERIC_ATTACK_KNOCKBACK);
+        AttributeInstance attackKnockback = player.getAttribute(Attribute.ATTACK_KNOCKBACK);
         if (attackKnockback != null) {
             attackKnockback.setBaseValue(1000);
         }
 
-        AttributeInstance attackDamage = player.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+        AttributeInstance attackDamage = player.getAttribute(Attribute.ATTACK_DAMAGE);
         if (attackDamage != null) {
             attackDamage.setBaseValue(-100);
         }
     }
 
     void ResetPlayerMiningSpeed(Player player){
-        AttributeInstance miningSpeed = player.getAttribute(Attribute.PLAYER_MINING_EFFICIENCY);
+        AttributeInstance miningSpeed = player.getAttribute(Attribute.MINING_EFFICIENCY);
         if (miningSpeed != null) {
             if (miningSpeed.getValue() != 0){
                 miningSpeed.setBaseValue(0);
@@ -2896,7 +3127,7 @@ public class Events implements Listener {
 
         Random random = new Random();
 
-        int mobLevel = GetMobLevel(entity);
+        int mobLevel = GetMobLevel(entity)*3;
         double attackDamageValue = mobLevel + (mobLevel * random.nextDouble());
 
         if (GetEntityDungeonTier(entity.getLocation()) == 0){
@@ -3031,7 +3262,7 @@ public class Events implements Listener {
                     ManageDamage(player, target, totalDamage*2, true);
 
                     if (isSword(item)){
-                        for (Entity entity : player.getNearbyEntities(5,5,5)){
+                        for (Entity entity : player.getNearbyEntities(2,2,2)){
                             if (entity instanceof Mob){
                                 ManageDamage(player, entity, totalDamage*0.5, false);
                             }
@@ -3039,7 +3270,7 @@ public class Events implements Listener {
                     }
 
                     else if (isHammer(item)){
-                        for (Entity entity : target.getNearbyEntities(6,3,6)){
+                        for (Entity entity : target.getNearbyEntities(5,3,5)){
                             if (entity instanceof Mob){
                                 if (entity != target){
                                     ManageDamage(player, entity, totalDamage*0.3, false);
@@ -3187,6 +3418,8 @@ public class Events implements Listener {
         return crit;
     }
 
+    // Steam
+
     public static boolean hasSteam(Player player, Double req){
         double current = playerSteam.get(player);
         if (playerSteam.get(player) < 0){
@@ -3210,6 +3443,44 @@ public class Events implements Listener {
     public static void SetSteam(Player player, double amount){
         playerSteam.put(player, amount);
     }
+
+
+    // Acid
+    public static boolean hasAcid(Player player, int req){
+        double current = playerAcid.get(player.getUniqueId());
+        if (playerAcid.get(player.getUniqueId()) < 0){
+            playerAcid.put(player.getUniqueId(), 0);
+        }
+        return current >= req;
+    }
+
+    public static void RemoveAcid(Player player, int amount, boolean notification){
+        int current = playerAcid.get(player.getUniqueId());
+        current -= amount;
+        playerAcid.put(player.getUniqueId(), current);
+
+        if (notification){
+            player.sendMessage(sendText("&c-"+amount+" "+acidSymbol));
+        }
+    }
+
+    public static void AddAcid(Player player, int amount, boolean notification){
+        int current = playerAcid.get(player.getUniqueId());
+        current += amount;
+        playerAcid.put(player.getUniqueId(), current);
+
+        if (notification){
+            player.sendMessage(sendText("&a+"+amount+" "+acidSymbol));
+        }
+    }
+
+    public static void SetAcid(Player player, int amount, boolean notification){
+        playerAcid.put(player.getUniqueId(), amount);
+    }
+
+    //
+
+
 
     public static double GetSteam(Player player){
         return playerSteam.get(player);
@@ -3644,16 +3915,7 @@ public class Events implements Listener {
                 }
 
                 if (isAcidMaker(block)){
-                    /*openedMenu.put(player, MenuList.AcidMaker);
-                    Inventory inventory = OpenGUI(player, 3, "Acid Maker");
-
-                    SetHeaderFooter(inventory);
-
-                    inventory.setItem(13, getBasicUi("acidmaker_acid"));
-                    player.openInventory(inventory);
-                    player.updateInventory();*/
-
-                    OpenAcidMaker(player);
+                    OpenMenu(player, MenuList.AcidMaker);
 
                     PlaySoundAt(Sound.ENTITY_SLIME_DEATH_SMALL, block.getLocation(),1,1);
                 }
@@ -4327,6 +4589,15 @@ public class Events implements Listener {
     }
 
     public void ManageMobHealthBar(Entity entity){
+
+        if (!(entity instanceof Mob)){
+            return;
+        }
+
+        if (entity.getCustomName() == null){
+            return;
+        }
+
         Bukkit.getScheduler().runTaskLater(getMainPlugin(), () -> {
             if (entity.isValid()){
                 String[] name = entity.getCustomName().split(" ");
@@ -4787,15 +5058,29 @@ public class Events implements Listener {
                 for (String itemStats : itemStatsList){
                     String itemKey = uncolouredText(meta.getDisplayName()).toLowerCase().replaceAll(" ", "").trim();
                     String storedTarget = itemKey+"."+itemStats.toLowerCase();
+
                     if (itemStats.equals("displayname")){
                         if (!meta.getDisplayName().equals(storedItemStats.get(storedTarget))){
                             meta.setDisplayName(sendText(storedItemStats.get(storedTarget)));
                         }
-                    } else if (itemStats.equals("material")){
+                    }
+                    else if (itemStats.equals("material")){
                         if (item.getType() != Material.getMaterial(storedItemStats.get(storedTarget))){
                             item.setType(Material.getMaterial(storedItemStats.get(storedTarget)));
                         }
-                    }else{
+                    }
+
+                    else if (itemStats.equals("levelMinimum")){
+                        if (container.has(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER)){
+                            if (container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER) < Integer.parseInt(storedItemStats.get(storedTarget))
+                            || container.get(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER) > Integer.parseInt(storedItemStats.get(storedTarget))){
+                                container.set(GetNamespacedKey(levelMinimumKey), PersistentDataType.INTEGER, Integer.parseInt(storedItemStats.get(storedTarget)));
+                            }
+                        }
+                    }
+
+
+                    else{
                         if (container.has(GetNamespacedKey(baseKey+itemStats))){
                             if (!container.get(GetNamespacedKey(baseKey+itemStats), PersistentDataType.DOUBLE).toString().equals(storedItemStats.get(storedTarget))){
                                 container.set(GetNamespacedKey(baseKey+itemStats), PersistentDataType.DOUBLE, Double.parseDouble(storedItemStats.get(storedTarget)));
@@ -4831,6 +5116,28 @@ public class Events implements Listener {
         }
     }
 
+    @EventHandler
+    public void OnWeaponRightClick(PlayerInteractEvent event){
+        Player player = event.getPlayer();
+
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (item.getType() != Material.AIR){
+
+            if (!event.getAction().isRightClick()){
+                return;
+            }
+
+            if (!isFactoryItem(item)){
+                return;
+            }
+
+            if (isBlast(item)){
+                event.setCancelled(true);
+                player.swingHand(EquipmentSlot.HAND);
+            }
+        }
+    }
 
 
 }

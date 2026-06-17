@@ -1,8 +1,5 @@
 package org.factory.factory.Utils;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -14,8 +11,9 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.factory.factory.GameHandler.BackpackHolder;
+import org.factory.factory.GameManager.CooldownManager;
 
-import java.awt.*;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
 import java.util.Base64;
@@ -24,7 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.bukkit.Bukkit.getServer;
-import static org.factory.factory.Utils.CooldownManager.*;
+import static org.factory.factory.GameManager.CooldownManager.*;
 import static org.factory.factory.Utils.VaultEconomy.icon;
 
 public class UserInterface {
@@ -34,6 +32,7 @@ public class UserInterface {
 
     public static String usageArrowSymbol = "➤";
 
+    public static String acidSymbol = "\uD83E\uDDEA";
     // color
 
     public static String color_darkGreenAcid = "#538E1F";

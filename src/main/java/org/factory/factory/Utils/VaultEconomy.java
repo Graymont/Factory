@@ -39,4 +39,6 @@ public class VaultEconomy {
         player.sendMessage(sendRgbText("-"+FormatDouble(amount)+icon, color_darkRed));
     }
 
+    // test record 1 2 3
+
 }

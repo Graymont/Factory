@@ -11,13 +11,17 @@ import org.factory.factory.Utils.ItemSerializer;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static org.factory.factory.Events.globalRevision;
 import static org.factory.factory.Factory.getMainPlugin;
-import static org.factory.factory.Utils.FactoryItem.*;
-import static org.factory.factory.Utils.FactoryMachine.machineKey;
-import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
+import static org.factory.factory.GameHandler.FactoryItem.*;
+import static org.factory.factory.GameHandler.FactoryMachine.machineKey;
+import static org.factory.factory.GameManager.PersistentDataManager.GetNamespacedKey;
 import static org.factory.factory.Utils.UserInterface.*;
 
 public class Database {
@@ -56,6 +60,10 @@ public class Database {
 
     public static ItemStack GetItem(String name){
         ItemStack addedItem = new ItemStack(itemList.get(name).clone());
+        if (addedItem.isEmpty()){
+            consoleLog(sendText("&cItem with id: &4"+name+" &cis not exist!"));
+            return new ItemStack(Material.STICK);
+        }
         /*ItemMeta meta = addedItem.getItemMeta();
         PersistentDataContainer container = meta.getPersistentDataContainer();
         if (!container.has(GetNamespacedKey(machineKey), PersistentDataType.BOOLEAN) &&
@@ -337,13 +345,15 @@ public class Database {
                 String categorySlot = keySplit.get(1);
                 String categoryMaterial = keySplit.get(2);
                 String categoryDisplayname = keySplit.get(3);
+                String isDisplayed = keySplit.get(4);
                 categoryList.put(categoryKey+".slot", categorySlot);
                 categoryList.put(categoryKey+".material", Material.getMaterial(categoryMaterial).toString());
                 categoryList.put(categoryKey+".name", categoryDisplayname);
+                categoryList.put(categoryKey+".isDisplayed", isDisplayed);
 
                 String formatCategory = categoryKey+"_items";
                 parentCategory.add(formatCategory);
-                consoleLog(sendText("&3[Factory Config] &aCategory " + formatCategory + " slot: "+categorySlot+" with material: "+categoryMaterial+" and displayname: "+categoryDisplayname+" loaded successfully!"));
+                consoleLog(sendText("&3[Factory Config] &aCategory: " + formatCategory + " slot: "+categorySlot+" with material: "+categoryMaterial+" with displayname: "+categoryDisplayname+" &adisplayed: "+isDisplayed+" loaded successfully!"));
             }
         } else {
             consoleLog(sendText("&3[Factory Config] &cNo category " + parent + " section found in file."));
@@ -522,6 +532,21 @@ public class Database {
         SaveLocations();
         SaveSpawners();
         consoleLog(sendText("&3[Factory Config] &aSaving all configuration data..."));
+    }
+
+    public static void BackupDatabase(File pluginFolder) {
+        File sourceFile = new File(pluginFolder, "database.db");
+
+        // Format: 5.10.2025 14-33-22
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.MM.yyyy HH-mm-ss"));
+        File destFile = new File(pluginFolder, "database " + timestamp + ".db");
+
+        try {
+            Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("Database backup created: " + destFile.getName());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

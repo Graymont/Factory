@@ -1,37 +1,35 @@
 package org.factory.factory;
 
+import net.luckperms.api.LuckPerms;
 import org.bukkit.*;
-import org.bukkit.block.Block;
-import org.bukkit.block.Furnace;
 import org.bukkit.entity.*;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.factory.factory.GameHandler.Dungeon;
+import org.factory.factory.GameHandler.FactoryMob;
+import org.factory.factory.GameHandler.PlayerProgress;
+import org.factory.factory.GameManager.*;
 import org.factory.factory.Utils.*;
 
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 
 import static org.factory.factory.Database.*;
 import static org.factory.factory.Events.*;
-import static org.factory.factory.Utils.Booster.ManageBooster;
-import static org.factory.factory.Utils.CraftingManager.InitRecipes;
-import static org.factory.factory.Utils.CraftingManager.InitSmeltings;
-import static org.factory.factory.Utils.FactoryEvents.*;
-import static org.factory.factory.Utils.FactoryItem.GenerateItemConfig;
-import static org.factory.factory.Utils.FactoryItem.InitFactoryItems;
-import static org.factory.factory.Utils.FactoryMachine.*;
-import static org.factory.factory.Utils.FactoryMob.Every1SecondsSpawnerParticle;
-import static org.factory.factory.Utils.FactoryMob.Every30SecondsDungeonMobSpawn;
-import static org.factory.factory.Utils.GUIManager.GameMenu;
-import static org.factory.factory.Utils.PlayerProgress.ManageProgress;
-import static org.factory.factory.Utils.PlayerProgressManager.TriggerFishing;
+import static org.factory.factory.GameHandler.Booster.ManageBooster;
+import static org.factory.factory.GameManager.CraftingManager.InitRecipes;
+import static org.factory.factory.GameManager.CraftingManager.InitSmeltings;
+import static org.factory.factory.GameHandler.FactoryEvents.*;
+import static org.factory.factory.GameHandler.FactoryItem.InitFactoryItems;
+import static org.factory.factory.GameHandler.FactoryMachine.*;
+import static org.factory.factory.GameHandler.FactoryMob.Every1SecondsSpawnerParticle;
+import static org.factory.factory.GameHandler.FactoryMob.Every30SecondsDungeonMobSpawn;
+import static org.factory.factory.GameManager.GUIManager.GameMenu;
+import static org.factory.factory.GameHandler.PlayerProgress.ManageProgress;
+import static org.factory.factory.GameManager.PlayerProgressManager.TriggerFishing;
+import static org.factory.factory.Utils.Benefit.ManageBenefit;
 import static org.factory.factory.Utils.SQLiteDatabase.*;
 import static org.factory.factory.Utils.UserInterface.*;
 import static org.factory.factory.Utils.VaultEconomy.setupEconomy;
@@ -39,6 +37,7 @@ import static org.factory.factory.Utils.VaultEconomy.setupEconomy;
 public final class Factory extends JavaPlugin {
 
     public SQLiteDatabase sqLiteDatabase = new SQLiteDatabase();
+    public static LuckPerms luckPerms;
     public Events events = new Events(this);
     public FurnaceManager furnaceManager = new FurnaceManager(this, events);
     public Commands commands = new Commands(events, this);
@@ -58,6 +57,8 @@ public final class Factory extends JavaPlugin {
 
     public FarmlandProtection farmlandProtection = new FarmlandProtection();
 
+    public MerchantListener merchantListener = new MerchantListener();
+
     public static Factory getMainPlugin() {
         return Factory.getPlugin(Factory.class);
     }
@@ -68,9 +69,14 @@ public final class Factory extends JavaPlugin {
         sqLiteDatabase.connect();
 
         if (!SQLiteDatabase.isConnected()) {
-            getLogger().warning("SQLite Database failed to connect, disabling Factory");
+            getLogger().warning(sendText("&cSQLite Database failed to connect, disabling Factory"));
             getServer().getPluginManager().disablePlugin(this);
             return;
+        }
+
+        RegisteredServiceProvider<LuckPerms> provider = getServer().getServicesManager().getRegistration(LuckPerms.class);
+        if (provider != null) {
+            luckPerms = provider.getProvider();
         }
 
         RegisterAllEvents();
@@ -148,6 +154,7 @@ public final class Factory extends JavaPlugin {
         Objects.requireNonNull(getCommand("sell")).setExecutor(commands);
         Objects.requireNonNull(getCommand("trash")).setExecutor(commands);
         Objects.requireNonNull(getCommand("prestige")).setExecutor(commands);
+        Objects.requireNonNull(getCommand("portablecraft")).setExecutor(commands);
 
         // Tab Completer
         Objects.requireNonNull(getCommand("factoryutils")).setTabCompleter(commands);
@@ -163,6 +170,7 @@ public final class Factory extends JavaPlugin {
         getServer().getPluginManager().registerEvents(dungeon, this);
         getServer().getPluginManager().registerEvents(factoryMob, this);
         getServer().getPluginManager().registerEvents(farmlandProtection, this);
+        getServer().getPluginManager().registerEvents(merchantListener, this);
     }
 
     static void EverySeconds(){
@@ -186,6 +194,8 @@ public final class Factory extends JavaPlugin {
                     PreventPlayer(player);
 
                     ManageEventBenefits();
+
+                    //ManageBenefit(player);
                 }
             }
         }.runTaskTimer(getMainPlugin(), 0L, 20L);
@@ -216,8 +226,18 @@ public final class Factory extends JavaPlugin {
         new BukkitRunnable() {
             @Override
             public void run() {
-                SaveAllProgress();
+                //SaveAllProgress();
+                Broadcast(" ");
+                Broadcast(" &8☗ &7Saving&8...");
+
+                StopMachineBehaviour();
+                for (Player player : Bukkit.getOnlinePlayers()){
+                    AutoSave(player);
+                }
                 StartMachineBehaviour();
+
+                //executeConsoleCommand("fu backup");
+                Broadcast(" &8☗ &8[&aSaving Completed&8]");
             }
         }.runTaskTimer(getMainPlugin(), 0L, 36000L);
     }
@@ -327,15 +347,26 @@ public final class Factory extends JavaPlugin {
         else if (steam < 0){
             playerSteam.put(player, 0.0);
         }
+
+        int acid = playerAcid.get(player.getUniqueId());
+        int maxAcid = playerMaxAcid.get(player.getUniqueId());
+
+        if (acid > maxAcid){
+            playerAcid.put(player.getUniqueId(), maxAcid);
+        }
     }
 
     public static void ActionBar(Player player) {
         double steam = playerSteam.get(player);
         double maxSteam = playerMaxSteam.get(player);
+
+        double acid = playerAcid.get(player.getUniqueId());
+        double maxAcid = playerMaxAcid.get(player.getUniqueId());
+
         double armor = playerArmor.get(player);
         double health = player.getHealth();
         double maxHealth = player.getMaxHealth();
-        SendActionBar(player, sendText("&4❤ &c"+FormatDouble(health)+"/"+FormatDouble(maxHealth)+" Health          "+"&7[&8\uD83D\uDD30&f"+FormatDouble(armor)+" &7Armor&7]"+"          &6\uD83C\uDF0A &e"+FormatDouble(steam)+"/"+FormatDouble(maxSteam)+" Steam"));
+        SendActionBar(player, sendText("&c❤ "+FormatDouble(health)+"/"+FormatDouble(maxHealth)+" Health          "+"&a\uD83E\uDDEA "+FormatDouble(acid)+"/"+FormatDouble(maxAcid)+" Acid"+"          &e\uD83C\uDF0A "+FormatDouble(steam)+"/"+FormatDouble(maxSteam)+" Steam"));
     }
 
     public static void ManageCooldown(Player player){

@@ -12,39 +12,37 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.factory.factory.Utils.*;
+import org.factory.factory.GameHandler.*;
+import org.factory.factory.GameManager.CooldownManager;
+import org.factory.factory.GameManager.GUIManager;
+import org.factory.factory.GameManager.RewardsManager;
+import org.factory.factory.GameManager.TraderManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.naming.Name;
-import java.lang.reflect.Array;
+import java.io.File;
 import java.util.*;
 
 import static org.factory.factory.Database.*;
 import static org.factory.factory.Events.*;
-import static org.factory.factory.Factory.getMainPlugin;
-import static org.factory.factory.Utils.Booster.*;
-import static org.factory.factory.Utils.CooldownManager.ResetCooldown;
-import static org.factory.factory.Utils.CooldownManager.SetCooldown;
-import static org.factory.factory.Utils.Dungeon.GetDungeonLoot;
-import static org.factory.factory.Utils.Dungeon.TeleportDungeon;
-import static org.factory.factory.Utils.FactoryEnchant.GetEnchantmentBook;
-import static org.factory.factory.Utils.FactoryEvents.RollEvents;
-import static org.factory.factory.Utils.FactoryEvents.SetEvent;
-import static org.factory.factory.Utils.FactoryItem.*;
-import static org.factory.factory.Utils.FactoryMachine.*;
-import static org.factory.factory.Utils.FactoryMob.SpawnDungeonMob;
-import static org.factory.factory.Utils.FactoryMob.SpawnMob;
-import static org.factory.factory.Utils.FactoryQuest.*;
-import static org.factory.factory.Utils.GUIManager.*;
-import static org.factory.factory.Utils.MultiBlock.*;
-import static org.factory.factory.Utils.PersistentDataManager.GetNamespacedKey;
-import static org.factory.factory.Utils.PlayerProgress.*;
-import static org.factory.factory.Utils.RewardsManager.*;
-import static org.factory.factory.Utils.SQLiteDatabase.SaveAllProgress;
-import static org.factory.factory.Utils.SQLiteDatabase.TransferPlayerProgress;
-import static org.factory.factory.Utils.TraderManager.OpenTrader;
+import static org.factory.factory.GameHandler.Booster.*;
+import static org.factory.factory.GameManager.CooldownManager.ResetCooldown;
+import static org.factory.factory.GameHandler.Dungeon.GetDungeonLoot;
+import static org.factory.factory.GameHandler.FactoryEnchant.GetEnchantmentBook;
+import static org.factory.factory.GameHandler.FactoryEvents.RollEvents;
+import static org.factory.factory.GameHandler.FactoryEvents.SetEvent;
+import static org.factory.factory.GameHandler.FactoryItem.*;
+import static org.factory.factory.GameHandler.FactoryMachine.*;
+import static org.factory.factory.GameHandler.FactoryMob.SpawnDungeonMob;
+import static org.factory.factory.GameHandler.FactoryMob.SpawnMob;
+import static org.factory.factory.GameHandler.FactoryQuest.*;
+import static org.factory.factory.GameManager.GUIManager.*;
+import static org.factory.factory.GameHandler.MultiBlock.*;
+import static org.factory.factory.GameManager.PersistentDataManager.GetNamespacedKey;
+import static org.factory.factory.GameHandler.PlayerProgress.*;
+import static org.factory.factory.GameManager.RewardsManager.*;
+import static org.factory.factory.Utils.SQLiteDatabase.*;
+import static org.factory.factory.GameManager.TraderManager.OpenTrader;
 import static org.factory.factory.Utils.UserInterface.*;
 import static org.factory.factory.Utils.UserInterface.sendText;
 
@@ -255,6 +253,13 @@ public class Commands implements CommandExecutor, TabCompleter {
                 Player player = (Player) sender;
                 events.ViewAttributes(player, args[1], args[2]);
             }
+            else if (args[0].equalsIgnoreCase("openmerchant")){
+                Player player = Bukkit.getPlayer(args[1]);
+                String category = args[2]+"_items";
+                openedCategory.put(player, category);
+                OpenShopCategory(player, openedCategory.get(player));
+                consoleLog(sendText("&aOpened Merchant for &2"+player.getName()+" &acategory: &b"+category+" &aOpened Category: &6"+openedCategory.get(player)));
+            }
             else if (args[0].equalsIgnoreCase("reload")){
                 LoadAllData();
                 sender.sendMessage(sendText("&aConfiguration Reloaded from yml!"));
@@ -388,7 +393,21 @@ public class Commands implements CommandExecutor, TabCompleter {
             else if (args[0].equalsIgnoreCase("save-data")){
                 //SaveAllData();
 
+                StopMachineBehaviour();
+
+                for (Player player : Bukkit.getOnlinePlayers()){
+                    AutoSave(player);
+                }
+
+                StartMachineBehaviour();
+                sender.sendMessage(sendText("&aSaved all data to &6database.db (only online players)"));
+            }
+            else if (args[0].equalsIgnoreCase("save-all-data")){
+                //SaveAllData();
+                StopMachineBehaviour();
+
                 SaveAllProgress();
+
                 StartMachineBehaviour();
                 sender.sendMessage(sendText("&aSaved all data to &6database.db"));
             }
@@ -530,23 +549,50 @@ public class Commands implements CommandExecutor, TabCompleter {
                 assert player != null;
                 RemoveExp(player, amount);
             }
+
             // maxmachine
             else if (args[0].equalsIgnoreCase("setmaxmachine")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
                 SetMaxMachine(player, amount);
+
+                sender.sendMessage(sendText("&aMax Machine of &2"+args[1]+" &ahas been set to &2"+amount));
             }
             else if (args[0].equalsIgnoreCase("addmaxmachine")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
                 assert player != null;
                 AddMaxMachine(player, amount);
+
+                sender.sendMessage(sendText("&aAdded &2"+amount+" &amax machine to &2"+args[1]));
             }
             else if (args[0].equalsIgnoreCase("removemaxmachine")){
                 Player player = Bukkit.getPlayer(args[1]);
                 int amount = Integer.parseInt(args[2]);
                 assert player != null;
                 RemoveMaxMachine(player, amount);
+
+                sender.sendMessage(sendText("&aRemoved &2"+amount+" &amax machine from &2"+args[1]));
+            }
+
+            // acid
+            else if (args[0].equalsIgnoreCase("setacid")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                assert player != null;
+                SetAcid(player, amount, true);
+            }
+            else if (args[0].equalsIgnoreCase("addacid")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                assert player != null;
+                AddAcid(player, amount, true);
+            }
+            else if (args[0].equalsIgnoreCase("removeacid")){
+                Player player = Bukkit.getPlayer(args[1]);
+                int amount = Integer.parseInt(args[2]);
+                assert player != null;
+                RemoveAcid(player, amount, true);
             }
 
             else if (args[0].equalsIgnoreCase("testbooster")){
@@ -745,6 +791,15 @@ public class Commands implements CommandExecutor, TabCompleter {
                 assert sender instanceof Player;
                 OpenNetherSmelter((Player) sender);
             }
+
+            else if (args[0].equalsIgnoreCase("backup")){
+                File file = new File("plugins/Factory/Game Database/SQLite/");
+                BackupDatabase(file);
+            }
+
+            else if (args[0].equalsIgnoreCase("viewtable")){
+                sender.sendMessage(sendText("&a"+ViewTables(getConnection())));
+            }
         }
         else if (command.getName().equalsIgnoreCase("refundmachine")){
             events.RefundMachines(((Player) sender));
@@ -823,6 +878,12 @@ public class Commands implements CommandExecutor, TabCompleter {
             OpenMenu((Player) sender, MenuList.Prestige);
         }
 
+        else if (command.getName().equalsIgnoreCase("portablecraft")){
+            assert sender instanceof Player;
+
+            ((Player) sender).openWorkbench(((Player) sender).getLocation(), true);
+        }
+
         else if (command.getName().equalsIgnoreCase("catalog")){
             Player player = (Player) sender;
             int page = 1;
@@ -878,16 +939,24 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("reload");
                 argsList.add("save-all-config");
                 argsList.add("save-data");
+                argsList.add("save-all-data");
                 argsList.add("load-data");
                 argsList.add("viewattributes");
                 argsList.add("refundmachine");
                 argsList.add("refreshmachinetag");
                 argsList.add("getbackpack");
                 argsList.add("givereward");
+
                 argsList.add("setsteam");
                 argsList.add("removesteam");
                 argsList.add("addsteam");
+
+                argsList.add("setacid");
+                argsList.add("removeacid");
+                argsList.add("addacid");
+
                 argsList.add("openmenu");
+                argsList.add("openmerchant");
                 argsList.add("opentrader");
 
                 argsList.add("setprestige");
@@ -921,6 +990,9 @@ public class Commands implements CommandExecutor, TabCompleter {
                 argsList.add("forcecompletequest");
 
                 argsList.add("clearmobs");
+                argsList.add("backup");
+
+                argsList.add("viewtable");
 
                 String partialInput = args[0].toLowerCase();
                 for (String key : argsList) {
@@ -979,7 +1051,8 @@ public class Commands implements CommandExecutor, TabCompleter {
                         || args[0].equalsIgnoreCase("openmenu")
                         || args[0].equalsIgnoreCase("opentrader")
 
-                        || args[0].equalsIgnoreCase("resetbooster")){
+                        || args[0].equalsIgnoreCase("resetbooster")
+                        || args[0].equalsIgnoreCase("openmerchant")){
 
                     for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                         if (onlinePlayer.getName().toLowerCase().startsWith(partialInput)) {
